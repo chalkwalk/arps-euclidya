@@ -1,47 +1,58 @@
 #pragma once
 
-#include <juce_audio_processors/juce_audio_processors.h>
 #include "DataModel.h"
+#include <array>
+#include <juce_audio_processors/juce_audio_processors.h>
+
+struct MidiLogEvent {
+  int logType; // 0=NoteOn, 1=NoteOff, 2=CC
+  int channel;
+  int data1;
+  float data2;
+};
 
 // Forward declaration of the editor class
 class EuclideanArpEditor;
 
-class EuclideanArpProcessor : public juce::AudioProcessor
-{
+class EuclideanArpProcessor : public juce::AudioProcessor {
 public:
-    EuclideanArpProcessor();
-    ~EuclideanArpProcessor() override;
+  EuclideanArpProcessor();
+  ~EuclideanArpProcessor() override;
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
-    void releaseResources() override;
+  void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+  void releaseResources() override;
 
-    bool isBusesLayoutSupported(const BusesLayout& layouts) const override;
-    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+  bool isBusesLayoutSupported(const BusesLayout &layouts) const override;
+  void processBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &) override;
 
-    juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override;
+  juce::AudioProcessorEditor *createEditor() override;
+  bool hasEditor() const override;
 
-    const juce::String getName() const override;
-    bool acceptsMidi() const override;
-    bool producesMidi() const override;
-    bool isMidiEffect() const override;
-    double getTailLengthSeconds() const override;
+  const juce::String getName() const override;
+  bool acceptsMidi() const override;
+  bool producesMidi() const override;
+  bool isMidiEffect() const override;
+  double getTailLengthSeconds() const override;
 
-    int getNumPrograms() override;
-    int getCurrentProgram() override;
-    void setCurrentProgram(int index) override;
-    const juce::String getProgramName(int index) override;
-    void changeProgramName(int index, const juce::String& newName) override;
+  int getNumPrograms() override;
+  int getCurrentProgram() override;
+  void setCurrentProgram(int index) override;
+  const juce::String getProgramName(int index) override;
+  void changeProgramName(int index, const juce::String &newName) override;
 
-    void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) override;
+  void getStateInformation(juce::MemoryBlock &destData) override;
+  void setStateInformation(const void *data, int sizeInBytes) override;
 
-    class EuclideanArpEditor* getEditor();
+  class EuclideanArpEditor *getEditor();
 
-    juce::AudioProcessorValueTreeState apvts;
+  juce::AudioProcessorValueTreeState apvts;
+
+  juce::AbstractFifo midiLogFifo{512};
+  std::array<MidiLogEvent, 512> midiLogBuffer;
+  void logMidiEvent(int type, int channel, int d1, float d2);
 
 private:
-    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+  juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpProcessor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpProcessor)
 };
