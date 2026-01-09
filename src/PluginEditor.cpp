@@ -29,12 +29,18 @@ void ChannelPanel::addText(const juce::String &text) {
   juce::StringArray newLines;
   newLines.addLines(text);
 
-  for (const auto &line : newLines)
+  for (const auto &line : newLines) {
     textLines.add(line);
-  while (getTextHeight() > getHeight())
-    textLines.remove(0);
+  }
 
-  repaint();
+  // Prune old lines if they exceed vertical height
+  while (textLines.size() > 0 && getHeight() > 0 &&
+         getTextHeight() > getHeight()) {
+    textLines.remove(0);
+  }
+
+  // Force a repaint on the message thread
+  juce::MessageManager::callAsync([this]() { repaint(); });
 }
 
 float ChannelPanel::getTextHeight() const {
@@ -58,6 +64,8 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   }
   setSize(800, 600);
   startTimerHz(30);
+
+  printTextToConsole("--- Euclidean Arp: Step 2 (Core Graph Engine) ---");
 }
 
 EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }
@@ -75,15 +83,30 @@ void EuclideanArpEditor::timerCallback() {
       for (int i = 0; i < size; ++i) {
         const auto &event = buffer[(size_t)(start + i)];
         juce::String text;
-        if (event.logType == 0)
-          text = "Note On: " + juce::String(event.data1) +
-                 " V: " + juce::String(event.data2);
-        else if (event.logType == 1)
-          text = "Note Off: " + juce::String(event.data1);
+
+        if (event.logType == 3) {
+          tickCount++;
+          continue; // Don't spam the console with every tick
+        } else if (event.logType == 6) {
+          printTextToConsole(
+              "Engine Info | BlockSize: " + juce::String(event.data1) +
+              " SR: " + juce::String(event.data2));
+          continue;
+        }
+
+        if (event.logType == 0 || event.logType == 4)
+          text = (event.logType == 4 ? "ARP Note On: " : "Note On: ") +
+                 juce::String(event.data1) + " V: " + juce::String(event.data2);
+        else if (event.logType == 1 || event.logType == 5)
+          text = (event.logType == 5 ? "ARP Note Off: " : "Note Off: ") +
+                 juce::String(event.data1);
         else if (event.logType == 2)
           text = "CC " + juce::String(event.data1) + ": " +
                  juce::String((int)event.data2);
 
+        if (event.logType == 4 || event.logType == 5) {
+          printTextToConsole(text);
+        }
         printTextToChannel(event.channel, text);
       }
     };
@@ -94,6 +117,16 @@ void EuclideanArpEditor::timerCallback() {
       readEvents(start2, size2);
 
     fifo.finishedRead(size1 + size2);
+  }
+
+  // Update the console status line periodically (every ~0.5 sec = 15 frames)
+  statusFrameCount++;
+  if (statusFrameCount >= 15) {
+    statusFrameCount = 0;
+    auto held = audioProcessor.midiHandler.getHeldNotes();
+    juce::String status = "Ticks: " + juce::String(tickCount) +
+                          " | Held: " + juce::String((int)held.size());
+    printTextToConsole(status);
   }
 }
 

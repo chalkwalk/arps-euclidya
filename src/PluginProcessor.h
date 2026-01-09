@@ -1,11 +1,10 @@
 #pragma once
 
-#include "DataModel.h"
 #include <array>
 #include <juce_audio_processors/juce_audio_processors.h>
 
 struct MidiLogEvent {
-  int logType; // 0=NoteOn, 1=NoteOff, 2=CC
+  int logType; // 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn, 5=ArpNoteOff
   int channel;
   int data1;
   float data2;
@@ -13,6 +12,12 @@ struct MidiLogEvent {
 
 // Forward declaration of the editor class
 class EuclideanArpEditor;
+
+#include "ClockManager.h"
+#include "GraphEngine.h"
+#include "MidiHandler.h"
+#include "MidiInNode.h"
+#include "MidiOutNode.h"
 
 class EuclideanArpProcessor : public juce::AudioProcessor {
 public:
@@ -50,6 +55,15 @@ public:
   juce::AbstractFifo midiLogFifo{512};
   std::array<MidiLogEvent, 512> midiLogBuffer;
   void logMidiEvent(int type, int channel, int d1, float d2);
+
+  // Subsystems
+  MidiHandler midiHandler;
+  ClockManager clockManager;
+  GraphEngine graphEngine;
+
+  // Hardcoded Step 2 Nodes
+  std::shared_ptr<MidiInNode> midiInNode;
+  std::shared_ptr<MidiOutNode> midiOutNode;
 
 private:
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

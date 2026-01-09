@@ -16,7 +16,12 @@ target_sources(EuclideanArp
     PRIVATE
         PluginProcessor.cpp
         PluginEditor.cpp
-        GraphNode.cpp)
+        GraphNode.cpp
+        GraphEngine.cpp
+        MidiHandler.cpp
+        ClockManager.cpp
+        MidiInNode.cpp
+        MidiOutNode.cpp)
 
 target_compile_definitions(EuclideanArp
     PUBLIC

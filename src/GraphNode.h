@@ -9,7 +9,7 @@ class GraphNode {
 public:
   virtual ~GraphNode() = default;
 
-  virtual juce::String getName() const = 0;
+  virtual std::string getName() const = 0;
 
   // Triggered when an upstream connection sets the dirty flag
   virtual void process() = 0;
