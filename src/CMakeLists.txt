@@ -19,6 +19,7 @@ target_sources(EuclideanArp
         GraphNode.cpp
         GraphEngine.cpp
         MidiHandler.cpp
+        EuclideanMath.cpp
         ClockManager.cpp
         MidiInNode.cpp
         MidiOutNode.cpp)

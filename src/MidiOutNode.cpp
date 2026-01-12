@@ -1,10 +1,11 @@
 #include "MidiOutNode.h"
 
-MidiOutNode::MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx)
-    : midiHandler(midiCtx), clockManager(clockCtx) {}
+MidiOutNode::MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
+                         std::array<std::atomic<float> *, 32> macrosArray)
+    : midiHandler(midiCtx), clockManager(clockCtx), macros(macrosArray) {}
 
 void MidiOutNode::process() {
-  // The graph changed upstream, we need to reset the index if the length shrunk
+  // Graph changed upstream, reset sequence logic if the length shrunk
   auto it = inputSequences.find(0);
   if (it != inputSequences.end()) {
     int numSteps = it->second.size();
@@ -18,10 +19,7 @@ void MidiOutNode::process() {
 
 void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                                int samplePosition) {
-  // Release any notes currently held from the previous step BEFORE looking for
-  // ticks In a real ARP, Note Offs are triggered by a Gate Length / PPQN
-  // sub-tick For Step 2, we just kill the previous note exactly when the new
-  // note triggers
+  // Kill prev notes unconditionally on the tick for now
   bool isTick = clockManager.isTick();
 
   if (isTick) {
@@ -38,33 +36,53 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
   if (isTick) {
     const auto &sequence = it->second;
-    const auto &step = sequence[sequenceIndex];
 
-    // Ensure index wraps properly
-    sequenceIndex = (sequenceIndex + 1) % sequence.size();
+    // Build the pattern using Macros 1, 2, and 3
+    // Safe-cast knowing they represent properties
+    int steps = macros[0] != nullptr ? (int)std::round(macros[0]->load()) : 16;
+    int beats = macros[1] != nullptr ? (int)std::round(macros[1]->load()) : 4;
+    int offset = macros[2] != nullptr ? (int)std::round(macros[2]->load()) : 16;
 
-    for (const HeldNote &noteTrigger : step) {
-      // --- DYNAMIC MPE POLLING ---
-      // Fetch the **current** physical state from the controller for this note
-      // even though the graph might have seen the trigger seconds ago
-      float currentPressure = midiHandler.getMpeZ(noteTrigger.noteNumber);
+    std::vector<bool> pattern =
+        EuclideanMath::generatePattern(steps, beats, offset);
 
-      // For Step 2, let's map pressure (Z) to Velocity to prove out the
-      // decouple Base velocity + modulated pressure
-      float finalVelocity = std::clamp(
-          noteTrigger.velocity + (currentPressure * 0.5f), 0.0f, 1.0f);
+    if (pattern.empty())
+      return;
 
-      outputBuffer.addEvent(juce::MidiMessage::noteOn(noteTrigger.channel,
-                                                      noteTrigger.noteNumber,
-                                                      finalVelocity),
-                            samplePosition);
+    // Safety check - we must wrap if pattern length dynamically shrunk
+    if (patternIndex >= (int)pattern.size()) {
+      patternIndex = 0;
+    }
 
-      // Keep track so we can Note Off on the next beat
-      playingNotes.push_back({noteTrigger.channel, noteTrigger.noteNumber});
+    // Instantaneously skip sequence steps until the pattern dictates a Beat
+    size_t skipsProcessed = 0; // limit to prevent infinite loops (e.g. 0 beats)
+    while (!pattern[patternIndex] && skipsProcessed < pattern.size()) {
+      patternIndex = (int)((patternIndex + 1) % pattern.size());
+      sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
+      skipsProcessed++;
+    }
 
-      // Note: Continuous messages (Pitch Bend, CC74) for actively playing notes
-      // should realistically be pushed out every audio block, not just on
-      // ticks. But this proves the decoupled Note-On modulation concept.
+    // If the loop broke normally, we have a Note to play
+    if (pattern[patternIndex]) {
+      const auto &step = sequence[sequenceIndex];
+
+      // Increment for NEXT clock tick
+      patternIndex = (int)((patternIndex + 1) % pattern.size());
+      sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
+
+      for (const HeldNote &noteTrigger : step) {
+        // --- DYNAMIC MPE POLLING ---
+        float currentPressure = midiHandler.getMpeZ(noteTrigger.noteNumber);
+        float finalVelocity = std::clamp(
+            noteTrigger.velocity + (currentPressure * 0.5f), 0.0f, 1.0f);
+
+        outputBuffer.addEvent(juce::MidiMessage::noteOn(noteTrigger.channel,
+                                                        noteTrigger.noteNumber,
+                                                        finalVelocity),
+                              samplePosition);
+
+        playingNotes.push_back({noteTrigger.channel, noteTrigger.noteNumber});
+      }
     }
   }
 }

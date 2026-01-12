@@ -5,9 +5,15 @@ EuclideanArpProcessor::EuclideanArpProcessor()
     : AudioProcessor(BusesProperties()), // No audio channels for MIDI effect
       apvts(*this, nullptr, "Parameters", createParameterLayout()) {
 
+  // Fetch raw parameter pointers for RT thread
+  for (int i = 0; i < 32; ++i) {
+    macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
+  }
+
   // Step 2 wiring
   midiInNode = std::make_shared<MidiInNode>(midiHandler);
-  midiOutNode = std::make_shared<MidiOutNode>(midiHandler, clockManager);
+  midiOutNode =
+      std::make_shared<MidiOutNode>(midiHandler, clockManager, macros);
 
   // Hardcoded Patch
   midiInNode->addConnection(0, midiOutNode.get(), 0);
@@ -33,6 +39,26 @@ void EuclideanArpProcessor::logMidiEvent(int type, int channel, int d1,
 juce::AudioProcessorValueTreeState::ParameterLayout
 EuclideanArpProcessor::createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+  for (int i = 1; i <= 32; ++i) {
+    juce::String id = "macro_" + juce::String(i);
+    juce::String name = "Macro " + juce::String(i);
+
+    if (i == 1) { // Steps
+      layout.add(std::make_unique<juce::AudioParameterInt>(
+          id, name + " (Steps)", 1, 32, 16));
+    } else if (i == 2) { // Beats
+      layout.add(std::make_unique<juce::AudioParameterInt>(
+          id, name + " (Beats)", 1, 32, 4));
+    } else if (i == 3) { // Offset
+      layout.add(std::make_unique<juce::AudioParameterInt>(
+          id, name + " (Offset)", 0, 32, 16));
+    } else {
+      layout.add(std::make_unique<juce::AudioParameterFloat>(id, name, 0.0f,
+                                                             1.0f, 0.0f));
+    }
+  }
+
   return layout;
 }
 

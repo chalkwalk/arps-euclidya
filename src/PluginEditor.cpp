@@ -65,7 +65,7 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   setSize(800, 600);
   startTimerHz(30);
 
-  printTextToConsole("--- Euclidean Arp: Step 2 (Core Graph Engine) ---");
+  printTextToConsole("--- Euclidean Arp: Step 3 (The Pattern Integration) ---");
 }
 
 EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }

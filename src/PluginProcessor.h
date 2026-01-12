@@ -51,6 +51,7 @@ public:
   class EuclideanArpEditor *getEditor();
 
   juce::AudioProcessorValueTreeState apvts;
+  std::array<std::atomic<float> *, 32> macros = {nullptr};
 
   juce::AbstractFifo midiLogFifo{512};
   std::array<MidiLogEvent, 512> midiLogBuffer;
