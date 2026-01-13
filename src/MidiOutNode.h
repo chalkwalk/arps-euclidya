@@ -29,6 +29,7 @@ private:
 
   int sequenceIndex = 0;
   int patternIndex = 0;
+  int rhythmIndex = 0;
 
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)

@@ -37,14 +37,39 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
   if (isTick) {
     const auto &sequence = it->second;
 
-    // Build the pattern using Macros 1, 2, and 3
-    // Safe-cast knowing they represent properties
-    int steps = macros[0] != nullptr ? (int)std::round(macros[0]->load()) : 16;
-    int beats = macros[1] != nullptr ? (int)std::round(macros[1]->load()) : 4;
-    int offset = macros[2] != nullptr ? (int)std::round(macros[2]->load()) : 16;
+    // --- 1. RHYTHM LAYER (Beat vs Rest) ---
+    int rSteps = macros[3] != nullptr ? (int)std::round(macros[3]->load()) : 16;
+    int rBeats = macros[4] != nullptr ? (int)std::round(macros[4]->load()) : 16;
+    int rOffset =
+        macros[5] != nullptr ? (int)std::round(macros[5]->load()) : 16;
+
+    std::vector<bool> rhythmPattern =
+        EuclideanMath::generatePattern(rSteps, rBeats, rOffset);
+
+    if (rhythmPattern.empty())
+      return;
+
+    if (rhythmIndex >= (int)rhythmPattern.size()) {
+      rhythmIndex = 0;
+    }
+
+    bool isRhythmBeat = rhythmPattern[rhythmIndex];
+    rhythmIndex = (int)((rhythmIndex + 1) % rhythmPattern.size());
+
+    // If it's a Rest, time passes but absolutely nothing triggers
+    if (!isRhythmBeat) {
+      return;
+    }
+
+    // --- 2. PATTERN LAYER (Note vs Skip) ---
+    // We only evaluate this IF the Rhythm layer produced a Beat trigger
+    int pSteps = macros[0] != nullptr ? (int)std::round(macros[0]->load()) : 16;
+    int pBeats = macros[1] != nullptr ? (int)std::round(macros[1]->load()) : 4;
+    int pOffset =
+        macros[2] != nullptr ? (int)std::round(macros[2]->load()) : 16;
 
     std::vector<bool> pattern =
-        EuclideanMath::generatePattern(steps, beats, offset);
+        EuclideanMath::generatePattern(pSteps, pBeats, pOffset);
 
     if (pattern.empty())
       return;
