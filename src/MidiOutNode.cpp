@@ -4,16 +4,66 @@ MidiOutNode::MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
                          std::array<std::atomic<float> *, 32> macrosArray)
     : midiHandler(midiCtx), clockManager(clockCtx), macros(macrosArray) {}
 
+namespace {
+bool stepsAreEqual(const std::vector<HeldNote> &a,
+                   const std::vector<HeldNote> &b) {
+  if (a.size() != b.size())
+    return false;
+  // Assumes notes within a step are sorted or at least in the same order
+  for (size_t i = 0; i < a.size(); ++i) {
+    if (!(a[i] == b[i]))
+      return false;
+  }
+  return true;
+}
+
+int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
+                         const NoteSequence &oldSequence,
+                         const NoteSequence &newSequence, int previousIndex) {
+  if (newSequence.empty())
+    return 0;
+
+  int nL = newSequence.size();
+
+  // Spiral search forward
+  for (int i = 0; i < nL; ++i) {
+    int cI = (previousIndex + i) % nL;
+    if (stepsAreEqual(newSequence[cI], stepToFind))
+      return cI;
+  }
+
+  // Fallback search from beginning
+  for (int i = 0; i < nL; ++i) {
+    if (stepsAreEqual(newSequence[i], stepToFind))
+      return i;
+  }
+
+  // Proportional index fallback
+  int oL = std::max(1, (int)oldSequence.size());
+  return ((previousIndex * nL) / oL) % nL;
+}
+} // namespace
+
 void MidiOutNode::process() {
-  // Graph changed upstream, reset sequence logic if the length shrunk
   auto it = inputSequences.find(0);
   if (it != inputSequences.end()) {
-    int numSteps = it->second.size();
-    if (numSteps > 0 && sequenceIndex >= numSteps) {
+    const NoteSequence &newSequence = it->second;
+    int numSteps = newSequence.size();
+
+    if (numSteps == 0) {
       sequenceIndex = 0;
-    } else if (numSteps == 0) {
-      sequenceIndex = 0;
+    } else if (!previousSequence.empty() &&
+               sequenceIndex < (int)previousSequence.size()) {
+      auto stepToFind = previousSequence[sequenceIndex];
+      sequenceIndex = findClosestNoteIndex(stepToFind, previousSequence,
+                                           newSequence, sequenceIndex);
+    } else {
+      if (sequenceIndex >= numSteps) {
+        sequenceIndex = 0;
+      }
     }
+
+    previousSequence = newSequence;
   }
 }
 

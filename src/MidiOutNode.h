@@ -31,6 +31,8 @@ private:
   int patternIndex = 0;
   int rhythmIndex = 0;
 
+  NoteSequence previousSequence;
+
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)
   std::vector<std::pair<int, int>> playingNotes;
