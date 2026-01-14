@@ -20,8 +20,8 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
       double currentPpq = *info->getPpqPosition();
 
       if (lastPpqPosition >= 0.0) {
-        // Determine if we crossed a 1/16th note boundary (0.25 PPQ)
-        double division = 0.25;
+        // Determine if we crossed an 1/8th note boundary (0.5 PPQ)
+        double division = 0.5;
 
         double previousTick = std::floor(lastPpqPosition / division);
         double currentTick = std::floor(currentPpq / division);
@@ -38,12 +38,12 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
 
     if (sampleRate > 0) {
       double samplesPerBeat = (sampleRate * 60.0) / currentBPM;
-      double samplesPerSixteenth = samplesPerBeat * 0.25;
+      double samplesPerEighth = samplesPerBeat * 0.5;
 
       internalPhase += samplesPerBlock;
 
-      if (internalPhase >= samplesPerSixteenth) {
-        internalPhase -= samplesPerSixteenth;
+      if (internalPhase >= samplesPerEighth) {
+        internalPhase -= samplesPerEighth;
         tickFlag = true;
       }
     }

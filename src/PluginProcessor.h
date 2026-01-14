@@ -18,6 +18,7 @@ class EuclideanArpEditor;
 #include "MidiHandler.h"
 #include "MidiInNode.h"
 #include "MidiOutNode.h"
+#include "SortNode.h"
 
 class EuclideanArpProcessor : public juce::AudioProcessor {
 public:
@@ -64,6 +65,7 @@ public:
 
   // Hardcoded Step 2 Nodes
   std::shared_ptr<MidiInNode> midiInNode;
+  std::shared_ptr<SortNode> sortNode;
   std::shared_ptr<MidiOutNode> midiOutNode;
 
 private:

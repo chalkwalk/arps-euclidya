@@ -18,6 +18,7 @@ target_sources(EuclideanArp
         PluginEditor.cpp
         GraphNode.cpp
         GraphEngine.cpp
+        SortNode.cpp
         MidiHandler.cpp
         EuclideanMath.cpp
         ClockManager.cpp

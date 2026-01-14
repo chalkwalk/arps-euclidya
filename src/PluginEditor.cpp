@@ -65,7 +65,8 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   setSize(800, 600);
   startTimerHz(30);
 
-  printTextToConsole("--- Euclidean Arp: Step 4 (The Rhythm Layer) ---");
+  printTextToConsole(
+      "--- Euclidean Arp: Step 5 (The First Transformation) ---");
 }
 
 EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }

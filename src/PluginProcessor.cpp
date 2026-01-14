@@ -10,15 +10,18 @@ EuclideanArpProcessor::EuclideanArpProcessor()
     macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
   }
 
-  // Step 2 wiring
+  // Step 5 wiring
   midiInNode = std::make_shared<MidiInNode>(midiHandler);
+  sortNode = std::make_shared<SortNode>();
   midiOutNode =
       std::make_shared<MidiOutNode>(midiHandler, clockManager, macros);
 
   // Hardcoded Patch
-  midiInNode->addConnection(0, midiOutNode.get(), 0);
+  midiInNode->addConnection(0, sortNode.get(), 0);
+  sortNode->addConnection(0, midiOutNode.get(), 0);
 
   graphEngine.addNode(midiInNode);
+  graphEngine.addNode(sortNode);
   graphEngine.addNode(midiOutNode);
 }
 
