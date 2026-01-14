@@ -1,7 +1,7 @@
 
 juce_add_plugin(EuclideanArp
     COMPANY_NAME "ChalkWalkMusic"
-    IS_SYNTH FALSE
+    IS_SYNTH TRUE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_EFFECT TRUE
@@ -19,6 +19,7 @@ target_sources(EuclideanArp
         GraphNode.cpp
         GraphEngine.cpp
         SortNode.cpp
+        ReverseNode.cpp
         MidiHandler.cpp
         EuclideanMath.cpp
         ClockManager.cpp

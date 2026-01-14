@@ -66,7 +66,7 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   startTimerHz(30);
 
   printTextToConsole(
-      "--- Euclidean Arp: Step 5 (The First Transformation) ---");
+      "--- Euclidean Arp: Step 6 (Expanding Transformations) ---");
 }
 
 EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }
