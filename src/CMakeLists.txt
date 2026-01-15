@@ -26,6 +26,8 @@ target_sources(EuclideanArp
         MidiInNode.cpp
         MidiOutNode.cpp)
 
+clap_juce_extensions_plugin(TARGET EuclideanArp CLAP_ID "com.ChalkWalkMusic.EuclideanArp" CLAP_FEATURES "note-effect" "tool")
+
 target_compile_definitions(EuclideanArp
     PUBLIC
         JUCE_WEB_BROWSER=0
