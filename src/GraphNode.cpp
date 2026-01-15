@@ -17,3 +17,5 @@ void GraphNode::addConnection(int thisOutputPort, GraphNode *targetNode,
                               int targetInputPort) {
   connections[thisOutputPort].push_back({targetNode, targetInputPort});
 }
+
+void GraphNode::clearConnections() { connections.clear(); }

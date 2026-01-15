@@ -17,11 +17,6 @@ EuclideanArpProcessor::EuclideanArpProcessor()
   midiOutNode =
       std::make_shared<MidiOutNode>(midiHandler, clockManager, macros);
 
-  // Hardcoded Patch
-  midiInNode->addConnection(0, sortNode.get(), 0);
-  sortNode->addConnection(0, reverseNode.get(), 0);
-  reverseNode->addConnection(0, midiOutNode.get(), 0);
-
   graphEngine.addNode(midiInNode);
   graphEngine.addNode(sortNode);
   graphEngine.addNode(reverseNode);
@@ -146,17 +141,23 @@ void EuclideanArpProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
   midiHandler.processMidi(midiMessages);
 
-  // Instantaneous graph recalculation
-  if (midiHandler.hasChanged()) {
-    graphEngine.recalculate();
+  {
+    const juce::ScopedLock sl(graphLock);
+
+    // Instantaneous graph recalculation
+    if (midiHandler.hasChanged()) {
+      graphEngine.recalculate();
+    }
+
+    // Clear input, we are replacing the midi stream with our engine's output
+    midiMessages.clear();
+
+    // The output node evaluates the tick and sequence cache to build the new
+    // buffer
+    if (midiOutNode) {
+      midiOutNode->generateMidi(midiMessages, 0);
+    }
   }
-
-  // Clear input, we are replacing the midi stream with our engine's output
-  midiMessages.clear();
-
-  // The output node evaluates the tick and sequence cache to build the new
-  // buffer
-  midiOutNode->generateMidi(midiMessages, 0);
 
   // Log the *output* MIDI to the UI FIFO using the user's out-of-band edit
   for (const auto metadata : midiMessages) {
@@ -197,6 +198,21 @@ void EuclideanArpProcessor::setStateInformation(const void *data,
 
 EuclideanArpEditor *EuclideanArpProcessor::getEditor() {
   return dynamic_cast<EuclideanArpEditor *>(getActiveEditor());
+}
+
+void EuclideanArpProcessor::addNode(std::shared_ptr<GraphNode> node) {
+  const juce::ScopedLock sl(graphLock);
+  graphEngine.addNode(node);
+}
+
+void EuclideanArpProcessor::removeNode(GraphNode *node) {
+  const juce::ScopedLock sl(graphLock);
+  graphEngine.removeNode(node);
+}
+
+void EuclideanArpProcessor::moveNode(GraphNode *node, int newIndex) {
+  const juce::ScopedLock sl(graphLock);
+  graphEngine.moveNode(node, newIndex);
 }
 
 // This creates new instances of the plugin
