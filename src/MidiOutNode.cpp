@@ -88,13 +88,18 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     const auto &sequence = it->second;
 
     // --- 1. RHYTHM LAYER (Beat vs Rest) ---
-    int rSteps = macros[3] != nullptr ? (int)std::round(macros[3]->load()) : 16;
-    int rBeats = macros[4] != nullptr ? (int)std::round(macros[4]->load()) : 16;
-    int rOffset =
-        macros[5] != nullptr ? (int)std::round(macros[5]->load()) : 16;
+    int actualRSteps = macroRSteps != -1 && macros[macroRSteps] != nullptr
+                           ? (int)std::round(macros[macroRSteps]->load())
+                           : rSteps;
+    int actualRBeats = macroRBeats != -1 && macros[macroRBeats] != nullptr
+                           ? (int)std::round(macros[macroRBeats]->load())
+                           : rBeats;
+    int actualROffset = macroROffset != -1 && macros[macroROffset] != nullptr
+                            ? (int)std::round(macros[macroROffset]->load())
+                            : rOffset;
 
-    std::vector<bool> rhythmPattern =
-        EuclideanMath::generatePattern(rSteps, rBeats, rOffset);
+    std::vector<bool> rhythmPattern = EuclideanMath::generatePattern(
+        actualRSteps, actualRBeats, actualROffset);
 
     if (rhythmPattern.empty())
       return;
@@ -113,13 +118,18 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
     // --- 2. PATTERN LAYER (Note vs Skip) ---
     // We only evaluate this IF the Rhythm layer produced a Beat trigger
-    int pSteps = macros[0] != nullptr ? (int)std::round(macros[0]->load()) : 16;
-    int pBeats = macros[1] != nullptr ? (int)std::round(macros[1]->load()) : 4;
-    int pOffset =
-        macros[2] != nullptr ? (int)std::round(macros[2]->load()) : 16;
+    int actualPSteps = macroPSteps != -1 && macros[macroPSteps] != nullptr
+                           ? (int)std::round(macros[macroPSteps]->load())
+                           : pSteps;
+    int actualPBeats = macroPBeats != -1 && macros[macroPBeats] != nullptr
+                           ? (int)std::round(macros[macroPBeats]->load())
+                           : pBeats;
+    int actualPOffset = macroPOffset != -1 && macros[macroPOffset] != nullptr
+                            ? (int)std::round(macros[macroPOffset]->load())
+                            : pOffset;
 
-    std::vector<bool> pattern =
-        EuclideanMath::generatePattern(pSteps, pBeats, pOffset);
+    std::vector<bool> pattern = EuclideanMath::generatePattern(
+        actualPSteps, actualPBeats, actualPOffset);
 
     if (pattern.empty())
       return;

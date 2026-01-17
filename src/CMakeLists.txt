@@ -25,6 +25,7 @@ target_sources(EuclideanArp
         ClockManager.cpp
         MidiInNode.cpp
         MidiOutNode.cpp
+        MidiOutNodeEditor.cpp
         NodeEditorPanel.cpp)
 
 clap_juce_extensions_plugin(TARGET EuclideanArp CLAP_ID "com.ChalkWalkMusic.EuclideanArp" CLAP_FEATURES "note-effect" "tool")

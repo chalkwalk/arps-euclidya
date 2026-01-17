@@ -22,6 +22,23 @@ public:
 
   void generateMidi(juce::MidiBuffer &outputBuffer, int samplePosition);
 
+  std::unique_ptr<juce::Component>
+  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+
+  int pSteps = 16;
+  int pBeats = 4;
+  int pOffset = 16;
+  int rSteps = 16;
+  int rBeats = 16;
+  int rOffset = 16;
+
+  int macroPSteps = -1;
+  int macroPBeats = -1;
+  int macroPOffset = -1;
+  int macroRSteps = -1;
+  int macroRBeats = -1;
+  int macroROffset = -1;
+
 private:
   MidiHandler &midiHandler;
   ClockManager &clockManager;

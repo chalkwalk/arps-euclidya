@@ -83,8 +83,8 @@ void EuclideanArpEditor::resized() {
 
   int panelY = 5;
   for (auto panel : nodePanels) {
-    panel->setBounds(10, panelY, bounds.getWidth() - 40, 150);
-    panelY += 160;
+    panel->setBounds(10, panelY, bounds.getWidth() - 40, 220);
+    panelY += 230;
   }
   graphContent.setBounds(0, 0, bounds.getWidth() - 20, panelY);
 }
