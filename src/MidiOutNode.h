@@ -15,12 +15,15 @@ public:
               std::array<std::atomic<float> *, 32> macrosArray);
   ~MidiOutNode() override = default;
 
-  std::string getName() const override { return "Midi Out Node"; }
+  std::string getName() const override { return "Midi Out"; }
 
   // Re-caches internally when graph sequence changes
   void process() override;
 
   void generateMidi(juce::MidiBuffer &outputBuffer, int samplePosition);
+
+  void saveNodeState(juce::XmlElement *xml) override;
+  void loadNodeState(juce::XmlElement *xml) override;
 
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;

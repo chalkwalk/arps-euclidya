@@ -16,10 +16,6 @@ class EuclideanArpEditor;
 #include "ClockManager.h"
 #include "GraphEngine.h"
 #include "MidiHandler.h"
-#include "MidiInNode.h"
-#include "MidiOutNode.h"
-#include "ReverseNode.h"
-#include "SortNode.h"
 
 class EuclideanArpProcessor : public juce::AudioProcessor {
 public:
@@ -71,10 +67,7 @@ public:
   void moveNode(GraphNode *node, int newIndex);
 
   // Hardcoded Step 2 Nodes
-  std::shared_ptr<MidiInNode> midiInNode;
-  std::shared_ptr<SortNode> sortNode;
-  std::shared_ptr<ReverseNode> reverseNode;
-  std::shared_ptr<MidiOutNode> midiOutNode;
+  // Hardcoded Step 2 Nodes
 
 private:
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

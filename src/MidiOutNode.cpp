@@ -171,3 +171,39 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     }
   }
 }
+
+void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
+  if (xml != nullptr) {
+    xml->setAttribute("pSteps", pSteps);
+    xml->setAttribute("pBeats", pBeats);
+    xml->setAttribute("pOffset", pOffset);
+    xml->setAttribute("rSteps", rSteps);
+    xml->setAttribute("rBeats", rBeats);
+    xml->setAttribute("rOffset", rOffset);
+
+    xml->setAttribute("macroPSteps", macroPSteps);
+    xml->setAttribute("macroPBeats", macroPBeats);
+    xml->setAttribute("macroPOffset", macroPOffset);
+    xml->setAttribute("macroRSteps", macroRSteps);
+    xml->setAttribute("macroRBeats", macroRBeats);
+    xml->setAttribute("macroROffset", macroROffset);
+  }
+}
+
+void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
+  if (xml != nullptr) {
+    pSteps = xml->getIntAttribute("pSteps", 16);
+    pBeats = xml->getIntAttribute("pBeats", 4);
+    pOffset = xml->getIntAttribute("pOffset", 16);
+    rSteps = xml->getIntAttribute("rSteps", 16);
+    rBeats = xml->getIntAttribute("rBeats", 16);
+    rOffset = xml->getIntAttribute("rOffset", 16);
+
+    macroPSteps = xml->getIntAttribute("macroPSteps", -1);
+    macroPBeats = xml->getIntAttribute("macroPBeats", -1);
+    macroPOffset = xml->getIntAttribute("macroPOffset", -1);
+    macroRSteps = xml->getIntAttribute("macroRSteps", -1);
+    macroRBeats = xml->getIntAttribute("macroRBeats", -1);
+    macroROffset = xml->getIntAttribute("macroROffset", -1);
+  }
+}

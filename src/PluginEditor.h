@@ -16,8 +16,9 @@ public:
   void resized() override;
   void timerCallback() override;
 
-private:
   void rebuildGraphUI();
+
+private:
   void addNodeFromLibrary(const juce::String &nodeType);
 
   EuclideanArpProcessor &audioProcessor;

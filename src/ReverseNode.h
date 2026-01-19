@@ -7,7 +7,7 @@ public:
   ReverseNode() = default;
   ~ReverseNode() override = default;
 
-  std::string getName() const override { return "Reverse Node"; }
+  std::string getName() const override { return "Reverse"; }
 
   void process() override;
 };

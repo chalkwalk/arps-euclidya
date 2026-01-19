@@ -5,6 +5,9 @@
 #include <memory>
 #include <vector>
 
+class MidiHandler;
+class ClockManager;
+
 class GraphEngine {
 public:
   GraphEngine() = default;
@@ -24,6 +27,11 @@ public:
 
   // Rebuilds implicit connections based on node order and applies overrides
   void updateImplicitConnections();
+
+  void saveState(juce::XmlElement *xmlRoot);
+  void loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
+                 ClockManager &clockCtx,
+                 std::array<std::atomic<float> *, 32> &macros);
 
 private:
   std::vector<std::shared_ptr<GraphNode>> nodes;

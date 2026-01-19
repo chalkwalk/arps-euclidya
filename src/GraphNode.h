@@ -9,9 +9,15 @@
 
 class GraphNode {
 public:
+  GraphNode() : nodeId(juce::Uuid()) {}
   virtual ~GraphNode() = default;
 
+  juce::Uuid nodeId;
+
   virtual std::string getName() const = 0;
+
+  virtual void saveNodeState(juce::XmlElement *xml) { juce::ignoreUnused(xml); }
+  virtual void loadNodeState(juce::XmlElement *xml) { juce::ignoreUnused(xml); }
 
   // Triggered when an upstream connection sets the dirty flag
   virtual void process() = 0;

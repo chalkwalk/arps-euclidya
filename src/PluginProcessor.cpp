@@ -1,5 +1,9 @@
 #include "PluginProcessor.h"
+#include "MidiInNode.h"
+#include "MidiOutNode.h"
 #include "PluginEditor.h"
+#include "ReverseNode.h"
+#include "SortNode.h"
 
 EuclideanArpProcessor::EuclideanArpProcessor()
     : AudioProcessor(BusesProperties()), // No audio channels for MIDI effect
@@ -10,17 +14,11 @@ EuclideanArpProcessor::EuclideanArpProcessor()
     macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
   }
 
-  // Step 6 wiring
-  midiInNode = std::make_shared<MidiInNode>(midiHandler);
-  sortNode = std::make_shared<SortNode>();
-  reverseNode = std::make_shared<ReverseNode>();
-  midiOutNode =
-      std::make_shared<MidiOutNode>(midiHandler, clockManager, macros);
-
-  graphEngine.addNode(midiInNode);
-  graphEngine.addNode(sortNode);
-  graphEngine.addNode(reverseNode);
-  graphEngine.addNode(midiOutNode);
+  // Default initial graph wiring
+  graphEngine.addNode(std::make_shared<MidiInNode>(midiHandler));
+  graphEngine.addNode(std::make_shared<SortNode>());
+  graphEngine.addNode(
+      std::make_shared<MidiOutNode>(midiHandler, clockManager, macros));
 }
 
 EuclideanArpProcessor::~EuclideanArpProcessor() {}
@@ -153,9 +151,11 @@ void EuclideanArpProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     midiMessages.clear();
 
     // The output node evaluates the tick and sequence cache to build the new
-    // buffer
-    if (midiOutNode) {
-      midiOutNode->generateMidi(midiMessages, 0);
+    // buffer. Find all MidiOutNodes in the graph and let them emit.
+    for (const auto &node : graphEngine.getNodes()) {
+      if (auto *outNode = dynamic_cast<MidiOutNode *>(node.get())) {
+        outNode->generateMidi(midiMessages, 0);
+      }
     }
   }
 
@@ -182,18 +182,54 @@ juce::AudioProcessorEditor *EuclideanArpProcessor::createEditor() {
 }
 
 void EuclideanArpProcessor::getStateInformation(juce::MemoryBlock &destData) {
+  juce::XmlElement xmlRoot("EuclideanArpState");
+
+  // Save APVTS Macros
   auto state = apvts.copyState();
-  std::unique_ptr<juce::XmlElement> xml(state.createXml());
-  copyXmlToBinary(*xml, destData);
+  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
+  if (apvtsXml != nullptr) {
+    auto *wrapper = xmlRoot.createNewChildElement("APVTS");
+    wrapper->addChildElement(apvtsXml.release());
+  }
+
+  // Save Graph State
+  auto *graphXml = xmlRoot.createNewChildElement("Graph");
+  {
+    const juce::ScopedLock sl(graphLock);
+    graphEngine.saveState(graphXml);
+  }
+
+  copyXmlToBinary(xmlRoot, destData);
 }
 
 void EuclideanArpProcessor::setStateInformation(const void *data,
                                                 int sizeInBytes) {
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
-  if (xmlState.get() != nullptr)
-    if (xmlState->hasTagName(apvts.state.getType()))
-      apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+  if (xmlState != nullptr && xmlState->hasTagName("EuclideanArpState")) {
+    // Restore APVTS Macros
+    auto *apvtsWrapper = xmlState->getChildByName("APVTS");
+    if (apvtsWrapper != nullptr && apvtsWrapper->getNumChildElements() > 0) {
+      auto *apvtsXml = apvtsWrapper->getChildElement(0);
+      if (apvtsXml->hasTagName(apvts.state.getType())) {
+        apvts.replaceState(juce::ValueTree::fromXml(*apvtsXml));
+      }
+    }
+
+    // Restore Graph State
+    auto *graphXml = xmlState->getChildByName("Graph");
+    if (graphXml != nullptr) {
+      const juce::ScopedLock sl(graphLock);
+      graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
+
+      if (auto *editor = getEditor()) {
+        // Trigger asynchronous UI rebuild on the message thread
+        juce::MessageManager::callAsync(
+            [editor]() { editor->rebuildGraphUI(); });
+      }
+    }
+  }
 }
 
 EuclideanArpEditor *EuclideanArpProcessor::getEditor() {
