@@ -42,29 +42,8 @@ EuclideanArpProcessor::createParameterLayout() {
   for (int i = 1; i <= 32; ++i) {
     juce::String id = "macro_" + juce::String(i);
     juce::String name = "Macro " + juce::String(i);
-
-    if (i == 1) { // Pattern Steps
-      layout.add(std::make_unique<juce::AudioParameterInt>(
-          id, name + " (Pattern Steps)", 1, 32, 8));
-    } else if (i == 2) { // Pattern Beats
-      layout.add(std::make_unique<juce::AudioParameterInt>(
-          id, name + " (Pattern Beats)", 1, 32, 8));
-    } else if (i == 3) { // Pattern Offset
-      layout.add(std::make_unique<juce::AudioParameterInt>(
-          id, name + " (Pattern Offset)", 0, 32, 16));
-    } else if (i == 4) { // Rhythm Steps
-      layout.add(std::make_unique<juce::AudioParameterInt>(
-          id, name + " (Rhythm Steps)", 1, 32, 16));
-    } else if (i == 5) { // Rhythm Beats
-      layout.add(std::make_unique<juce::AudioParameterInt>(
-          id, name + " (Rhythm Beats)", 1, 32, 16));
-    } else if (i == 6) { // Rhythm Offset
-      layout.add(std::make_unique<juce::AudioParameterInt>(
-          id, name + " (Rhythm Offset)", 0, 32, 16));
-    } else {
-      layout.add(std::make_unique<juce::AudioParameterFloat>(id, name, 0.0f,
-                                                             1.0f, 0.0f));
-    }
+    layout.add(std::make_unique<juce::AudioParameterFloat>(id, name, 0.0f, 1.0f,
+                                                           0.0f));
   }
 
   return layout;

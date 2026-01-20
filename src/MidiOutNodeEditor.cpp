@@ -15,90 +15,123 @@ public:
   }
 };
 
+class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
+                        public juce::Slider::Listener {
+public:
+  MacroAttachment(juce::AudioProcessorValueTreeState &s,
+                  const juce::String &pID, juce::Slider &sl)
+      : state(s), paramID(pID), slider(sl) {
+    state.addParameterListener(paramID, this);
+    slider.addListener(this);
+    parameterChanged(paramID, *state.getRawParameterValue(paramID));
+  }
+  ~MacroAttachment() override {
+    state.removeParameterListener(paramID, this);
+    slider.removeListener(this);
+  }
+  void parameterChanged(const juce::String &, float newValue) override {
+    juce::MessageManager::callAsync([this, newValue]() {
+      juce::ScopedValueSetter<bool> svs(isUpdating, true);
+      double val = slider.getMinimum() +
+                   newValue * (slider.getMaximum() - slider.getMinimum());
+      slider.setValue(val, juce::sendNotificationSync);
+    });
+  }
+  void sliderValueChanged(juce::Slider *) override {
+    if (!isUpdating) {
+      float norm = (float)((slider.getValue() - slider.getMinimum()) /
+                           (slider.getMaximum() - slider.getMinimum()));
+      if (auto *param = state.getParameter(paramID))
+        param->setValueNotifyingHost(norm);
+    }
+  }
+
+private:
+  juce::AudioProcessorValueTreeState &state;
+  juce::String paramID;
+  juce::Slider &slider;
+  bool isUpdating = false;
+};
+
 class MidiOutNodeEditor : public juce::Component {
 public:
   MidiOutNodeEditor(MidiOutNode &node,
                     juce::AudioProcessorValueTreeState &apvts)
       : midiOutNode(node) {
     // Setup simple UI for Pattern and Rhythm
-    auto setupSlider =
-        [this, &apvts](CustomMacroSlider &slider, juce::Label &label,
-                       int &nodeValueRef, int &nodeMacroRef,
-                       std::unique_ptr<
-                           juce::AudioProcessorValueTreeState::SliderAttachment>
-                           &attachment,
-                       const juce::String &text) {
-          slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-          slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-          slider.setRange(1, 32, 1);
-          slider.setValue(nodeValueRef);
-          addAndMakeVisible(slider);
+    auto setupSlider = [this, &apvts](
+                           CustomMacroSlider &slider, juce::Label &label,
+                           int &nodeValueRef, int &nodeMacroRef,
+                           std::unique_ptr<MacroAttachment> &attachment,
+                           const juce::String &text, int minVal, int maxVal) {
+      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      slider.setRange(minVal, maxVal, 1);
+      slider.setValue(nodeValueRef);
+      addAndMakeVisible(slider);
 
-          label.setText(text, juce::dontSendNotification);
-          label.setJustificationType(juce::Justification::centred);
-          addAndMakeVisible(label);
+      label.setText(text, juce::dontSendNotification);
+      label.setJustificationType(juce::Justification::centred);
+      addAndMakeVisible(label);
 
-          slider.onValueChange = [&slider, &nodeValueRef]() {
-            nodeValueRef = (int)slider.getValue();
-          };
+      slider.onValueChange = [&slider, &nodeValueRef]() {
+        nodeValueRef = (int)slider.getValue();
+      };
 
-          auto updateSliderVisibility = [&slider](int macro) {
-            if (macro == -1) {
-              slider.removeColour(juce::Slider::rotarySliderFillColourId);
-              slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-            } else {
-              slider.setColour(juce::Slider::rotarySliderFillColourId,
-                               juce::Colours::orange);
-              slider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                               juce::Colours::orange.withAlpha(0.3f));
-            }
-          };
+      auto updateSliderVisibility = [&slider](int macro) {
+        if (macro == -1) {
+          slider.removeColour(juce::Slider::rotarySliderFillColourId);
+          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
+        } else {
+          slider.setColour(juce::Slider::rotarySliderFillColourId,
+                           juce::Colours::orange);
+          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                           juce::Colours::orange.withAlpha(0.3f));
+        }
+      };
 
-          slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
-                                 updateSliderVisibility]() {
-            MacroMappingMenu::showMenu(
-                &slider, nodeMacroRef,
-                [&nodeMacroRef, &attachment, &apvts, &slider,
-                 updateSliderVisibility](int macroIndex) {
-                  nodeMacroRef = macroIndex;
-                  if (macroIndex == -1) {
-                    attachment.reset();
-                    slider.setTooltip("");
-                  } else {
-                    attachment = std::make_unique<
-                        juce::AudioProcessorValueTreeState::SliderAttachment>(
-                        apvts, "macro_" + juce::String(macroIndex + 1), slider);
-                    slider.setTooltip("Mapped to Macro " +
-                                      juce::String(macroIndex + 1));
-                  }
-                  updateSliderVisibility(macroIndex);
-                });
-          };
+      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+                             updateSliderVisibility]() {
+        MacroMappingMenu::showMenu(
+            &slider, nodeMacroRef,
+            [&nodeMacroRef, &attachment, &apvts, &slider,
+             updateSliderVisibility](int macroIndex) {
+              nodeMacroRef = macroIndex;
+              if (macroIndex == -1) {
+                attachment.reset();
+                slider.setTooltip("");
+              } else {
+                attachment = std::make_unique<MacroAttachment>(
+                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
+                slider.setTooltip("Mapped to Macro " +
+                                  juce::String(macroIndex + 1));
+              }
+              updateSliderVisibility(macroIndex);
+            });
+      };
 
-          // Initialize tooltip and attachment if previously mapped
-          if (nodeMacroRef != -1) {
-            slider.setTooltip("Mapped to Macro " +
-                              juce::String(nodeMacroRef + 1));
-            attachment = std::make_unique<
-                juce::AudioProcessorValueTreeState::SliderAttachment>(
-                apvts, "macro_" + juce::String(nodeMacroRef + 1), slider);
-          }
-          updateSliderVisibility(nodeMacroRef);
-        };
+      // Initialize tooltip and attachment if previously mapped
+      if (nodeMacroRef != -1) {
+        slider.setTooltip("Mapped to Macro " + juce::String(nodeMacroRef + 1));
+        attachment = std::make_unique<MacroAttachment>(
+            apvts, "macro_" + juce::String(nodeMacroRef + 1), slider);
+      }
+      updateSliderVisibility(nodeMacroRef);
+    };
 
     setupSlider(pSteps, lPSteps, midiOutNode.pSteps, midiOutNode.macroPSteps,
-                aPSteps, "P Steps");
+                aPSteps, "P Steps", 1, 32);
     setupSlider(pBeats, lPBeats, midiOutNode.pBeats, midiOutNode.macroPBeats,
-                aPBeats, "P Beats");
+                aPBeats, "P Beats", 1, 32);
     setupSlider(pOffset, lPOffset, midiOutNode.pOffset,
-                midiOutNode.macroPOffset, aPOffset, "P Offset");
+                midiOutNode.macroPOffset, aPOffset, "P Offset", 0, 32);
 
     setupSlider(rSteps, lRSteps, midiOutNode.rSteps, midiOutNode.macroRSteps,
-                aRSteps, "R Steps");
+                aRSteps, "R Steps", 1, 32);
     setupSlider(rBeats, lRBeats, midiOutNode.rBeats, midiOutNode.macroRBeats,
-                aRBeats, "R Beats");
+                aRBeats, "R Beats", 1, 32);
     setupSlider(rOffset, lROffset, midiOutNode.rOffset,
-                midiOutNode.macroROffset, aROffset, "R Offset");
+                midiOutNode.macroROffset, aROffset, "R Offset", 0, 32);
 
     setSize(400, 150);
   }
@@ -141,10 +174,8 @@ private:
   juce::Label lPSteps, lPBeats, lPOffset;
   juce::Label lRSteps, lRBeats, lROffset;
 
-  std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> aPSteps,
-      aPBeats, aPOffset;
-  std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> aRSteps,
-      aRBeats, aROffset;
+  std::unique_ptr<MacroAttachment> aPSteps, aPBeats, aPOffset;
+  std::unique_ptr<MacroAttachment> aRSteps, aRBeats, aROffset;
 };
 
 std::unique_ptr<juce::Component>
