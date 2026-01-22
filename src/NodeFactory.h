@@ -15,7 +15,7 @@ public:
              ClockManager &clockCtx,
              std::array<std::atomic<float> *, 32> macros) {
     if (type == "Midi In")
-      return std::make_shared<MidiInNode>(midiCtx);
+      return std::make_shared<MidiInNode>(midiCtx, macros);
     if (type == "Sort")
       return std::make_shared<SortNode>();
     if (type == "Reverse")

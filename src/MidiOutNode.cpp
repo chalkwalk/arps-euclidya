@@ -163,7 +163,8 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
       for (const HeldNote &noteTrigger : step) {
         // --- DYNAMIC MPE POLLING ---
-        float currentPressure = midiHandler.getMpeZ(noteTrigger.noteNumber);
+        float currentPressure =
+            midiHandler.getMpeZ(noteTrigger.channel, noteTrigger.noteNumber);
         float finalVelocity = std::clamp(
             noteTrigger.velocity + (currentPressure * 0.5f), 0.0f, 1.0f);
 

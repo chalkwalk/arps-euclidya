@@ -1,9 +1,117 @@
 #include "MidiInNode.h"
+#include "MacroMappingMenu.h"
+#include "SharedMacroUI.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 
-MidiInNode::MidiInNode(MidiHandler &handler) : midiHandler(handler) {}
+class MidiInNodeEditor : public juce::Component {
+public:
+  MidiInNodeEditor(MidiInNode &node, juce::AudioProcessorValueTreeState &apvts)
+      : midiInNode(node) {
+
+    auto setupSlider = [this, &apvts](
+                           CustomMacroSlider &slider, juce::Label &label,
+                           int &nodeValueRef, int &nodeMacroRef,
+                           std::unique_ptr<MacroAttachment> &attachment,
+                           const juce::String &text, int minVal, int maxVal) {
+      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      slider.setRange(minVal, maxVal, 1);
+      slider.setValue(nodeValueRef);
+      addAndMakeVisible(slider);
+
+      label.setText(text, juce::dontSendNotification);
+      label.setJustificationType(juce::Justification::centred);
+      addAndMakeVisible(label);
+
+      slider.onValueChange = [&slider, &nodeValueRef]() {
+        nodeValueRef = (int)slider.getValue();
+      };
+
+      auto updateSliderVisibility = [&slider](int macro) {
+        if (macro == -1) {
+          slider.removeColour(juce::Slider::rotarySliderFillColourId);
+          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
+        } else {
+          slider.setColour(juce::Slider::rotarySliderFillColourId,
+                           juce::Colours::orange);
+          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                           juce::Colours::orange.withAlpha(0.3f));
+        }
+      };
+
+      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+                             updateSliderVisibility]() {
+        MacroMappingMenu::showMenu(
+            &slider, nodeMacroRef,
+            [&nodeMacroRef, &attachment, &apvts, &slider,
+             updateSliderVisibility](int macroIndex) {
+              nodeMacroRef = macroIndex;
+              if (macroIndex == -1) {
+                attachment.reset();
+                slider.setTooltip("");
+              } else {
+                attachment = std::make_unique<MacroAttachment>(
+                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
+                slider.setTooltip("Mapped to Macro " +
+                                  juce::String(macroIndex + 1));
+              }
+              updateSliderVisibility(macroIndex);
+            });
+      };
+
+      // Initialize tooltip and attachment if previously mapped
+      if (nodeMacroRef != -1) {
+        slider.setTooltip("Mapped to Macro " + juce::String(nodeMacroRef + 1));
+        attachment = std::make_unique<MacroAttachment>(
+            apvts, "macro_" + juce::String(nodeMacroRef + 1), slider);
+      }
+      updateSliderVisibility(nodeMacroRef);
+    };
+
+    setupSlider(channelFilterSlider, channelFilterLabel,
+                midiInNode.channelFilter, midiInNode.macroChannelFilter,
+                channelFilterAttachment, "Channel Filter (0=All)", 0, 16);
+
+    setSize(400, 150);
+  }
+
+  void resized() override {
+    auto bounds = getLocalBounds();
+
+    // Create a 1/3rd width bounding box aligned to top-left to emulate Rank
+    // Order grid spacing
+    int w = getWidth() / 3;
+    auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
+
+    auto bCopy = b1;
+    channelFilterLabel.setBounds(bCopy.removeFromBottom(20));
+    int size = std::min(bCopy.getWidth(), bCopy.getHeight());
+    channelFilterSlider.setBounds(bCopy.withSizeKeepingCentre(size, size));
+  }
+
+private:
+  MidiInNode &midiInNode;
+  CustomMacroSlider channelFilterSlider;
+  juce::Label channelFilterLabel;
+  std::unique_ptr<MacroAttachment> channelFilterAttachment;
+};
+
+MidiInNode::MidiInNode(MidiHandler &handler,
+                       std::array<std::atomic<float> *, 32> macrosArray)
+    : midiHandler(handler), macros(macrosArray) {}
+
+std::unique_ptr<juce::Component>
+MidiInNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
+  return std::make_unique<MidiInNodeEditor>(*this, apvts);
+}
 
 void MidiInNode::process() {
-  auto heldNotes = midiHandler.getHeldNotes();
+  int actualChannelFilter =
+      macroChannelFilter != -1 && macros[macroChannelFilter] != nullptr
+          ? (int)std::round(macros[macroChannelFilter]->load() * 16.0f)
+          : channelFilter;
+
+  auto heldNotes = midiHandler.getHeldNotes(actualChannelFilter);
 
   NoteSequence seq;
 
@@ -23,5 +131,19 @@ void MidiInNode::process() {
     for (const auto &connection : it->second) {
       connection.targetNode->setInputSequence(connection.targetInputPort, seq);
     }
+  }
+}
+
+void MidiInNode::saveNodeState(juce::XmlElement *xml) {
+  if (xml != nullptr) {
+    xml->setAttribute("channelFilter", channelFilter);
+    xml->setAttribute("macroChannelFilter", macroChannelFilter);
+  }
+}
+
+void MidiInNode::loadNodeState(juce::XmlElement *xml) {
+  if (xml != nullptr) {
+    channelFilter = xml->getIntAttribute("channelFilter", 0);
+    macroChannelFilter = xml->getIntAttribute("macroChannelFilter", -1);
   }
 }

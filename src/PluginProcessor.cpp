@@ -14,9 +14,11 @@ EuclideanArpProcessor::EuclideanArpProcessor()
     macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
   }
 
-  // Default initial graph wiring
-  graphEngine.addNode(std::make_shared<MidiInNode>(midiHandler));
-  graphEngine.addNode(std::make_shared<SortNode>());
+  // Create default graph (Midi In -> Sort -> Midi Out)
+  auto inNode = std::make_shared<MidiInNode>(midiHandler, macros);
+  auto sortNode = std::make_shared<SortNode>();
+  graphEngine.addNode(inNode);
+  graphEngine.addNode(sortNode);
   graphEngine.addNode(
       std::make_shared<MidiOutNode>(midiHandler, clockManager, macros));
 }

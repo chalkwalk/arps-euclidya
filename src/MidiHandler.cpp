@@ -1,109 +1,70 @@
 #include "MidiHandler.h"
 
+MidiHandler::MidiHandler() {
+  mpeInstrument.addListener(this);
+  mpeInstrument.setZoneLayout(juce::MPEZoneLayout()); // Strict MPE
+}
+
+MidiHandler::~MidiHandler() { mpeInstrument.removeListener(this); }
+
 void MidiHandler::processMidi(juce::MidiBuffer &midiMessages) {
   std::lock_guard<std::mutex> lock(stateMutex);
 
   for (const auto metadata : midiMessages) {
-    const auto message = metadata.getMessage();
-    const int channel = message.getChannel();
-
-    if (message.isNoteOn()) {
-      int note = message.getNoteNumber();
-      float velocity = message.getVelocity();
-
-      // Check if note is already held (shouldn't happen often, but be safe)
-      auto it =
-          std::find_if(heldNotes.begin(), heldNotes.end(),
-                       [note, channel](const HeldNote &n) {
-                         return n.noteNumber == note && n.channel == channel;
-                       });
-
-      if (it == heldNotes.end()) {
-        heldNotes.push_back({note, channel, velocity});
-        isDirty = true;
-      }
-    } else if (message.isNoteOff()) {
-      int note = message.getNoteNumber();
-
-      auto it =
-          std::find_if(heldNotes.begin(), heldNotes.end(),
-                       [note, channel](const HeldNote &n) {
-                         return n.noteNumber == note && n.channel == channel;
-                       });
-
-      if (it != heldNotes.end()) {
-        heldNotes.erase(it);
-        isDirty = true;
-
-        // Clean up MPE state
-        mpeXState.erase(note);
-        mpeYState.erase(note);
-        mpeZState.erase(note);
-      }
-    } else if (message.isPitchWheel()) {
-      // Usually Pitch Bend is per voice channel in MPE
-      // For now, simplify and associate it with the active channel mapping
-      // Note: True MPE parsing is more complex, routing Channel -> Note
-      // Assuming MPE zone routing is handled upstream, or we simply track last
-      // played note on this channel
-      if (!heldNotes.empty()) {
-        // Find note associated with this channel
-        auto it = std::find_if(
-            heldNotes.begin(), heldNotes.end(),
-            [channel](const HeldNote &n) { return n.channel == channel; });
-
-        if (it != heldNotes.end()) {
-          float pb =
-              message.getPitchWheelValue() / 16383.0f; // 0.0 to 1.0 roughly
-          mpeXState[it->noteNumber] = pb;
-        }
-      }
-    } else if (message.isController() && message.getControllerNumber() == 74) {
-      if (!heldNotes.empty()) {
-        auto it = std::find_if(
-            heldNotes.begin(), heldNotes.end(),
-            [channel](const HeldNote &n) { return n.channel == channel; });
-
-        if (it != heldNotes.end()) {
-          mpeYState[it->noteNumber] = message.getControllerValue() / 127.0f;
-        }
-      }
-    } else if (message.isChannelPressure()) {
-      if (!heldNotes.empty()) {
-        auto it = std::find_if(
-            heldNotes.begin(), heldNotes.end(),
-            [channel](const HeldNote &n) { return n.channel == channel; });
-
-        if (it != heldNotes.end()) {
-          mpeZState[it->noteNumber] =
-              message.getChannelPressureValue() / 127.0f;
-        }
-      }
-    }
+    mpeInstrument.processNextMidiEvent(metadata.getMessage());
   }
 }
 
-std::vector<HeldNote> MidiHandler::getHeldNotes() const {
+std::vector<HeldNote> MidiHandler::getHeldNotes(int channelFilter) const {
   std::lock_guard<std::mutex> lock(stateMutex);
-  return heldNotes;
+  std::vector<HeldNote> notes;
+  int count = mpeInstrument.getNumPlayingNotes();
+
+  // MPEInstrument holds notes in order of recent addition (last is newest)
+  // We want to return them in the order they were triggered.
+  for (int i = 0; i < count; ++i) {
+    juce::MPENote mpeNote = mpeInstrument.getNote(i);
+
+    if (channelFilter == 0 || mpeNote.midiChannel == channelFilter) {
+      HeldNote n;
+      n.noteNumber = mpeNote.initialNote;
+      n.channel = mpeNote.midiChannel;
+      n.velocity = mpeNote.noteOnVelocity.asUnsignedFloat();
+      n.mpeX = mpeNote.pitchbend.asSignedFloat();
+      n.mpeY = mpeNote.timbre.asUnsignedFloat();
+      n.mpeZ = mpeNote.pressure.asUnsignedFloat();
+      notes.push_back(n);
+    }
+  }
+
+  return notes;
 }
 
-float MidiHandler::getMpeX(int noteNumber) const {
+float MidiHandler::getMpeX(int channel, int noteNumber) const {
   std::lock_guard<std::mutex> lock(stateMutex);
-  auto it = mpeXState.find(noteNumber);
-  return it != mpeXState.end() ? it->second : 0.5f; // PB defaults to center
+  juce::MPENote note = mpeInstrument.getNote(channel, noteNumber);
+  if (note.isValid()) {
+    return note.pitchbend.asSignedFloat(); // -1.0 to 1.0
+  }
+  return 0.0f;
 }
 
-float MidiHandler::getMpeY(int noteNumber) const {
+float MidiHandler::getMpeY(int channel, int noteNumber) const {
   std::lock_guard<std::mutex> lock(stateMutex);
-  auto it = mpeYState.find(noteNumber);
-  return it != mpeYState.end() ? it->second : 0.0f;
+  juce::MPENote note = mpeInstrument.getNote(channel, noteNumber);
+  if (note.isValid()) {
+    return note.timbre.asUnsignedFloat(); // 0.0 to 1.0
+  }
+  return 0.0f;
 }
 
-float MidiHandler::getMpeZ(int noteNumber) const {
+float MidiHandler::getMpeZ(int channel, int noteNumber) const {
   std::lock_guard<std::mutex> lock(stateMutex);
-  auto it = mpeZState.find(noteNumber);
-  return it != mpeZState.end() ? it->second : 0.0f;
+  juce::MPENote note = mpeInstrument.getNote(channel, noteNumber);
+  if (note.isValid()) {
+    return note.pressure.asUnsignedFloat(); // 0.0 to 1.0
+  }
+  return 0.0f;
 }
 
 bool MidiHandler::hasChanged() {
@@ -111,4 +72,30 @@ bool MidiHandler::hasChanged() {
   bool changed = isDirty;
   isDirty = false;
   return changed;
+}
+
+void MidiHandler::setLegacyMode(bool shouldEnable) {
+  std::lock_guard<std::mutex> lock(stateMutex);
+  if (shouldEnable) {
+    // Non-MPE controllers: +/- 2 semitone range, across all 16 channels
+    mpeInstrument.enableLegacyMode(2, juce::Range<int>(1, 17));
+  } else {
+    mpeInstrument.setZoneLayout(juce::MPEZoneLayout());
+  }
+}
+
+bool MidiHandler::isLegacyModeEnabled() const {
+  std::lock_guard<std::mutex> lock(stateMutex);
+  return mpeInstrument.isLegacyModeEnabled();
+}
+
+void MidiHandler::noteAdded(juce::MPENote /*newNote*/) {
+  // We do NOT need to lock stateMutex here because this callback is fired
+  // synchronously *from within* processMidi(), which has already acquired the
+  // lock!
+  isDirty = true;
+}
+
+void MidiHandler::noteReleased(juce::MPENote /*finishedNote*/) {
+  isDirty = true;
 }
