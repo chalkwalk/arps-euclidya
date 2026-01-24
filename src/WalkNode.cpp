@@ -1,0 +1,272 @@
+#include "WalkNode.h"
+#include "MacroMappingMenu.h"
+#include <algorithm>
+#include <random>
+
+class WalkNodeEditor : public juce::Component {
+public:
+  WalkNodeEditor(WalkNode &node, juce::AudioProcessorValueTreeState &apvts)
+      : walkNode(node) {
+
+    auto setupIntSlider = [this, &apvts](
+                              CustomMacroSlider &slider, juce::Label &label,
+                              int &nodeValueRef, int &nodeMacroRef,
+                              std::unique_ptr<MacroAttachment> &attachment,
+                              const juce::String &labelText, int min, int max) {
+      slider.setRange(min, max, 1);
+      slider.setValue(nodeValueRef, juce::dontSendNotification);
+      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      addAndMakeVisible(slider);
+
+      label.setText(labelText, juce::dontSendNotification);
+      label.setJustificationType(juce::Justification::centred);
+      addAndMakeVisible(label);
+
+      slider.onValueChange = [&slider, &nodeValueRef]() {
+        nodeValueRef = (int)slider.getValue();
+      };
+
+      auto updateSliderVisibility = [&slider](int macro) {
+        if (macro == -1) {
+          slider.setAlpha(1.0f);
+          slider.setEnabled(true);
+        } else {
+          slider.setAlpha(0.5f);
+          slider.setEnabled(false);
+        }
+      };
+
+      updateSliderVisibility(nodeMacroRef);
+
+      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+                             updateSliderVisibility]() {
+        MacroMappingMenu::showMenu(
+            &slider, nodeMacroRef,
+            [&nodeMacroRef, &attachment, &apvts, &slider,
+             updateSliderVisibility](int macroIndex) {
+              nodeMacroRef = macroIndex;
+              if (macroIndex == -1) {
+                attachment.reset();
+                slider.setTooltip("");
+              } else {
+                attachment = std::make_unique<MacroAttachment>(
+                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
+                slider.setTooltip("Mapped to Macro " +
+                                  juce::String(macroIndex + 1));
+              }
+              updateSliderVisibility(macroIndex);
+            });
+      };
+
+      // INIT
+      if (nodeMacroRef != -1) {
+        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
+        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
+      }
+    };
+
+    auto setupFloatSlider = [this, &apvts](
+                                CustomMacroSlider &slider, juce::Label &label,
+                                float &nodeValueRef, int &nodeMacroRef,
+                                std::unique_ptr<MacroAttachment> &attachment,
+                                const juce::String &labelText, float min,
+                                float max, float step = 1.0f) {
+      slider.setRange(min, max, step);
+      slider.setValue(nodeValueRef, juce::dontSendNotification);
+      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      addAndMakeVisible(slider);
+
+      label.setText(labelText, juce::dontSendNotification);
+      label.setJustificationType(juce::Justification::centred);
+      addAndMakeVisible(label);
+
+      slider.onValueChange = [&slider, &nodeValueRef]() {
+        nodeValueRef = (float)slider.getValue();
+      };
+
+      auto updateSliderVisibility = [&slider](int macro) {
+        if (macro == -1) {
+          slider.setAlpha(1.0f);
+          slider.setEnabled(true);
+        } else {
+          slider.setAlpha(0.5f);
+          slider.setEnabled(false);
+        }
+      };
+
+      updateSliderVisibility(nodeMacroRef);
+
+      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+                             updateSliderVisibility]() {
+        MacroMappingMenu::showMenu(
+            &slider, nodeMacroRef,
+            [&nodeMacroRef, &attachment, &apvts, &slider,
+             updateSliderVisibility](int macroIndex) {
+              nodeMacroRef = macroIndex;
+              if (macroIndex == -1) {
+                attachment.reset();
+                slider.setTooltip("");
+              } else {
+                attachment = std::make_unique<MacroAttachment>(
+                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
+                slider.setTooltip("Mapped to Macro " +
+                                  juce::String(macroIndex + 1));
+              }
+              updateSliderVisibility(macroIndex);
+            });
+      };
+
+      // INIT
+      if (nodeMacroRef != -1) {
+        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
+        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
+      }
+    };
+
+    setupIntSlider(lengthSlider, lengthLabel, walkNode.walkLength,
+                   walkNode.macroWalkLength, lengthAttachment, "Walk Length", 1,
+                   64);
+
+    setupFloatSlider(skewSlider, skewLabel, walkNode.walkSkew,
+                     walkNode.macroWalkSkew, skewAttachment, "Walk Skew", -1.0f,
+                     1.0f, 0.01f);
+
+    setSize(400, 150);
+  }
+
+  void resized() override {
+    auto bounds = getLocalBounds();
+    int w = getWidth() / 3;
+
+    auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
+    auto bCopy1 = b1;
+    lengthLabel.setBounds(bCopy1.removeFromBottom(20));
+    int size1 = std::min(bCopy1.getWidth(), bCopy1.getHeight());
+    lengthSlider.setBounds(bCopy1.withSizeKeepingCentre(size1, size1));
+
+    auto b2 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
+    auto bCopy2 = b2;
+    skewLabel.setBounds(bCopy2.removeFromBottom(20));
+    int size2 = std::min(bCopy2.getWidth(), bCopy2.getHeight());
+    skewSlider.setBounds(bCopy2.withSizeKeepingCentre(size2, size2));
+  }
+
+private:
+  WalkNode &walkNode;
+  CustomMacroSlider lengthSlider;
+  juce::Label lengthLabel;
+  std::unique_ptr<MacroAttachment> lengthAttachment;
+
+  CustomMacroSlider skewSlider;
+  juce::Label skewLabel;
+  std::unique_ptr<MacroAttachment> skewAttachment;
+};
+
+// --- WalkNode Impl
+
+WalkNode::WalkNode(std::array<std::atomic<float> *, 32> &inMacros)
+    : macros(inMacros) {}
+
+std::unique_ptr<juce::Component>
+WalkNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
+  return std::make_unique<WalkNodeEditor>(*this, apvts);
+}
+
+void WalkNode::saveNodeState(juce::XmlElement *xml) {
+  if (xml != nullptr) {
+    xml->setAttribute("walkLength", walkLength);
+    xml->setAttribute("macroWalkLength", macroWalkLength);
+    xml->setAttribute("walkSkew", walkSkew);
+    xml->setAttribute("macroWalkSkew", macroWalkSkew);
+  }
+}
+
+void WalkNode::loadNodeState(juce::XmlElement *xml) {
+  if (xml != nullptr) {
+    walkLength = xml->getIntAttribute("walkLength", 16);
+    macroWalkLength = xml->getIntAttribute("macroWalkLength", -1);
+    walkSkew = xml->getDoubleAttribute("walkSkew", 0.0);
+    macroWalkSkew = xml->getIntAttribute("macroWalkSkew", -1);
+  }
+}
+
+void WalkNode::process() {
+  int actualLength =
+      macroWalkLength != -1 && macros[macroWalkLength] != nullptr
+          ? 1 + (int)std::round(macros[macroWalkLength]->load() * 63.0f)
+          : walkLength;
+
+  float actualSkew = macroWalkSkew != -1 && macros[macroWalkSkew] != nullptr
+                         ? (macros[macroWalkSkew]->load() * 2.0f) - 1.0f
+                         : walkSkew;
+
+  auto it = inputSequences.find(0);
+  if (it == inputSequences.end() || it->second.empty() || actualLength <= 0) {
+    outputSequences[0] = NoteSequence();
+  } else {
+    std::vector<HeldNote> flatNotes;
+    for (const auto &step : it->second) {
+      for (const auto &note : step) {
+        flatNotes.push_back(note);
+      }
+    }
+
+    std::sort(flatNotes.begin(), flatNotes.end(),
+              [](const HeldNote &a, const HeldNote &b) {
+                return a.noteNumber < b.noteNumber;
+              });
+
+    // Generate a seed based on the sorted notes and length parameter so it's
+    // stable
+    size_t seed = flatNotes.size() + actualLength;
+    for (const auto &n : flatNotes) {
+      seed ^= n.noteNumber + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+
+    std::mt19937 gen(seed);
+    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+
+    actualSkew = std::max(-1.0f, std::min(1.0f, actualSkew));
+    float pv = std::max(0.0f, (1.0f / 3.0f) * (1.0f - actualSkew));
+    float pn = std::max(0.0f, (1.0f / 3.0f) * (1.0f + actualSkew));
+    float pc = std::max(0.0f, 1.0f - pv - pn);
+
+    float total = pv + pc + pn;
+    if (total > 0.0f) {
+      pv /= total;
+      pc /= total;
+      pn /= total;
+    } else {
+      pv = pc = pn = 1.0f / 3.0f;
+    }
+
+    NoteSequence generatedSeq;
+
+    if (flatNotes.size() > 0) {
+      int currentIdx = flatNotes.size() / 2;
+
+      for (int i = 0; i < actualLength; ++i) {
+        generatedSeq.push_back({flatNotes[currentIdx]});
+
+        float r = dis(gen);
+        if (r < pv) {
+          currentIdx = (currentIdx - 1 + flatNotes.size()) % flatNotes.size();
+        } else if (r >= pv + pc) {
+          currentIdx = (currentIdx + 1) % flatNotes.size();
+        }
+      }
+    }
+
+    outputSequences[0] = generatedSeq;
+  }
+
+  auto connIt = connections.find(0);
+  if (connIt != connections.end()) {
+    for (const auto &connection : connIt->second) {
+      connection.targetNode->setInputSequence(connection.targetInputPort,
+                                              outputSequences[0]);
+    }
+  }
+}
