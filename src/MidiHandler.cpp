@@ -2,7 +2,9 @@
 
 MidiHandler::MidiHandler() {
   mpeInstrument.addListener(this);
-  mpeInstrument.setZoneLayout(juce::MPEZoneLayout()); // Strict MPE
+  juce::MPEZoneLayout layout;
+  layout.setLowerZone(15); // Standard MPE layout: Master Ch 1, Members 2-16
+  mpeInstrument.setZoneLayout(layout);
 }
 
 MidiHandler::~MidiHandler() { mpeInstrument.removeListener(this); }
@@ -74,13 +76,20 @@ bool MidiHandler::hasChanged() {
   return changed;
 }
 
+void MidiHandler::forceDirty() {
+  std::lock_guard<std::mutex> lock(stateMutex);
+  isDirty = true;
+}
+
 void MidiHandler::setLegacyMode(bool shouldEnable) {
   std::lock_guard<std::mutex> lock(stateMutex);
   if (shouldEnable) {
     // Non-MPE controllers: +/- 2 semitone range, across all 16 channels
     mpeInstrument.enableLegacyMode(2, juce::Range<int>(1, 17));
   } else {
-    mpeInstrument.setZoneLayout(juce::MPEZoneLayout());
+    juce::MPEZoneLayout layout;
+    layout.setLowerZone(15); // Standard MPE layout: Master Ch 1, Members 2-16
+    mpeInstrument.setZoneLayout(layout);
   }
 }
 

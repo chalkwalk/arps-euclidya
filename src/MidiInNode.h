@@ -16,6 +16,9 @@ public:
 
   int channelFilter = 0; // 0 means all channels
   int macroChannelFilter = -1;
+  bool legacyMode = false;
+
+  MidiHandler &getMidiHandler() { return midiHandler; }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;

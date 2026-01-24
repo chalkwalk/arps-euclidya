@@ -23,8 +23,9 @@ public:
       label.setJustificationType(juce::Justification::centred);
       addAndMakeVisible(label);
 
-      slider.onValueChange = [&slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
+        midiInNode.getMidiHandler().forceDirty();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {
@@ -72,6 +73,16 @@ public:
                 midiInNode.channelFilter, midiInNode.macroChannelFilter,
                 channelFilterAttachment, "Channel Filter (0=All)", 0, 16);
 
+    legacyModeToggle.setButtonText("Legacy Mode (Non-MPE)");
+    legacyModeToggle.setToggleState(midiInNode.legacyMode,
+                                    juce::dontSendNotification);
+    legacyModeToggle.onClick = [this]() {
+      midiInNode.legacyMode = legacyModeToggle.getToggleState();
+      midiInNode.getMidiHandler().setLegacyMode(midiInNode.legacyMode);
+      midiInNode.getMidiHandler().forceDirty();
+    };
+    addAndMakeVisible(legacyModeToggle);
+
     setSize(400, 150);
   }
 
@@ -87,6 +98,9 @@ public:
     channelFilterLabel.setBounds(bCopy.removeFromBottom(20));
     int size = std::min(bCopy.getWidth(), bCopy.getHeight());
     channelFilterSlider.setBounds(bCopy.withSizeKeepingCentre(size, size));
+
+    auto b2 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
+    legacyModeToggle.setBounds(b2.reduced(10));
   }
 
 private:
@@ -94,6 +108,7 @@ private:
   CustomMacroSlider channelFilterSlider;
   juce::Label channelFilterLabel;
   std::unique_ptr<MacroAttachment> channelFilterAttachment;
+  juce::ToggleButton legacyModeToggle;
 };
 
 MidiInNode::MidiInNode(MidiHandler &handler,
@@ -106,6 +121,10 @@ MidiInNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
 }
 
 void MidiInNode::process() {
+  if (midiHandler.isLegacyModeEnabled() != legacyMode) {
+    midiHandler.setLegacyMode(legacyMode);
+  }
+
   int actualChannelFilter =
       macroChannelFilter != -1 && macros[macroChannelFilter] != nullptr
           ? (int)std::round(macros[macroChannelFilter]->load() * 16.0f)
@@ -138,6 +157,7 @@ void MidiInNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("channelFilter", channelFilter);
     xml->setAttribute("macroChannelFilter", macroChannelFilter);
+    xml->setAttribute("legacyMode", legacyMode);
   }
 }
 
@@ -145,5 +165,8 @@ void MidiInNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     channelFilter = xml->getIntAttribute("channelFilter", 0);
     macroChannelFilter = xml->getIntAttribute("macroChannelFilter", -1);
+    legacyMode = xml->getBoolAttribute("legacyMode", false);
+    midiHandler.setLegacyMode(legacyMode);
+    midiHandler.forceDirty();
   }
 }

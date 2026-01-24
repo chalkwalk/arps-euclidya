@@ -26,6 +26,7 @@ public:
   // Checks if the list of held notes has structurally changed (keys
   // added/removed)
   bool hasChanged();
+  void forceDirty();
 
   // Toggles the MPE instrument between strict MPE Zones and legacy
   // compatibility mode
