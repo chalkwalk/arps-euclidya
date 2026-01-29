@@ -6,28 +6,24 @@ void SortNode::process() {
   if (it == inputSequences.end() || it->second.empty()) {
     outputSequences[0] = NoteSequence();
   } else {
-    // 1. Extract all currently held notes from the incoming sequence into a
-    // flat list
-    std::vector<HeldNote> flatNotes;
-    for (const auto &step : it->second) {
-      for (const auto &note : step) {
-        flatNotes.push_back(note);
-      }
-    }
+    NoteSequence steps = it->second;
 
-    // 2. Sort the notes ascending by pitch
-    std::sort(flatNotes.begin(), flatNotes.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
-              });
+    auto getMeanValue = [](const std::vector<HeldNote> &chord) {
+      if (chord.empty())
+        return 0.0f;
+      float sum = 0.0f;
+      for (const auto &n : chord)
+        sum += n.noteNumber;
+      return sum / chord.size();
+    };
 
-    // 3. Reconstruct into a new sorted NoteSequence (1 note per step)
-    NoteSequence sortedSeq;
-    for (const auto &note : flatNotes) {
-      sortedSeq.push_back({note});
-    }
+    std::stable_sort(steps.begin(), steps.end(),
+                     [&getMeanValue](const std::vector<HeldNote> &a,
+                                     const std::vector<HeldNote> &b) {
+                       return getMeanValue(a) < getMeanValue(b);
+                     });
 
-    outputSequences[0] = sortedSeq;
+    outputSequences[0] = steps;
   }
 
   // 4. Pass down the graph

@@ -123,35 +123,46 @@ void ChordNNode::process() {
   if (it == inputSequences.end() || it->second.empty() || actualNValue <= 0) {
     outputSequences[0] = NoteSequence();
   } else {
-    std::vector<HeldNote> flatNotes;
-    for (const auto &step : it->second) {
-      for (const auto &note : step) {
-        flatNotes.push_back(note);
-      }
-    }
+    NoteSequence steps = it->second;
 
-    std::sort(flatNotes.begin(), flatNotes.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
-              });
+    auto getMeanValue = [](const std::vector<HeldNote> &chord) {
+      if (chord.empty())
+        return 0.0f;
+      float sum = 0.0f;
+      for (const auto &n : chord)
+        sum += n.noteNumber;
+      return sum / chord.size();
+    };
 
-    size_t n = std::min((size_t)actualNValue, flatNotes.size());
+    std::stable_sort(steps.begin(), steps.end(),
+                     [&getMeanValue](const std::vector<HeldNote> &a,
+                                     const std::vector<HeldNote> &b) {
+                       return getMeanValue(a) < getMeanValue(b);
+                     });
+
+    size_t n = std::min((size_t)actualNValue, steps.size());
     NoteSequence sortedSeq;
 
-    if (n > 0 && n <= flatNotes.size()) {
+    if (n > 0 && n <= steps.size()) {
       auto cmb = [&](auto &self, std::vector<HeldNote> cur, size_t sI) -> void {
-        if (cur.size() == n) {
+        if (cur.size() >= n) { // using >= to handle flattened chords correctly
           sortedSeq.push_back(cur);
           return;
         }
-        if (sI >= flatNotes.size())
+        if (sI >= steps.size())
           return;
-        for (size_t i = sI; i < flatNotes.size(); ++i) {
-          if (cur.size() + (flatNotes.size() - i) < n)
+        for (size_t i = sI; i < steps.size(); ++i) {
+          if (cur.size() + (steps.size() - i) < n)
             break;
-          cur.push_back(flatNotes[i]);
-          self(self, cur, i + 1);
-          cur.pop_back();
+
+          // Add all notes in this incoming step to the current combination
+          // accumulation
+          std::vector<HeldNote> nextCur = cur;
+          for (const auto &noteInStep : steps[i]) {
+            nextCur.push_back(noteInStep);
+          }
+
+          self(self, nextCur, i + 1);
         }
       };
       cmb(cmb, std::vector<HeldNote>(), 0);

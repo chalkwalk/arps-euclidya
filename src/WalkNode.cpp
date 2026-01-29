@@ -206,23 +206,30 @@ void WalkNode::process() {
   if (it == inputSequences.end() || it->second.empty() || actualLength <= 0) {
     outputSequences[0] = NoteSequence();
   } else {
-    std::vector<HeldNote> flatNotes;
-    for (const auto &step : it->second) {
-      for (const auto &note : step) {
-        flatNotes.push_back(note);
-      }
-    }
+    NoteSequence steps = it->second;
 
-    std::sort(flatNotes.begin(), flatNotes.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
-              });
+    auto getMeanValue = [](const std::vector<HeldNote> &chord) {
+      if (chord.empty())
+        return 0.0f;
+      float sum = 0.0f;
+      for (const auto &n : chord)
+        sum += n.noteNumber;
+      return sum / chord.size();
+    };
 
-    // Generate a seed based on the sorted notes and length parameter so it's
+    std::stable_sort(steps.begin(), steps.end(),
+                     [&getMeanValue](const std::vector<HeldNote> &a,
+                                     const std::vector<HeldNote> &b) {
+                       return getMeanValue(a) < getMeanValue(b);
+                     });
+
+    // Generate a seed based on the sorted steps and length parameter so it's
     // stable
-    size_t seed = flatNotes.size() + actualLength;
-    for (const auto &n : flatNotes) {
-      seed ^= n.noteNumber + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    size_t seed = steps.size() + actualLength;
+    for (const auto &step : steps) {
+      for (const auto &n : step) {
+        seed ^= n.noteNumber + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+      }
     }
 
     std::mt19937 gen(seed);
@@ -244,17 +251,17 @@ void WalkNode::process() {
 
     NoteSequence generatedSeq;
 
-    if (flatNotes.size() > 0) {
-      int currentIdx = flatNotes.size() / 2;
+    if (steps.size() > 0) {
+      int currentIdx = steps.size() / 2;
 
       for (int i = 0; i < actualLength; ++i) {
-        generatedSeq.push_back({flatNotes[currentIdx]});
+        generatedSeq.push_back(steps[currentIdx]);
 
         float r = dis(gen);
         if (r < pv) {
-          currentIdx = (currentIdx - 1 + flatNotes.size()) % flatNotes.size();
+          currentIdx = (currentIdx - 1 + steps.size()) % steps.size();
         } else if (r >= pv + pc) {
-          currentIdx = (currentIdx + 1) % flatNotes.size();
+          currentIdx = (currentIdx + 1) % steps.size();
         }
       }
     }

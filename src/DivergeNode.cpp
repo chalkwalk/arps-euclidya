@@ -6,27 +6,34 @@ void DivergeNode::process() {
   if (it == inputSequences.end() || it->second.empty()) {
     outputSequences[0] = NoteSequence();
   } else {
-    std::vector<HeldNote> flatNotes;
-    for (const auto &step : it->second) {
-      for (const auto &note : step) {
-        flatNotes.push_back(note);
-      }
-    }
+    NoteSequence steps = it->second;
 
-    std::sort(flatNotes.begin(), flatNotes.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
-              });
+    auto getMeanValue = [](const std::vector<HeldNote> &chord) {
+      if (chord.empty())
+        return 0.0f;
+      float sum = 0.0f;
+      for (const auto &n : chord)
+        sum += n.noteNumber;
+      return sum / chord.size();
+    };
+
+    std::stable_sort(steps.begin(), steps.end(),
+                     [&getMeanValue](const std::vector<HeldNote> &a,
+                                     const std::vector<HeldNote> &b) {
+                       return getMeanValue(a) < getMeanValue(b);
+                     });
 
     NoteSequence sortedSeq;
-    int s = ((int)flatNotes.size() - 1) / 2;
-    int e = (int)flatNotes.size() / 2;
+    int s = ((int)steps.size() - 1) / 2;
+    int e = (int)steps.size() / 2;
 
-    while (s >= 0 || e < flatNotes.size()) {
-      if (s >= 0)
-        sortedSeq.push_back({flatNotes[s]});
-      if (s != e && e < flatNotes.size())
-        sortedSeq.push_back({flatNotes[e]});
+    while (s >= 0 || e < (int)steps.size()) {
+      if (s >= 0 && !steps[s].empty()) {
+        sortedSeq.push_back(steps[s]);
+      }
+      if (s != e && e < (int)steps.size() && !steps[e].empty()) {
+        sortedSeq.push_back(steps[e]);
+      }
       s--;
       e++;
     }
