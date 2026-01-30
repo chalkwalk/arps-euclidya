@@ -1,14 +1,20 @@
 #pragma once
 
+#include "AllNotesNode.h"
 #include "ChordNNode.h"
 #include "ConvergeNode.h"
 #include "DivergeNode.h"
+#include "FoldNode.h"
 #include "GraphNode.h"
 #include "MidiInNode.h"
 #include "MidiOutNode.h"
 #include "OctaveStackNode.h"
+#include "OctaveTransposeNode.h"
+#include "QuantizerNode.h"
 #include "ReverseNode.h"
 #include "SortNode.h"
+#include "TransposeNode.h"
+#include "UnfoldNode.h"
 #include "WalkNode.h"
 #include <memory>
 #include <string>
@@ -35,13 +41,27 @@ public:
       return std::make_shared<WalkNode>(macros);
     if (type == "Octave Stack")
       return std::make_shared<OctaveStackNode>(macros);
+    if (type == "Transpose")
+      return std::make_shared<TransposeNode>(macros);
+    if (type == "Octave Transpose")
+      return std::make_shared<OctaveTransposeNode>(macros);
+    if (type == "Fold")
+      return std::make_shared<FoldNode>(macros);
+    if (type == "Unfold")
+      return std::make_shared<UnfoldNode>();
+    if (type == "Quantizer")
+      return std::make_shared<QuantizerNode>();
+    if (type == "All Notes")
+      return std::make_shared<AllNotesNode>();
     if (type == "Midi Out")
       return std::make_shared<MidiOutNode>(midiCtx, clockCtx, macros);
     return nullptr;
   }
 
   static std::vector<std::string> getAvailableNodeTypes() {
-    return {"Midi In", "Sort", "Reverse",      "Converge", "Diverge",
-            "ChordN",  "Walk", "Octave Stack", "Midi Out"};
+    return {
+        "Midi In", "Sort",   "Reverse",      "Converge",  "Diverge",
+        "ChordN",  "Walk",   "Octave Stack", "Transpose", "Octave Transpose",
+        "Fold",    "Unfold", "Quantizer",    "All Notes", "Midi Out"};
   }
 };

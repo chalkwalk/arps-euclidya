@@ -1,11 +1,12 @@
-#include "ChordNNode.h"
+#include "TransposeNode.h"
 #include "MacroMappingMenu.h"
 #include <algorithm>
 
-class ChordNNodeEditor : public juce::Component {
+class TransposeNodeEditor : public juce::Component {
 public:
-  ChordNNodeEditor(ChordNNode &node, juce::AudioProcessorValueTreeState &apvts)
-      : chordNNode(node) {
+  TransposeNodeEditor(TransposeNode &node,
+                      juce::AudioProcessorValueTreeState &apvts)
+      : transposeNode(node) {
 
     auto setupSlider = [this, &apvts](
                            CustomMacroSlider &slider, juce::Label &label,
@@ -65,8 +66,9 @@ public:
       }
     };
 
-    setupSlider(nValueSlider, nValueLabel, chordNNode.nValue,
-                chordNNode.macroNValue, nValueAttachment, "N Value", 1, 16);
+    setupSlider(semitonesSlider, semitonesLabel, transposeNode.semitones,
+                transposeNode.macroSemitones, semitonesAttachment, "Semitones",
+                -24, 24);
 
     setSize(400, 150);
   }
@@ -77,97 +79,70 @@ public:
     auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
 
     auto bCopy = b1;
-    nValueLabel.setBounds(bCopy.removeFromBottom(20));
+    semitonesLabel.setBounds(bCopy.removeFromBottom(20));
     int size = std::min(bCopy.getWidth(), bCopy.getHeight());
-    nValueSlider.setBounds(bCopy.withSizeKeepingCentre(size, size));
+    semitonesSlider.setBounds(bCopy.withSizeKeepingCentre(size, size));
   }
 
 private:
-  ChordNNode &chordNNode;
-  CustomMacroSlider nValueSlider;
-  juce::Label nValueLabel;
-  std::unique_ptr<MacroAttachment> nValueAttachment;
+  TransposeNode &transposeNode;
+  CustomMacroSlider semitonesSlider;
+  juce::Label semitonesLabel;
+  std::unique_ptr<MacroAttachment> semitonesAttachment;
 };
 
-// --- ChordNNode Impl
+// --- TransposeNode Impl
 
-ChordNNode::ChordNNode(std::array<std::atomic<float> *, 32> &inMacros)
+TransposeNode::TransposeNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
-std::unique_ptr<juce::Component>
-ChordNNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<ChordNNodeEditor>(*this, apvts);
+std::unique_ptr<juce::Component> TransposeNode::createEditorComponent(
+    juce::AudioProcessorValueTreeState &apvts) {
+  return std::make_unique<TransposeNodeEditor>(*this, apvts);
 }
 
-void ChordNNode::saveNodeState(juce::XmlElement *xml) {
+void TransposeNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
-    xml->setAttribute("nValue", nValue);
-    xml->setAttribute("macroNValue", macroNValue);
+    xml->setAttribute("semitones", semitones);
+    xml->setAttribute("macroSemitones", macroSemitones);
   }
 }
 
-void ChordNNode::loadNodeState(juce::XmlElement *xml) {
+void TransposeNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
-    nValue = xml->getIntAttribute("nValue", 2);
-    macroNValue = xml->getIntAttribute("macroNValue", -1);
+    semitones = xml->getIntAttribute("semitones", 0);
+    macroSemitones = xml->getIntAttribute("macroSemitones", -1);
   }
 }
 
-void ChordNNode::process() {
-  int actualNValue =
-      macroNValue != -1 && macros[macroNValue] != nullptr
-          ? 1 + (int)std::round(macros[macroNValue]->load() * 15.0f)
-          : nValue;
+void TransposeNode::process() {
+  int actualSemitones =
+      macroSemitones != -1 && macros[macroSemitones] != nullptr
+          ? -24 + (int)std::round(macros[macroSemitones]->load() * 48.0f)
+          : semitones;
 
   auto it = inputSequences.find(0);
-  if (it == inputSequences.end() || it->second.empty() || actualNValue <= 0) {
-    outputSequences[0] = NoteSequence();
+  if (it == inputSequences.end() || it->second.empty() ||
+      actualSemitones == 0) {
+    // If no transposition needed, just pass through
+    outputSequences[0] =
+        it != inputSequences.end() ? it->second : NoteSequence();
   } else {
-    // 1. Extract all unique notes from the incoming sequence into a pool
-    std::set<int> uniquePitches;
-    std::vector<HeldNote> uniqueNotes;
-
+    NoteSequence outSeq;
     for (const auto &step : it->second) {
+      std::vector<HeldNote> outStep;
       for (const auto &note : step) {
-        if (uniquePitches.find(note.noteNumber) == uniquePitches.end()) {
-          uniquePitches.insert(note.noteNumber);
-          uniqueNotes.push_back(note);
+        HeldNote transposed = note;
+        transposed.noteNumber += actualSemitones;
+        if (transposed.noteNumber >= 0 && transposed.noteNumber <= 127) {
+          outStep.push_back(transposed);
         }
       }
+      if (!outStep.empty()) {
+        outSeq.push_back(outStep);
+      }
     }
-
-    // 2. Sort the unique notes ascending by pitch
-    std::sort(uniqueNotes.begin(), uniqueNotes.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
-              });
-
-    size_t n = std::min((size_t)actualNValue, uniqueNotes.size());
-    NoteSequence sortedSeq;
-
-    // 3. Generate N-note combinations from the flat unique pool
-    if (n > 0 && n <= uniqueNotes.size()) {
-      auto cmb = [&](auto &self, std::vector<HeldNote> cur, size_t sI) -> void {
-        if (cur.size() == n) {
-          sortedSeq.push_back(cur);
-          return;
-        }
-        if (sI >= uniqueNotes.size())
-          return;
-        for (size_t i = sI; i < uniqueNotes.size(); ++i) {
-          if (cur.size() + (uniqueNotes.size() - i) < n)
-            break;
-
-          std::vector<HeldNote> nextCur = cur;
-          nextCur.push_back(uniqueNotes[i]);
-
-          self(self, nextCur, i + 1);
-        }
-      };
-      cmb(cmb, std::vector<HeldNote>(), 0);
-    }
-
-    outputSequences[0] = sortedSeq;
+    outputSequences[0] = outSeq;
   }
 
   auto connIt = connections.find(0);
