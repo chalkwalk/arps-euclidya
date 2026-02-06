@@ -59,7 +59,6 @@ public:
             });
       };
 
-      // Initialize tooltip and attachment if previously mapped
       if (nodeMacroRef != -1) {
         slider.setTooltip("Mapped to Macro " + juce::String(nodeMacroRef + 1));
         attachment = std::make_unique<MacroAttachment>(
@@ -82,12 +81,74 @@ public:
     setupSlider(rOffset, lROffset, midiOutNode.rOffset,
                 midiOutNode.macroROffset, aROffset, "R Offset", 0, 32);
 
-    setSize(400, 150);
+    // --- Clock Division ---
+    const char *divNames[] = {"4/1", "2/1", "1/1",  "1/2",
+                              "1/4", "1/8", "1/16", "1/32"};
+    for (int i = 0; i < 8; ++i) {
+      clockDivBox.addItem(divNames[i], i + 1);
+    }
+    clockDivBox.setSelectedId(midiOutNode.clockDivisionIndex + 1,
+                              juce::dontSendNotification);
+    clockDivBox.onChange = [this]() {
+      midiOutNode.clockDivisionIndex = clockDivBox.getSelectedId() - 1;
+    };
+    addAndMakeVisible(clockDivBox);
+
+    clockDivLabel.setText("Clock Div", juce::dontSendNotification);
+    clockDivLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(clockDivLabel);
+
+    tripletToggle.setButtonText("Triplet");
+    tripletToggle.setToggleState(midiOutNode.triplet,
+                                 juce::dontSendNotification);
+    tripletToggle.onClick = [this]() {
+      midiOutNode.triplet = tripletToggle.getToggleState();
+    };
+    addAndMakeVisible(tripletToggle);
+
+    // --- Sync & Reset controls ---
+    syncModeBox.addItem("Clock Sync", 1);
+    syncModeBox.addItem("Key Sync", 2);
+    syncModeBox.setSelectedId(midiOutNode.transportSyncMode + 1,
+                              juce::dontSendNotification);
+    syncModeBox.onChange = [this]() {
+      midiOutNode.transportSyncMode = syncModeBox.getSelectedId() - 1;
+    };
+    addAndMakeVisible(syncModeBox);
+
+    syncModeLabel.setText("Transport", juce::dontSendNotification);
+    syncModeLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(syncModeLabel);
+
+    patternResetToggle.setButtonText("Reset Pattern");
+    patternResetToggle.setToggleState(midiOutNode.patternResetOnRelease,
+                                      juce::dontSendNotification);
+    patternResetToggle.onClick = [this]() {
+      midiOutNode.patternResetOnRelease = patternResetToggle.getToggleState();
+    };
+    addAndMakeVisible(patternResetToggle);
+
+    rhythmResetToggle.setButtonText("Reset Rhythm");
+    rhythmResetToggle.setToggleState(midiOutNode.rhythmResetOnRelease,
+                                     juce::dontSendNotification);
+    rhythmResetToggle.onClick = [this]() {
+      midiOutNode.rhythmResetOnRelease = rhythmResetToggle.getToggleState();
+    };
+    addAndMakeVisible(rhythmResetToggle);
+
+    setSize(400, 340);
   }
 
   void resized() override {
     auto bounds = getLocalBounds();
-    auto topRow = bounds.removeFromTop(getHeight() / 2);
+    // 4 rows: Pattern knobs, Rhythm knobs, Clock div, Sync/Reset
+    int knobRowHeight = 100;
+    int ctrlRowHeight = 40;
+
+    auto row1 = bounds.removeFromTop(knobRowHeight);
+    auto row2 = bounds.removeFromTop(knobRowHeight);
+    auto row3 = bounds.removeFromTop(ctrlRowHeight);
+    auto row4 = bounds.removeFromTop(ctrlRowHeight);
 
     int w = getWidth() / 3;
 
@@ -95,24 +156,44 @@ public:
                              juce::Label &l) {
       auto bCopy = b;
       l.setBounds(bCopy.removeFromBottom(20));
-      // Make slider square to force drawing as a proper rotary knob
       int size = std::min(bCopy.getWidth(), bCopy.getHeight());
       s.setBounds(bCopy.withSizeKeepingCentre(size, size));
     };
 
-    auto b1 = topRow.removeFromLeft(w);
+    // Row 1: Pattern knobs
+    auto b1 = row1.removeFromLeft(w);
     setParamBounds(b1, pSteps, lPSteps);
-    auto b2 = topRow.removeFromLeft(w);
+    auto b2 = row1.removeFromLeft(w);
     setParamBounds(b2, pBeats, lPBeats);
-    auto b3 = topRow.removeFromLeft(w);
+    auto b3 = row1.removeFromLeft(w);
     setParamBounds(b3, pOffset, lPOffset);
 
-    auto b4 = bounds.removeFromLeft(w);
+    // Row 2: Rhythm knobs
+    auto b4 = row2.removeFromLeft(w);
     setParamBounds(b4, rSteps, lRSteps);
-    auto b5 = bounds.removeFromLeft(w);
+    auto b5 = row2.removeFromLeft(w);
     setParamBounds(b5, rBeats, lRBeats);
-    auto b6 = bounds.removeFromLeft(w);
+    auto b6 = row2.removeFromLeft(w);
     setParamBounds(b6, rOffset, lROffset);
+
+    // Row 3: Clock division + Triplet
+    auto r3a = row3.removeFromLeft(w);
+    clockDivLabel.setBounds(r3a.removeFromLeft(r3a.getWidth() / 3));
+    clockDivBox.setBounds(r3a.reduced(2));
+
+    auto r3b = row3.removeFromLeft(w);
+    tripletToggle.setBounds(r3b.reduced(4));
+
+    // Row 4: Sync mode + toggles
+    auto r4a = row4.removeFromLeft(w);
+    syncModeLabel.setBounds(r4a.removeFromLeft(r4a.getWidth() / 3));
+    syncModeBox.setBounds(r4a.reduced(2));
+
+    auto r4b = row4.removeFromLeft(w);
+    patternResetToggle.setBounds(r4b.reduced(4));
+
+    auto r4c = row4.removeFromLeft(w);
+    rhythmResetToggle.setBounds(r4c.reduced(4));
   }
 
 private:
@@ -125,6 +206,17 @@ private:
 
   std::unique_ptr<MacroAttachment> aPSteps, aPBeats, aPOffset;
   std::unique_ptr<MacroAttachment> aRSteps, aRBeats, aROffset;
+
+  // Clock division
+  juce::ComboBox clockDivBox;
+  juce::Label clockDivLabel;
+  juce::ToggleButton tripletToggle;
+
+  // Sync & Reset
+  juce::ComboBox syncModeBox;
+  juce::Label syncModeLabel;
+  juce::ToggleButton patternResetToggle;
+  juce::ToggleButton rhythmResetToggle;
 };
 
 std::unique_ptr<juce::Component>

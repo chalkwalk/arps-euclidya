@@ -42,6 +42,13 @@ public:
   int macroRBeats = -1;
   int macroROffset = -1;
 
+  // Step 13: Sync & Reset Controls
+  int transportSyncMode = 0;         // 0 = Clock Sync, 1 = Key Sync
+  bool patternResetOnRelease = true; // Reset sequence + pattern on all-keys-up
+  bool rhythmResetOnRelease = true;  // Reset rhythm on all-keys-up
+  int clockDivisionIndex = 5;        // Index into division table (default: 1/8)
+  bool triplet = false;              // Triplet modifier
+
 private:
   MidiHandler &midiHandler;
   ClockManager &clockManager;
@@ -52,6 +59,17 @@ private:
   int rhythmIndex = 0;
 
   NoteSequence previousSequence;
+
+  // Step 13: Key Sync state
+  bool wasHoldingNotes = false;      // Detect transition to no notes
+  bool keySyncArmed = true;          // Waiting for first key press
+  bool keySyncImmediateTick = false; // Fire immediately on first keypress
+  double keySyncStartPpq = 0.0;      // PPQ anchor for key-sync ticks
+  double keySyncInternalPhase = 0.0; // Internal phase anchor for free-run
+
+  // Per-node tick tracking
+  double lastTickPpq = -1.0;
+  double lastTickPhase = -1.0;
 
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)

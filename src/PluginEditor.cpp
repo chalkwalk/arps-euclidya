@@ -83,8 +83,16 @@ void EuclideanArpEditor::resized() {
 
   int panelY = 5;
   for (auto panel : nodePanels) {
-    panel->setBounds(10, panelY, bounds.getWidth() - 40, 220);
-    panelY += 230;
+    // Dynamic height: use the custom controls' preferred height + title bar
+    int panelHeight = 220; // default
+    auto *controls = panel->getChildComponent(
+        panel->getNumChildComponents() - 1); // last child is customControls
+    if (controls != nullptr) {
+      panelHeight =
+          controls->getHeight() + 34; // 24px title + 5px spacer + 5px padding
+    }
+    panel->setBounds(10, panelY, bounds.getWidth() - 40, panelHeight);
+    panelY += panelHeight + 10;
   }
   graphContent.setBounds(0, 0, bounds.getWidth() - 20, panelY);
 }

@@ -9,7 +9,6 @@ bool stepsAreEqual(const std::vector<HeldNote> &a,
                    const std::vector<HeldNote> &b) {
   if (a.size() != b.size())
     return false;
-  // Assumes notes within a step are sorted or at least in the same order
   for (size_t i = 0; i < a.size(); ++i) {
     if (!(a[i] == b[i]))
       return false;
@@ -25,23 +24,26 @@ int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
 
   int nL = newSequence.size();
 
-  // Spiral search forward
   for (int i = 0; i < nL; ++i) {
     int cI = (previousIndex + i) % nL;
     if (stepsAreEqual(newSequence[cI], stepToFind))
       return cI;
   }
 
-  // Fallback search from beginning
   for (int i = 0; i < nL; ++i) {
     if (stepsAreEqual(newSequence[i], stepToFind))
       return i;
   }
 
-  // Proportional index fallback
   int oL = std::max(1, (int)oldSequence.size());
   return ((previousIndex * nL) / oL) % nL;
 }
+
+// Clock division table: PPQ values for each division
+// Index: 0=4/1, 1=2/1, 2=1/1, 3=1/2, 4=1/4, 5=1/8, 6=1/16, 7=1/32
+constexpr double DIVISIONS[] = {16.0, 8.0, 4.0, 2.0, 1.0, 0.5, 0.25, 0.125};
+constexpr int NUM_DIVISIONS = 8;
+
 } // namespace
 
 void MidiOutNode::process() {
@@ -69,8 +71,74 @@ void MidiOutNode::process() {
 
 void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                                int samplePosition) {
-  // Kill prev notes unconditionally on the tick for now
-  bool isTick = clockManager.isTick();
+  // --- Reset-on-release detection ---
+  auto it0 = inputSequences.find(0);
+  bool holdingNotes = (it0 != inputSequences.end() && !it0->second.empty());
+
+  if (wasHoldingNotes && !holdingNotes) {
+    // All keys just released
+    if (patternResetOnRelease) {
+      sequenceIndex = 0;
+      patternIndex = 0;
+    }
+    if (rhythmResetOnRelease) {
+      rhythmIndex = 0;
+    }
+    if (transportSyncMode == 1) {
+      keySyncArmed = true;
+    }
+  }
+
+  // Get the unified cumulative PPQ (always incrementing, host or free-running)
+  double currentPpq = clockManager.getCumulativePpq();
+
+  // Detect first keypress for Key Sync arming
+  if (!wasHoldingNotes && holdingNotes && transportSyncMode == 1 &&
+      keySyncArmed) {
+    keySyncArmed = false;
+    keySyncImmediateTick = true;
+    keySyncStartPpq = currentPpq; // Anchor "the 1" to this moment
+  }
+
+  wasHoldingNotes = holdingNotes;
+
+  // --- Compute the effective division in PPQ ---
+  int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
+  double division = DIVISIONS[divIdx];
+  if (triplet) {
+    division *= (2.0 / 3.0);
+  }
+
+  // --- Determine if this block is a tick ---
+  bool isTick = false;
+
+  if (keySyncImmediateTick) {
+    // Key Sync: fire immediately on first keypress — this IS the "1"
+    isTick = true;
+    keySyncImmediateTick = false;
+    lastTickPpq = currentPpq; // Initialize for subsequent detection
+  } else if (lastTickPpq >= 0.0) {
+    // Normal tick detection using PPQ boundary crossings
+    double effectiveCurrent, effectivePrev;
+
+    if (transportSyncMode == 0) {
+      // Clock Sync: ticks on the absolute grid
+      effectiveCurrent = currentPpq;
+      effectivePrev = lastTickPpq;
+    } else {
+      // Key Sync: ticks relative to key-press anchor
+      effectiveCurrent = currentPpq - keySyncStartPpq;
+      effectivePrev = lastTickPpq - keySyncStartPpq;
+    }
+
+    double prevTick = std::floor(effectivePrev / division);
+    double currTick = std::floor(effectiveCurrent / division);
+    if (currTick > prevTick) {
+      isTick = true;
+    }
+  }
+
+  lastTickPpq = currentPpq;
 
   if (isTick) {
     for (const auto &note : playingNotes) {
@@ -114,13 +182,11 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     bool isRhythmBeat = rhythmPattern[rhythmIndex];
     rhythmIndex = (int)((rhythmIndex + 1) % rhythmPattern.size());
 
-    // If it's a Rest, time passes but absolutely nothing triggers
     if (!isRhythmBeat) {
       return;
     }
 
     // --- 2. PATTERN LAYER (Note vs Skip) ---
-    // We only evaluate this IF the Rhythm layer produced a Beat trigger
     int actualPSteps =
         macroPSteps != -1 && macros[macroPSteps] != nullptr
             ? 1 + (int)std::round(macros[macroPSteps]->load() * 31.0f)
@@ -140,29 +206,24 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (pattern.empty())
       return;
 
-    // Safety check - we must wrap if pattern length dynamically shrunk
     if (patternIndex >= (int)pattern.size()) {
       patternIndex = 0;
     }
 
-    // Instantaneously skip sequence steps until the pattern dictates a Beat
-    size_t skipsProcessed = 0; // limit to prevent infinite loops (e.g. 0 beats)
+    size_t skipsProcessed = 0;
     while (!pattern[patternIndex] && skipsProcessed < pattern.size()) {
       patternIndex = (int)((patternIndex + 1) % pattern.size());
       sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
       skipsProcessed++;
     }
 
-    // If the loop broke normally, we have a Note to play
     if (pattern[patternIndex]) {
       const auto &step = sequence[sequenceIndex];
 
-      // Increment for NEXT clock tick
       patternIndex = (int)((patternIndex + 1) % pattern.size());
       sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
 
       for (const HeldNote &noteTrigger : step) {
-        // --- DYNAMIC MPE POLLING ---
         float currentPressure =
             midiHandler.getMpeZ(noteTrigger.channel, noteTrigger.noteNumber);
         float finalVelocity = std::clamp(
@@ -194,6 +255,12 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("macroRSteps", macroRSteps);
     xml->setAttribute("macroRBeats", macroRBeats);
     xml->setAttribute("macroROffset", macroROffset);
+
+    xml->setAttribute("transportSyncMode", transportSyncMode);
+    xml->setAttribute("patternResetOnRelease", patternResetOnRelease ? 1 : 0);
+    xml->setAttribute("rhythmResetOnRelease", rhythmResetOnRelease ? 1 : 0);
+    xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
+    xml->setAttribute("triplet", triplet ? 1 : 0);
   }
 }
 
@@ -212,5 +279,12 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     macroRSteps = xml->getIntAttribute("macroRSteps", -1);
     macroRBeats = xml->getIntAttribute("macroRBeats", -1);
     macroROffset = xml->getIntAttribute("macroROffset", -1);
+
+    transportSyncMode = xml->getIntAttribute("transportSyncMode", 0);
+    patternResetOnRelease =
+        xml->getIntAttribute("patternResetOnRelease", 1) != 0;
+    rhythmResetOnRelease = xml->getIntAttribute("rhythmResetOnRelease", 1) != 0;
+    clockDivisionIndex = xml->getIntAttribute("clockDivisionIndex", 5);
+    triplet = xml->getIntAttribute("triplet", 0) != 0;
   }
 }

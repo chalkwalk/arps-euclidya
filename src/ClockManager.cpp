@@ -12,12 +12,16 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
   }
 
   if (info.hasValue() && info->getIsPlaying()) {
+    hostPlaying = true;
     if (info->getBpm().hasValue()) {
       currentBPM = *info->getBpm();
     }
 
     if (info->getPpqPosition().hasValue()) {
       double currentPpq = *info->getPpqPosition();
+
+      // Update cumulative PPQ to mirror host position
+      cumulativePpq = currentPpq;
 
       if (lastPpqPosition >= 0.0) {
         // Determine if we crossed an 1/8th note boundary (0.5 PPQ)
@@ -33,6 +37,7 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
       lastPpqPosition = currentPpq;
     }
   } else {
+    hostPlaying = false;
     // Fallback: Free-sync internal clock when host is stopped or unavailable
     lastPpqPosition = -1.0; // Reset host sync
 
@@ -41,6 +46,11 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
       double samplesPerEighth = samplesPerBeat * 0.5;
 
       internalPhase += samplesPerBlock;
+
+      // Accumulate cumulative PPQ from BPM
+      // samplesPerBlock / samplesPerBeat = beats (quarter notes) elapsed
+      double beatsElapsed = (double)samplesPerBlock / samplesPerBeat;
+      cumulativePpq += beatsElapsed;
 
       if (internalPhase >= samplesPerEighth) {
         internalPhase -= samplesPerEighth;
