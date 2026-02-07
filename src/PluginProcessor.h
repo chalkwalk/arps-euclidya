@@ -64,7 +64,6 @@ public:
   // Graph Editor methods
   void addNode(std::shared_ptr<GraphNode> node);
   void removeNode(GraphNode *node);
-  void moveNode(GraphNode *node, int newIndex);
 
   // Hardcoded Step 2 Nodes
   // Hardcoded Step 2 Nodes

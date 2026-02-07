@@ -203,12 +203,6 @@ void EuclideanArpProcessor::setStateInformation(const void *data,
     if (graphXml != nullptr) {
       const juce::ScopedLock sl(graphLock);
       graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
-
-      if (auto *editor = getEditor()) {
-        // Trigger asynchronous UI rebuild on the message thread
-        juce::MessageManager::callAsync(
-            [editor]() { editor->rebuildGraphUI(); });
-      }
     }
   }
 }
@@ -225,11 +219,6 @@ void EuclideanArpProcessor::addNode(std::shared_ptr<GraphNode> node) {
 void EuclideanArpProcessor::removeNode(GraphNode *node) {
   const juce::ScopedLock sl(graphLock);
   graphEngine.removeNode(node);
-}
-
-void EuclideanArpProcessor::moveNode(GraphNode *node, int newIndex) {
-  const juce::ScopedLock sl(graphLock);
-  graphEngine.moveNode(node, newIndex);
 }
 
 // This creates new instances of the plugin

@@ -29,11 +29,13 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
     btn->onClick = [this, nt]() { addNodeFromLibrary(nt); };
   }
 
-  // Setup Graph
+  // Setup Graph Canvas
   addAndMakeVisible(graphViewport);
-  graphViewport.setViewedComponent(&graphContent, false);
-
-  rebuildGraphUI();
+  graphCanvas = std::make_unique<GraphCanvas>(audioProcessor.graphEngine,
+                                              audioProcessor.apvts,
+                                              audioProcessor.graphLock);
+  graphViewport.setViewedComponent(graphCanvas.get(), false);
+  graphCanvas->rebuild();
 
   setSize(900, 700);
   startTimerHz(30);
@@ -44,7 +46,7 @@ EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }
 void EuclideanArpEditor::timerCallback() {}
 
 void EuclideanArpEditor::paint(juce::Graphics &g) {
-  g.fillAll(juce::Colour(0xff111111)); // Premium dark mode background
+  g.fillAll(juce::Colour(0xff111111));
   g.setColour(juce::Colour(0xff222222));
   g.fillRect(libraryViewport.getBounds());
   g.fillRect(macroBar.getBounds());
@@ -78,53 +80,8 @@ void EuclideanArpEditor::resized() {
   }
   libraryContent.setBounds(0, 0, 150, btnY);
 
-  // Main Graph
+  // Main Graph Canvas
   graphViewport.setBounds(bounds);
-
-  int panelY = 5;
-  for (auto panel : nodePanels) {
-    // Dynamic height: use the custom controls' preferred height + title bar
-    int panelHeight = 220; // default
-    auto *controls = panel->getChildComponent(
-        panel->getNumChildComponents() - 1); // last child is customControls
-    if (controls != nullptr) {
-      panelHeight =
-          controls->getHeight() + 34; // 24px title + 5px spacer + 5px padding
-    }
-    panel->setBounds(10, panelY, bounds.getWidth() - 40, panelHeight);
-    panelY += panelHeight + 10;
-  }
-  graphContent.setBounds(0, 0, bounds.getWidth() - 20, panelY);
-}
-
-void EuclideanArpEditor::rebuildGraphUI() {
-  nodePanels.clear();
-
-  const juce::ScopedLock sl(audioProcessor.graphLock);
-  auto nodes = audioProcessor.graphEngine.getNodes();
-
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    auto node = nodes[i];
-    auto panel = new NodeEditorPanel(node, audioProcessor.apvts);
-
-    panel->onDelete = [this, node]() {
-      audioProcessor.removeNode(node.get());
-      rebuildGraphUI();
-    };
-    panel->onMoveUp = [this, node, i]() {
-      audioProcessor.moveNode(node.get(), i - 1);
-      rebuildGraphUI();
-    };
-    panel->onMoveDown = [this, node, i]() {
-      audioProcessor.moveNode(node.get(), i + 1);
-      rebuildGraphUI();
-    };
-
-    graphContent.addAndMakeVisible(panel);
-    nodePanels.add(panel);
-  }
-
-  resized(); // trigger relayout of graphContent
 }
 
 void EuclideanArpEditor::addNodeFromLibrary(const juce::String &nodeType) {
@@ -132,7 +89,6 @@ void EuclideanArpEditor::addNodeFromLibrary(const juce::String &nodeType) {
       nodeType.toStdString(), audioProcessor.midiHandler,
       audioProcessor.clockManager, audioProcessor.macros);
   if (newNode) {
-    audioProcessor.addNode(newNode);
-    rebuildGraphUI();
+    graphCanvas->addNodeAtDefaultPosition(newNode);
   }
 }

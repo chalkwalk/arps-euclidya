@@ -13,6 +13,7 @@ public:
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
   std::string getName() const override { return "All Notes"; }
+  int getNumInputPorts() const override { return 0; }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;

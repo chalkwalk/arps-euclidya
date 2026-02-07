@@ -1,0 +1,213 @@
+#include "NodeBlock.h"
+#include "GraphCanvas.h"
+
+NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
+                     juce::AudioProcessorValueTreeState &apvts,
+                     GraphCanvas &canvas)
+    : targetNode(node), parentCanvas(canvas) {
+
+  titleLabel.setText(node->getName(), juce::dontSendNotification);
+  titleLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
+  titleLabel.setJustificationType(juce::Justification::centredLeft);
+  titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+  titleLabel.setInterceptsMouseClicks(false, false);
+  addAndMakeVisible(titleLabel);
+
+  deleteButton.setColour(juce::TextButton::buttonColourId,
+                         juce::Colour(0xff882222));
+  addAndMakeVisible(deleteButton);
+  deleteButton.onClick = [this] {
+    if (onDelete)
+      onDelete();
+  };
+
+  customControls = node->createEditorComponent(apvts);
+  if (customControls != nullptr) {
+    addAndMakeVisible(customControls.get());
+  }
+
+  // Calculate size based on port count and custom controls
+  int minPortHeight =
+      std::max(node->getNumInputPorts(), node->getNumOutputPorts()) *
+      PORT_SPACING;
+  int controlsHeight =
+      (customControls != nullptr) ? customControls->getHeight() : 40;
+  int bodyHeight = std::max(minPortHeight + 10, controlsHeight);
+  int totalHeight = HEADER_HEIGHT + bodyHeight + 10;
+
+  setSize(300, totalHeight);
+}
+
+void NodeBlock::paint(juce::Graphics &g) {
+  auto bounds = getLocalBounds().toFloat();
+
+  // Node body: rounded rectangle
+  g.setColour(juce::Colour(0xff2a2a2a));
+  g.fillRoundedRectangle(bounds, 6.0f);
+
+  // Header bar
+  auto headerBounds =
+      juce::Rectangle<float>(bounds.getX() + 1, bounds.getY() + 1,
+                             bounds.getWidth() - 2, (float)HEADER_HEIGHT - 1);
+  g.setColour(juce::Colour(0xff3a3a3a));
+  g.fillRoundedRectangle(headerBounds.getX(), headerBounds.getY(),
+                         headerBounds.getWidth(), headerBounds.getHeight(),
+                         5.0f);
+
+  // Border
+  g.setColour(juce::Colour(0xff555555));
+  g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
+
+  // Draw input ports
+  int numIn = targetNode->getNumInputPorts();
+  for (int i = 0; i < numIn; ++i) {
+    auto rect = getInputPortRect(i);
+    auto centre = rect.getCentre().toFloat();
+
+    // Filled green circle
+    g.setColour(juce::Colour(0xff44cc44));
+    g.fillEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
+                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f);
+    g.setColour(juce::Colour(0xff228822));
+    g.drawEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
+                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f, 1.5f);
+  }
+
+  // Draw output ports
+  int numOut = targetNode->getNumOutputPorts();
+  for (int i = 0; i < numOut; ++i) {
+    auto rect = getOutputPortRect(i);
+    auto centre = rect.getCentre().toFloat();
+
+    // Filled blue circle
+    g.setColour(juce::Colour(0xff4499ff));
+    g.fillEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
+                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f);
+    g.setColour(juce::Colour(0xff2266aa));
+    g.drawEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
+                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f, 1.5f);
+  }
+}
+
+void NodeBlock::resized() {
+  auto bounds = getLocalBounds();
+
+  // Header
+  auto header = bounds.removeFromTop(HEADER_HEIGHT).reduced(PORT_MARGIN + 4, 2);
+  deleteButton.setBounds(header.removeFromRight(24));
+  header.removeFromRight(4);
+  titleLabel.setBounds(header);
+
+  // Body: custom controls
+  if (customControls != nullptr) {
+    auto body = bounds.reduced(PORT_MARGIN + 4, 4);
+    customControls->setBounds(body);
+  }
+}
+
+void NodeBlock::mouseDown(const juce::MouseEvent &e) {
+  auto pos = e.getPosition();
+
+  // Check if we hit a port
+  int outPort = hitTestOutputPort(pos);
+  if (outPort >= 0) {
+    isDraggingCable = true;
+    isDraggingNode = false;
+    if (onPortDragStart) {
+      auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
+      onPortDragStart(this, outPort, true, canvasPos);
+    }
+    return;
+  }
+
+  int inPort = hitTestInputPort(pos);
+  if (inPort >= 0) {
+    isDraggingCable = true;
+    isDraggingNode = false;
+    if (onPortDragStart) {
+      auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
+      onPortDragStart(this, inPort, false, canvasPos);
+    }
+    return;
+  }
+
+  // Otherwise, start dragging the node
+  isDraggingNode = true;
+  isDraggingCable = false;
+  dragger.startDraggingComponent(this, e);
+}
+
+void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
+  if (isDraggingCable) {
+    if (onPortDragging) {
+      auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
+      onPortDragging(canvasPos);
+    }
+    return;
+  }
+
+  if (isDraggingNode) {
+    dragger.dragComponent(this, e, nullptr);
+    targetNode->nodeX = (float)getX();
+    targetNode->nodeY = (float)getY();
+    if (onPositionChanged)
+      onPositionChanged();
+  }
+}
+
+void NodeBlock::mouseUp(const juce::MouseEvent &e) {
+  if (isDraggingCable) {
+    if (onPortDragEnd) {
+      auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
+      onPortDragEnd(canvasPos);
+    }
+    isDraggingCable = false;
+    return;
+  }
+  isDraggingNode = false;
+}
+
+juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
+  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
+  return juce::Rectangle<int>(PORT_MARGIN - PORT_RADIUS, y - PORT_RADIUS,
+                              PORT_RADIUS * 2, PORT_RADIUS * 2);
+}
+
+juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
+  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
+  return juce::Rectangle<int>(getWidth() - PORT_MARGIN - PORT_RADIUS,
+                              y - PORT_RADIUS, PORT_RADIUS * 2,
+                              PORT_RADIUS * 2);
+}
+
+juce::Point<int> NodeBlock::getInputPortCentre(int portIndex) const {
+  auto rect = getInputPortRect(portIndex);
+  return getPosition() + rect.getCentre();
+}
+
+juce::Point<int> NodeBlock::getOutputPortCentre(int portIndex) const {
+  auto rect = getOutputPortRect(portIndex);
+  return getPosition() + rect.getCentre();
+}
+
+int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
+  int numIn = targetNode->getNumInputPorts();
+  for (int i = 0; i < numIn; ++i) {
+    auto rect = getInputPortRect(i);
+    auto centre = rect.getCentre();
+    if (localPoint.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
+      return i;
+  }
+  return -1;
+}
+
+int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
+  int numOut = targetNode->getNumOutputPorts();
+  for (int i = 0; i < numOut; ++i) {
+    auto rect = getOutputPortRect(i);
+    auto centre = rect.getCentre();
+    if (localPoint.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
+      return i;
+  }
+  return -1;
+}

@@ -15,18 +15,23 @@ public:
 
   void addNode(std::shared_ptr<GraphNode> node);
   void removeNode(GraphNode *node);
-  void moveNode(GraphNode *node, int newIndex);
 
-  // Forces all nodes to recalculate their states downstream
+  // Explicit connection management (replaces implicit linear chain)
+  bool addExplicitConnection(GraphNode *source, int outPort, GraphNode *target,
+                             int inPort);
+  void removeConnection(GraphNode *source, int outPort, GraphNode *target,
+                        int inPort);
+
+  // Forces all nodes to recalculate their states downstream (topological order)
   void recalculate();
 
-  // Gets the current list of nodes (in order)
+  // Gets the current list of nodes
   const std::vector<std::shared_ptr<GraphNode>> &getNodes() const {
     return nodes;
   }
 
-  // Rebuilds implicit connections based on node order and applies overrides
-  void updateImplicitConnections();
+  // Check if adding a connection would create a cycle
+  bool wouldCreateCycle(GraphNode *source, GraphNode *target) const;
 
   void saveState(juce::XmlElement *xmlRoot);
   void loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
@@ -35,4 +40,10 @@ public:
 
 private:
   std::vector<std::shared_ptr<GraphNode>> nodes;
+
+  // Compute a topological ordering of nodes based on connections
+  std::vector<GraphNode *> topologicalSort() const;
+
+  // Helper: check if 'target' is reachable from 'source' via connections
+  bool isReachable(GraphNode *source, GraphNode *target) const;
 };

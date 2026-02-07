@@ -1,75 +1,201 @@
 #include "GraphEngine.h"
 #include <algorithm>
+#include <queue>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 void GraphEngine::addNode(std::shared_ptr<GraphNode> node) {
   nodes.push_back(node);
-  updateImplicitConnections();
 }
 
 void GraphEngine::removeNode(GraphNode *node) {
+  // First, remove all connections involving this node
+  for (auto &n : nodes) {
+    if (n.get() == node) {
+      n->clearConnections();
+    } else {
+      // Remove connections that point to the deleted node
+      auto &conns =
+          const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
+              n->getConnections());
+      for (auto &[port, connVec] : conns) {
+        connVec.erase(std::remove_if(connVec.begin(), connVec.end(),
+                                     [node](const GraphNode::Connection &c) {
+                                       return c.targetNode == node;
+                                     }),
+                      connVec.end());
+      }
+    }
+  }
+
+  // Remove the node itself
   auto it = std::remove_if(
       nodes.begin(), nodes.end(),
       [node](const std::shared_ptr<GraphNode> &n) { return n.get() == node; });
   if (it != nodes.end()) {
     nodes.erase(it, nodes.end());
-    updateImplicitConnections();
   }
 }
 
-void GraphEngine::moveNode(GraphNode *node, int newIndex) {
-  auto it = std::find_if(
-      nodes.begin(), nodes.end(),
-      [node](const std::shared_ptr<GraphNode> &n) { return n.get() == node; });
+bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
+                                        GraphNode *target, int inPort) {
+  if (source == nullptr || target == nullptr)
+    return false;
+  if (source == target)
+    return false;
 
-  if (it != nodes.end()) {
-    std::shared_ptr<GraphNode> n = *it;
-    nodes.erase(it);
+  // Cycle detection: would adding source→target create a cycle?
+  if (wouldCreateCycle(source, target))
+    return false;
 
-    if (newIndex < 0)
-      newIndex = 0;
-    if (newIndex > (int)nodes.size())
-      newIndex = (int)nodes.size();
+  // Check port bounds
+  if (outPort < 0 || outPort >= source->getNumOutputPorts())
+    return false;
+  if (inPort < 0 || inPort >= target->getNumInputPorts())
+    return false;
 
-    nodes.insert(nodes.begin() + newIndex, n);
-    updateImplicitConnections();
+  // Remove any existing connection to this specific input port
+  // (an input port can only have one source)
+  for (auto &n : nodes) {
+    auto &conns =
+        const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
+            n->getConnections());
+    for (auto &[port, connVec] : conns) {
+      connVec.erase(
+          std::remove_if(connVec.begin(), connVec.end(),
+                         [target, inPort](const GraphNode::Connection &c) {
+                           return c.targetNode == target &&
+                                  c.targetInputPort == inPort;
+                         }),
+          connVec.end());
+    }
+  }
+
+  source->addConnection(outPort, target, inPort);
+  return true;
+}
+
+void GraphEngine::removeConnection(GraphNode *source, int outPort,
+                                   GraphNode *target, int inPort) {
+  if (source == nullptr)
+    return;
+
+  auto &conns = const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
+      source->getConnections());
+  auto it = conns.find(outPort);
+  if (it != conns.end()) {
+    auto sizeBefore = it->second.size();
+    it->second.erase(
+        std::remove_if(it->second.begin(), it->second.end(),
+                       [target, inPort](const GraphNode::Connection &c) {
+                         return c.targetNode == target &&
+                                c.targetInputPort == inPort;
+                       }),
+        it->second.end());
+
+    // If we actually removed a connection, clear the target's cached input
+    if (it->second.size() < sizeBefore && target != nullptr) {
+      target->clearInputSequence(inPort);
+    }
   }
 }
 
-void GraphEngine::updateImplicitConnections() {
-  // Clear all connections first
-  for (auto &node : nodes) {
-    node->clearConnections();
+bool GraphEngine::wouldCreateCycle(GraphNode *source, GraphNode *target) const {
+  // If target can reach source via existing connections, adding source→target
+  // would create a cycle
+  return isReachable(target, source);
+}
+
+bool GraphEngine::isReachable(GraphNode *from, GraphNode *to) const {
+  if (from == to)
+    return true;
+
+  std::unordered_set<GraphNode *> visited;
+  std::queue<GraphNode *> queue;
+  queue.push(from);
+  visited.insert(from);
+
+  while (!queue.empty()) {
+    GraphNode *current = queue.front();
+    queue.pop();
+
+    for (const auto &[port, connVec] : current->getConnections()) {
+      for (const auto &conn : connVec) {
+        if (conn.targetNode == to)
+          return true;
+        if (visited.find(conn.targetNode) == visited.end()) {
+          visited.insert(conn.targetNode);
+          queue.push(conn.targetNode);
+        }
+      }
+    }
   }
 
-  // Create implicit connections from node N output 0 to node N+1 input 0
-  for (size_t i = 0; i + 1 < nodes.size(); ++i) {
-    nodes[i]->addConnection(0, nodes[i + 1].get(), 0);
+  return false;
+}
+
+std::vector<GraphNode *> GraphEngine::topologicalSort() const {
+  // Kahn's algorithm
+  std::unordered_map<GraphNode *, int> inDegree;
+  for (const auto &node : nodes) {
+    if (inDegree.find(node.get()) == inDegree.end()) {
+      inDegree[node.get()] = 0;
+    }
   }
+
+  // Count incoming edges
+  for (const auto &node : nodes) {
+    for (const auto &[port, connVec] : node->getConnections()) {
+      for (const auto &conn : connVec) {
+        inDegree[conn.targetNode]++;
+      }
+    }
+  }
+
+  // Start with nodes that have no incoming edges
+  std::queue<GraphNode *> queue;
+  for (const auto &node : nodes) {
+    if (inDegree[node.get()] == 0) {
+      queue.push(node.get());
+    }
+  }
+
+  std::vector<GraphNode *> sorted;
+  while (!queue.empty()) {
+    GraphNode *current = queue.front();
+    queue.pop();
+    sorted.push_back(current);
+
+    for (const auto &[port, connVec] : current->getConnections()) {
+      for (const auto &conn : connVec) {
+        inDegree[conn.targetNode]--;
+        if (inDegree[conn.targetNode] == 0) {
+          queue.push(conn.targetNode);
+        }
+      }
+    }
+  }
+
+  return sorted;
 }
 
 void GraphEngine::recalculate() {
-  // Linear processing for Step 7 (Implicit flow)
-  // Each node processes using its input sequences which it gathers from
-  // upstream
+  auto sorted = topologicalSort();
 
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    // Before processing, we must copy the output of the previous node to our
-    // input because we are using a linear Top-to-Bottom evaluation model.
-    if (i > 0) {
-      // Find all connections that point to us
-      for (size_t j = 0; j < i; ++j) {
-        for (const auto &connList : nodes[j]->getConnections()) {
-          int outPort = connList.first;
-          for (const auto &conn : connList.second) {
-            if (conn.targetNode == nodes[i].get()) {
-              nodes[i]->setInputSequence(conn.targetInputPort,
-                                         nodes[j]->getOutputSequence(outPort));
-            }
+  for (GraphNode *node : sorted) {
+    // Copy outputs of upstream nodes to this node's inputs
+    for (const auto &upstreamNodePtr : nodes) {
+      for (const auto &[outPort, connVec] : upstreamNodePtr->getConnections()) {
+        for (const auto &conn : connVec) {
+          if (conn.targetNode == node) {
+            node->setInputSequence(conn.targetInputPort,
+                                   upstreamNodePtr->getOutputSequence(outPort));
           }
         }
       }
     }
-    nodes[i]->process();
+    node->process();
   }
 }
 
@@ -82,6 +208,7 @@ void GraphEngine::saveState(juce::XmlElement *xmlRoot) {
     auto *nodeXml = nodesXml->createNewChildElement("Node");
     nodeXml->setAttribute("type", node->getName());
     nodeXml->setAttribute("uuid", node->nodeId.toString());
+    node->saveBaseState(nodeXml);
     node->saveNodeState(nodeXml);
   }
 
@@ -118,6 +245,7 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
       auto node = NodeFactory::createNode(type, midiCtx, clockCtx, macros);
       if (node) {
         node->nodeId = juce::Uuid(nodeXml->getStringAttribute("uuid"));
+        node->loadBaseState(nodeXml);
         node->loadNodeState(nodeXml);
         nodes.push_back(node);
       }
@@ -133,24 +261,19 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
       juce::String targetUuidStr = connXml->getStringAttribute("targetUuid");
       int targetPort = connXml->getIntAttribute("targetPort");
 
-      std::shared_ptr<GraphNode> sourceNode = nullptr;
-      std::shared_ptr<GraphNode> targetNode = nullptr;
+      GraphNode *sourceNode = nullptr;
+      GraphNode *targetNode = nullptr;
 
       for (const auto &node : nodes) {
         if (node->nodeId.toString() == sourceUuidStr)
-          sourceNode = node;
+          sourceNode = node.get();
         if (node->nodeId.toString() == targetUuidStr)
-          targetNode = node;
+          targetNode = node.get();
       }
 
       if (sourceNode && targetNode) {
-        // Temporarily disable clearing existing connections
-        sourceNode->addConnection(sourcePort, targetNode.get(), targetPort);
+        sourceNode->addConnection(sourcePort, targetNode, targetPort);
       }
     }
-  } else {
-    // Fallback to implicit connections if no explicit routing found (Step 7
-    // compat)
-    updateImplicitConnections();
   }
 }

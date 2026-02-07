@@ -37,6 +37,8 @@ target_sources(EuclideanArp
         UnfoldNode.cpp
         QuantizerNode.cpp
         AllNotesNode.cpp
+        NodeBlock.cpp
+        GraphCanvas.cpp
     PUBLIC    NodeEditorPanel.cpp)
 
 clap_juce_extensions_plugin(TARGET EuclideanArp CLAP_ID "com.ChalkWalkMusic.EuclideanArp" CLAP_FEATURES "note-effect" "tool")

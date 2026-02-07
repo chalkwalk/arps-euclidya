@@ -16,6 +16,7 @@ public:
   ~MidiOutNode() override = default;
 
   std::string getName() const override { return "Midi Out"; }
+  int getNumOutputPorts() const override { return 0; }
 
   // Re-caches internally when graph sequence changes
   void process() override;

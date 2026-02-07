@@ -1,10 +1,9 @@
 #pragma once
 
-#include "NodeEditorPanel.h"
+#include "GraphCanvas.h"
 #include "PluginProcessor.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <vector>
 
 class EuclideanArpEditor : public juce::AudioProcessorEditor,
                            private juce::Timer {
@@ -16,21 +15,19 @@ public:
   void resized() override;
   void timerCallback() override;
 
-  void rebuildGraphUI();
-
 private:
   void addNodeFromLibrary(const juce::String &nodeType);
 
   EuclideanArpProcessor &audioProcessor;
 
-  // Layout components
+  // Library panel
   juce::Viewport libraryViewport;
   juce::Component libraryContent;
   juce::OwnedArray<juce::TextButton> libraryButtons;
 
+  // Graph canvas (replaces the linear graphContent)
   juce::Viewport graphViewport;
-  juce::Component graphContent;
-  juce::OwnedArray<NodeEditorPanel> nodePanels;
+  std::unique_ptr<GraphCanvas> graphCanvas;
 
   // Macros
   juce::Component macroBar;

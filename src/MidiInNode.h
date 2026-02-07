@@ -10,6 +10,7 @@ public:
   ~MidiInNode() override = default;
 
   std::string getName() const override { return "Midi In"; }
+  int getNumInputPorts() const override { return 0; }
 
   // Reads from MidiHandler and generates sequence cache
   void process() override;
