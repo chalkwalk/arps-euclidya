@@ -50,6 +50,12 @@ public:
     return nullptr;
   }
 
+  // Return pairs of (parameter display name, pointer to macro index field)
+  // Used by PluginProcessor to build dynamic macro parameter names
+  virtual std::vector<std::pair<juce::String, int *>> getMacroMappings() {
+    return {};
+  }
+
   void setInputSequence(int inputPort, const NoteSequence &sequence);
   void clearInputSequence(int inputPort);
   const NoteSequence &getOutputSequence(int outputPort) const;

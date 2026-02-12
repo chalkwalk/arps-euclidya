@@ -43,7 +43,10 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
 
 EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }
 
-void EuclideanArpEditor::timerCallback() {}
+void EuclideanArpEditor::timerCallback() {
+  // Periodically refresh macro display names to reflect any mapping changes
+  audioProcessor.updateMacroNames();
+}
 
 void EuclideanArpEditor::paint(juce::Graphics &g) {
   g.fillAll(juce::Colour(0xff111111));

@@ -29,6 +29,13 @@ public:
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {
+        {"Pattern Steps", &macroPSteps},   {"Pattern Beats", &macroPBeats},
+        {"Pattern Offset", &macroPOffset}, {"Rhythm Steps", &macroRSteps},
+        {"Rhythm Beats", &macroRBeats},    {"Rhythm Offset", &macroROffset}};
+  }
+
   int pSteps = 16;
   int pBeats = 4;
   int pOffset = 16;
@@ -49,6 +56,7 @@ public:
   bool rhythmResetOnRelease = true;  // Reset rhythm on all-keys-up
   int clockDivisionIndex = 5;        // Index into division table (default: 1/8)
   bool triplet = false;              // Triplet modifier
+  int outputChannel = 1;             // Output MIDI channel (1-16)
 
 private:
   MidiHandler &midiHandler;

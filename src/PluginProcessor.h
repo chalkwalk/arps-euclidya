@@ -3,6 +3,8 @@
 #include <array>
 #include <juce_audio_processors/juce_audio_processors.h>
 
+class MacroParameter;
+
 struct MidiLogEvent {
   int logType; // 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn, 5=ArpNoteOff
   int channel;
@@ -50,6 +52,10 @@ public:
 
   juce::AudioProcessorValueTreeState apvts;
   std::array<std::atomic<float> *, 32> macros = {nullptr};
+  std::array<MacroParameter *, 32> macroParams = {nullptr};
+
+  // Called after graph changes to update macro display names
+  void updateMacroNames();
 
   juce::AbstractFifo midiLogFifo{512};
   std::array<MidiLogEvent, 512> midiLogBuffer;

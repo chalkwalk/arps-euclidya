@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "MacroParameter.h"
 #include "MidiInNode.h"
 #include "MidiOutNode.h"
 #include "PluginEditor.h"
@@ -9,9 +10,11 @@ EuclideanArpProcessor::EuclideanArpProcessor()
     : AudioProcessor(BusesProperties()), // No audio channels for MIDI effect
       apvts(*this, nullptr, "Parameters", createParameterLayout()) {
 
-  // Fetch raw parameter pointers for RT thread
+  // Fetch raw parameter pointers and MacroParameter* for RT thread
   for (int i = 0; i < 32; ++i) {
     macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
+    macroParams[i] = dynamic_cast<MacroParameter *>(
+        apvts.getParameter("macro_" + juce::String(i + 1)));
   }
 
   // Create default graph (Midi In -> Sort -> Midi Out)
@@ -42,10 +45,7 @@ EuclideanArpProcessor::createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
   for (int i = 1; i <= 32; ++i) {
-    juce::String id = "macro_" + juce::String(i);
-    juce::String name = "Macro " + juce::String(i);
-    layout.add(std::make_unique<juce::AudioParameterFloat>(id, name, 0.0f, 1.0f,
-                                                           0.0f));
+    layout.add(std::make_unique<MacroParameter>(i));
   }
 
   return layout;
@@ -203,6 +203,7 @@ void EuclideanArpProcessor::setStateInformation(const void *data,
     if (graphXml != nullptr) {
       const juce::ScopedLock sl(graphLock);
       graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
+      updateMacroNames();
     }
   }
 }
@@ -214,11 +215,47 @@ EuclideanArpEditor *EuclideanArpProcessor::getEditor() {
 void EuclideanArpProcessor::addNode(std::shared_ptr<GraphNode> node) {
   const juce::ScopedLock sl(graphLock);
   graphEngine.addNode(node);
+  updateMacroNames();
 }
 
 void EuclideanArpProcessor::removeNode(GraphNode *node) {
   const juce::ScopedLock sl(graphLock);
   graphEngine.removeNode(node);
+  updateMacroNames();
+}
+
+void EuclideanArpProcessor::updateMacroNames() {
+  // Count how many parameters map to each macro index (0-31)
+  std::array<int, 32> mappingCount = {};
+  std::array<juce::String, 32> mappingNames;
+
+  auto &nodes = graphEngine.getNodes();
+  for (auto &node : nodes) {
+    auto mappings = node->getMacroMappings();
+    for (auto &[paramName, macroIndexPtr] : mappings) {
+      int idx = *macroIndexPtr;
+      if (idx >= 0 && idx < 32) {
+        mappingCount[(size_t)idx]++;
+        if (mappingCount[(size_t)idx] == 1) {
+          mappingNames[(size_t)idx] = paramName;
+        }
+      }
+    }
+  }
+
+  // Update each MacroParameter's display name
+  for (int i = 0; i < 32; ++i) {
+    if (macroParams[i] == nullptr)
+      continue;
+
+    if (mappingCount[(size_t)i] == 0) {
+      macroParams[i]->clearMapping();
+    } else if (mappingCount[(size_t)i] == 1) {
+      macroParams[i]->setMappingName(mappingNames[(size_t)i]);
+    } else {
+      macroParams[i]->setMappingName("MULTIPLE");
+    }
+  }
 }
 
 // This creates new instances of the plugin

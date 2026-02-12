@@ -26,6 +26,10 @@ public:
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {{"Channel Filter", &macroChannelFilter}};
+  }
+
 private:
   MidiHandler &midiHandler;
   std::array<std::atomic<float> *, 32> macros;

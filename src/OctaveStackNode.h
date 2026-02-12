@@ -14,6 +14,10 @@ public:
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {{"Octave Stack", &macroOctaves}};
+  }
+
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 

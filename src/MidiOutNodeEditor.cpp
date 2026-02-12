@@ -136,7 +136,22 @@ public:
     };
     addAndMakeVisible(rhythmResetToggle);
 
-    setSize(400, 340);
+    // --- Output Channel ---
+    for (int ch = 1; ch <= 16; ++ch) {
+      outputChannelBox.addItem("Ch " + juce::String(ch), ch);
+    }
+    outputChannelBox.setSelectedId(midiOutNode.outputChannel,
+                                   juce::dontSendNotification);
+    outputChannelBox.onChange = [this]() {
+      midiOutNode.outputChannel = outputChannelBox.getSelectedId();
+    };
+    addAndMakeVisible(outputChannelBox);
+
+    outputChannelLabel.setText("Out Ch", juce::dontSendNotification);
+    outputChannelLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(outputChannelLabel);
+
+    setSize(400, 380);
   }
 
   void resized() override {
@@ -149,6 +164,7 @@ public:
     auto row2 = bounds.removeFromTop(knobRowHeight);
     auto row3 = bounds.removeFromTop(ctrlRowHeight);
     auto row4 = bounds.removeFromTop(ctrlRowHeight);
+    auto row5 = bounds.removeFromTop(ctrlRowHeight);
 
     int w = getWidth() / 3;
 
@@ -194,6 +210,11 @@ public:
 
     auto r4c = row4.removeFromLeft(w);
     rhythmResetToggle.setBounds(r4c.reduced(4));
+
+    // Row 5: Output channel
+    auto r5a = row5.removeFromLeft(w);
+    outputChannelLabel.setBounds(r5a.removeFromLeft(r5a.getWidth() / 3));
+    outputChannelBox.setBounds(r5a.reduced(2));
   }
 
 private:
@@ -217,6 +238,10 @@ private:
   juce::Label syncModeLabel;
   juce::ToggleButton patternResetToggle;
   juce::ToggleButton rhythmResetToggle;
+
+  // Output Channel
+  juce::ComboBox outputChannelBox;
+  juce::Label outputChannelLabel;
 };
 
 std::unique_ptr<juce::Component>

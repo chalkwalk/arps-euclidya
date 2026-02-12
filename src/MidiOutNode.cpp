@@ -142,8 +142,9 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
   if (isTick) {
     for (const auto &note : playingNotes) {
-      outputBuffer.addEvent(juce::MidiMessage::noteOff(note.first, note.second),
-                            samplePosition);
+      outputBuffer.addEvent(
+          juce::MidiMessage::noteOff(outputChannel, note.second),
+          samplePosition);
     }
     playingNotes.clear();
   }
@@ -229,12 +230,12 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
         float finalVelocity = std::clamp(
             noteTrigger.velocity + (currentPressure * 0.5f), 0.0f, 1.0f);
 
-        outputBuffer.addEvent(juce::MidiMessage::noteOn(noteTrigger.channel,
+        outputBuffer.addEvent(juce::MidiMessage::noteOn(outputChannel,
                                                         noteTrigger.noteNumber,
                                                         finalVelocity),
                               samplePosition);
 
-        playingNotes.push_back({noteTrigger.channel, noteTrigger.noteNumber});
+        playingNotes.push_back({outputChannel, noteTrigger.noteNumber});
       }
     }
   }
@@ -261,6 +262,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("rhythmResetOnRelease", rhythmResetOnRelease ? 1 : 0);
     xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
     xml->setAttribute("triplet", triplet ? 1 : 0);
+    xml->setAttribute("outputChannel", outputChannel);
   }
 }
 
@@ -286,5 +288,6 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     rhythmResetOnRelease = xml->getIntAttribute("rhythmResetOnRelease", 1) != 0;
     clockDivisionIndex = xml->getIntAttribute("clockDivisionIndex", 5);
     triplet = xml->getIntAttribute("triplet", 0) != 0;
+    outputChannel = xml->getIntAttribute("outputChannel", 1);
   }
 }

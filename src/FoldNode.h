@@ -12,6 +12,10 @@ public:
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {{"Fold N", &macroNValue}};
+  }
+
   std::string getName() const override { return "Fold"; }
 
   void saveNodeState(juce::XmlElement *xml) override;
