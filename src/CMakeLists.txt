@@ -37,6 +37,10 @@ target_sources(EuclideanArp
         UnfoldNode.cpp
         QuantizerNode.cpp
         AllNotesNode.cpp
+        SplitNode.cpp
+        ConcatenateNode.cpp
+        ChordSplitNode.cpp
+        MultiplyNode.cpp
         NodeBlock.cpp
         GraphCanvas.cpp
     PUBLIC    NodeEditorPanel.cpp)
