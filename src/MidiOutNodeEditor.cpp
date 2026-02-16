@@ -2,7 +2,7 @@
 #include "MidiOutNode.h"
 #include "SharedMacroUI.h"
 
-class MidiOutNodeEditor : public juce::Component {
+class MidiOutNodeEditor : public juce::Component, private juce::Timer {
 public:
   MidiOutNodeEditor(MidiOutNode &node,
                     juce::AudioProcessorValueTreeState &apvts)
@@ -151,7 +151,25 @@ public:
     outputChannelLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(outputChannelLabel);
 
-    setSize(400, 380);
+    // --- Cycle Length Display ---
+    cycleLengthLabel.setJustificationType(juce::Justification::centredLeft);
+    cycleLengthLabel.setFont(juce::Font(12.0f));
+    cycleLengthLabel.setColour(juce::Label::textColourId,
+                               juce::Colours::lightgrey);
+    addAndMakeVisible(cycleLengthLabel);
+    updateCycleLabel();
+    startTimerHz(2); // Update 2x per second
+
+    setSize(400, 400);
+  }
+
+  ~MidiOutNodeEditor() override { stopTimer(); }
+
+  void timerCallback() override { updateCycleLabel(); }
+
+  void updateCycleLabel() {
+    cycleLengthLabel.setText("Cycle: " + midiOutNode.getCycleLengthInfo(),
+                             juce::dontSendNotification);
   }
 
   void resized() override {
@@ -215,6 +233,10 @@ public:
     auto r5a = row5.removeFromLeft(w);
     outputChannelLabel.setBounds(r5a.removeFromLeft(r5a.getWidth() / 3));
     outputChannelBox.setBounds(r5a.reduced(2));
+
+    // Row 6: Cycle length info
+    auto row6 = bounds.removeFromTop(ctrlRowHeight);
+    cycleLengthLabel.setBounds(row6.reduced(4));
   }
 
 private:
@@ -242,6 +264,9 @@ private:
   // Output Channel
   juce::ComboBox outputChannelBox;
   juce::Label outputChannelLabel;
+
+  // Cycle length display
+  juce::Label cycleLengthLabel;
 };
 
 std::unique_ptr<juce::Component>

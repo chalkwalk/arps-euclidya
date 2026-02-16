@@ -241,6 +241,76 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
   }
 }
 
+juce::String MidiOutNode::getCycleLengthInfo() const {
+  // Get input sequence length
+  auto it = inputSequences.find(0);
+  if (it == inputSequences.end() || it->second.empty())
+    return "No input";
+
+  int L = (int)it->second.size();
+
+  // Resolve actual pattern params (accounting for macros)
+  int actualPSteps =
+      macroPSteps != -1 && macros[(size_t)macroPSteps] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroPSteps]->load() * 31.0f)
+          : pSteps;
+  int actualPBeats =
+      macroPBeats != -1 && macros[(size_t)macroPBeats] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroPBeats]->load() * 31.0f)
+          : pBeats;
+
+  // Resolve actual rhythm params
+  int actualRSteps =
+      macroRSteps != -1 && macros[(size_t)macroRSteps] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroRSteps]->load() * 31.0f)
+          : rSteps;
+
+  // Pattern cycle: number of played notes before the melodic sequence repeats
+  // Formula: K * L / GCD(L, N) where K=beats, N=steps, L=input length
+  auto gcd = [](int a, int b) -> int {
+    while (b != 0) {
+      int t = b;
+      b = a % b;
+      a = t;
+    }
+    return a;
+  };
+  auto lcm = [&gcd](int a, int b) -> int { return a / gcd(a, b) * b; };
+
+  int patternCycle = actualPBeats * L / gcd(L, actualPSteps);
+
+  // Total cycle in clock ticks: LCM(pattern_cycle, rSteps)
+  int totalTicks = lcm(patternCycle, actualRSteps);
+
+  // Convert to quarter beats using clock division
+  int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
+  double divisionPpq = DIVISIONS[divIdx];
+  if (triplet)
+    divisionPpq *= (2.0 / 3.0);
+
+  double quarterBeats = totalTicks * divisionPpq;
+  double bars = quarterBeats / 4.0;
+
+  // Format output
+  juce::String info;
+  info << totalTicks << " ticks = ";
+
+  // Show quarter beats as fraction if not whole
+  if (std::abs(quarterBeats - std::round(quarterBeats)) < 0.001)
+    info << (int)quarterBeats;
+  else
+    info << juce::String(quarterBeats, 1);
+  info << " beats";
+
+  // Show bars
+  if (std::abs(bars - std::round(bars)) < 0.001)
+    info << " (" << (int)bars << " bar" << ((int)bars != 1 ? "s" : "") << ")";
+  else
+    info << " (" << juce::String(bars, 2) << " bars)";
+
+  return info;
+}
+
 void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("pSteps", pSteps);

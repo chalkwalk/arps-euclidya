@@ -23,6 +23,10 @@ public:
 
   void generateMidi(juce::MidiBuffer &outputBuffer, int samplePosition);
 
+  // Returns a formatted string showing the cycle length in ticks, quarter
+  // beats, and bars
+  juce::String getCycleLengthInfo() const;
+
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
