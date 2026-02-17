@@ -13,8 +13,10 @@ public:
   void paint(juce::Graphics &g) override;
   void paintOverChildren(juce::Graphics &g) override;
 
-  // Mouse handling for right-click cable deletion
+  // Mouse handling for right-click cable deletion and hover tooltips
   void mouseDown(const juce::MouseEvent &e) override;
+  void mouseMove(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
 
   // Rebuild all NodeBlocks from the engine's node list
   void rebuild();
@@ -27,6 +29,9 @@ public:
                       juce::Point<int> canvasPos);
   void updateCableDrag(juce::Point<int> canvasPos);
   void endCableDrag(juce::Point<int> canvasPos);
+
+  // Check if any cable carries a sequence >10K steps
+  void checkForLargeSequences();
 
   // Callback when the graph structure changes
   std::function<void()> onGraphChanged;
@@ -47,8 +52,17 @@ private:
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
   void drawCable(juce::Graphics &g, juce::Point<int> start,
-                 juce::Point<int> end, bool highlighted = false);
+                 juce::Point<int> end, bool highlighted = false,
+                 bool warning = false);
   void updateCanvasSize();
+
+  // Cable tooltip state
+  juce::String cableTooltipText;
+  juce::Point<int> cableTooltipPos;
+  bool showCableTooltip = false;
+
+  // Warning banner
+  bool hasLargeSequenceWarning = false;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphCanvas)
 };

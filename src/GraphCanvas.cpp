@@ -81,6 +81,20 @@ void GraphCanvas::paint(juce::Graphics &g) {
       g.fillRect(x, y, 1, 1);
     }
   }
+
+  // Warning banner for large sequences
+  if (hasLargeSequenceWarning) {
+    auto bannerArea = getLocalBounds().removeFromTop(28);
+    g.setColour(juce::Colour(0xcc8B4513)); // Dark orange background
+    g.fillRect(bannerArea);
+    g.setColour(juce::Colours::white);
+    g.setFont(12.0f);
+    g.drawText(
+        juce::CharPointer_UTF8(
+            "\xe2\x9a\xa0 A sequence exceeds 10,000 steps. This may cycle "
+            "over hundreds of bars and is likely unintentional."),
+        bannerArea.reduced(8, 0), juce::Justification::centredLeft);
+  }
 }
 
 void GraphCanvas::paintOverChildren(juce::Graphics &g) {
@@ -101,7 +115,14 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 
         auto start = sourceBlock->getOutputPortCentre(outPort);
         auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
-        drawCable(g, start, end);
+
+        // Check if this cable carries a large sequence
+        bool isLarge = false;
+        auto &outSeq = node->getOutputSequence(outPort);
+        if (outSeq.size() > 10000)
+          isLarge = true;
+
+        drawCable(g, start, end, false, isLarge);
       }
     }
   }
@@ -116,10 +137,28 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     }
     drawCable(g, start, cableDragEnd, true);
   }
+
+  // Draw cable hover tooltip
+  if (showCableTooltip) {
+    auto font = juce::Font(12.0f);
+    int textW = (int)font.getStringWidthFloat(cableTooltipText) + 12;
+    int textH = 20;
+    auto tooltipRect = juce::Rectangle<int>(
+        cableTooltipPos.x + 10, cableTooltipPos.y - 25, textW, textH);
+
+    g.setColour(juce::Colour(0xee222222));
+    g.fillRoundedRectangle(tooltipRect.toFloat(), 4.0f);
+    g.setColour(juce::Colour(0xff888888));
+    g.drawRoundedRectangle(tooltipRect.toFloat(), 4.0f, 1.0f);
+    g.setColour(juce::Colours::white);
+    g.setFont(font);
+    g.drawText(cableTooltipText, tooltipRect, juce::Justification::centred);
+  }
 }
 
 void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
-                            juce::Point<int> end, bool highlighted) {
+                            juce::Point<int> end, bool highlighted,
+                            bool warning) {
   juce::Path path;
   path.startNewSubPath(start.toFloat());
 
@@ -128,11 +167,12 @@ void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
                (float)end.x, (float)end.y);
 
   if (highlighted) {
-    // Bright yellow for in-progress drag
     g.setColour(juce::Colour(0xffeeee44));
     g.strokePath(path, juce::PathStrokeType(3.5f));
+  } else if (warning) {
+    g.setColour(juce::Colour(0xffff6633)); // Orange-red for large sequences
+    g.strokePath(path, juce::PathStrokeType(3.0f));
   } else {
-    // Bright white-ish cable
     g.setColour(juce::Colour(0xffdddddd));
     g.strokePath(path, juce::PathStrokeType(3.0f));
   }
@@ -262,4 +302,89 @@ void GraphCanvas::updateCanvasSize() {
   }
 
   setSize(maxX, maxY);
+}
+
+void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
+  auto localPos = e.getPosition();
+  bool found = false;
+
+  const juce::ScopedLock sl(graphLock);
+  auto &nodes = graphEngine.getNodes();
+
+  for (auto &node : nodes) {
+    auto *sourceBlock = findBlockForNode(node.get());
+    if (sourceBlock == nullptr)
+      continue;
+
+    for (const auto &[outPort, connVec] : node->getConnections()) {
+      for (const auto &conn : connVec) {
+        auto *targetBlock = findBlockForNode(conn.targetNode);
+        if (targetBlock == nullptr)
+          continue;
+
+        auto start = sourceBlock->getOutputPortCentre(outPort);
+        auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
+
+        juce::Path path;
+        path.startNewSubPath(start.toFloat());
+        float dx = std::max(std::abs((float)(end.x - start.x)) * 0.5f, 40.0f);
+        path.cubicTo(start.x + dx, (float)start.y, end.x - dx, (float)end.y,
+                     (float)end.x, (float)end.y);
+
+        juce::Point<float> nearest;
+        path.getNearestPoint(localPos.toFloat(), nearest);
+        if (nearest.getDistanceFrom(localPos.toFloat()) < 12.0f) {
+          auto &outSeq = node->getOutputSequence(outPort);
+          int stepCount = (int)outSeq.size();
+          cableTooltipText = juce::String(stepCount) + " steps";
+          if (stepCount > 10000)
+            cableTooltipText += juce::String::fromUTF8(" \xe2\x9a\xa0");
+          cableTooltipPos = localPos;
+          showCableTooltip = true;
+          found = true;
+          break;
+        }
+      }
+      if (found)
+        break;
+    }
+    if (found)
+      break;
+  }
+
+  if (!found && showCableTooltip) {
+    showCableTooltip = false;
+  }
+
+  repaint();
+}
+
+void GraphCanvas::mouseExit(const juce::MouseEvent &) {
+  if (showCableTooltip) {
+    showCableTooltip = false;
+    repaint();
+  }
+}
+
+void GraphCanvas::checkForLargeSequences() {
+  bool foundLarge = false;
+  const juce::ScopedLock sl(graphLock);
+  auto &nodes = graphEngine.getNodes();
+
+  for (auto &node : nodes) {
+    for (const auto &[outPort, connVec] : node->getConnections()) {
+      auto &outSeq = node->getOutputSequence(outPort);
+      if (outSeq.size() > 10000) {
+        foundLarge = true;
+        break;
+      }
+    }
+    if (foundLarge)
+      break;
+  }
+
+  if (foundLarge != hasLargeSequenceWarning) {
+    hasLargeSequenceWarning = foundLarge;
+    repaint();
+  }
 }

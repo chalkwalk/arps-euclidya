@@ -46,6 +46,8 @@ EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }
 void EuclideanArpEditor::timerCallback() {
   // Periodically refresh macro display names to reflect any mapping changes
   audioProcessor.updateMacroNames();
+  // Check for large sequences and update warning banner
+  graphCanvas->checkForLargeSequences();
 }
 
 void EuclideanArpEditor::paint(juce::Graphics &g) {
