@@ -43,6 +43,9 @@ public:
   std::function<void(juce::Point<int> canvasPos)> onPortDragging;
   std::function<void(juce::Point<int> canvasPos)> onPortDragEnd;
 
+  // Called when the node is clicked/selected
+  std::function<void()> onSelected;
+
 private:
   std::shared_ptr<GraphNode> targetNode;
   GraphCanvas &parentCanvas;

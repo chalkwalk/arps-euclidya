@@ -33,6 +33,10 @@ public:
   // Check if any cable carries a sequence >10K steps
   void checkForLargeSequences();
 
+  // Select a node (bring to front and highlight its cables)
+  void selectNode(GraphNode *node);
+  GraphNode *getSelectedNode() const { return selectedNode; }
+
   // Callback when the graph structure changes
   std::function<void()> onGraphChanged;
 
@@ -53,7 +57,7 @@ private:
   NodeBlock *findBlockForNode(GraphNode *node) const;
   void drawCable(juce::Graphics &g, juce::Point<int> start,
                  juce::Point<int> end, bool highlighted = false,
-                 bool warning = false);
+                 bool warning = false, bool selected = false);
   void updateCanvasSize();
 
   // Cable tooltip state
@@ -63,6 +67,9 @@ private:
 
   // Warning banner
   bool hasLargeSequenceWarning = false;
+
+  // Selected node for highlighting
+  GraphNode *selectedNode = nullptr;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphCanvas)
 };

@@ -29,6 +29,13 @@ void GraphCanvas::rebuild() {
       repaint();
     };
 
+    // Selection: bring to front when clicked anywhere on the block
+    block->onSelected = [this, b = block]() {
+      selectNode(b->getNode().get());
+      b->toFront(true);
+      repaint();
+    };
+
     // Wire port dragging callbacks
     block->onPortDragStart = [this](NodeBlock *b, int port, bool isOutput,
                                     juce::Point<int> canvasPos) {
@@ -116,13 +123,19 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
         auto start = sourceBlock->getOutputPortCentre(outPort);
         auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
 
+        // Determine cable highlight: bright if connected to selected node, dim
+        // otherwise
+        bool isSelected =
+            (selectedNode != nullptr) &&
+            (node.get() == selectedNode || conn.targetNode == selectedNode);
+
         // Check if this cable carries a large sequence
         bool isLarge = false;
         auto &outSeq = node->getOutputSequence(outPort);
         if (outSeq.size() > 10000)
           isLarge = true;
 
-        drawCable(g, start, end, false, isLarge);
+        drawCable(g, start, end, false, isLarge, isSelected);
       }
     }
   }
@@ -158,7 +171,7 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 
 void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
                             juce::Point<int> end, bool highlighted,
-                            bool warning) {
+                            bool warning, bool selected) {
   juce::Path path;
   path.startNewSubPath(start.toFloat());
 
@@ -170,11 +183,18 @@ void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
     g.setColour(juce::Colour(0xffeeee44));
     g.strokePath(path, juce::PathStrokeType(3.5f));
   } else if (warning) {
-    g.setColour(juce::Colour(0xffff6633)); // Orange-red for large sequences
+    g.setColour(juce::Colour(0xffff6633));
+    g.strokePath(path, juce::PathStrokeType(3.0f));
+  } else if (selected) {
+    g.setColour(juce::Colour(0xffdddddd)); // Bright white
     g.strokePath(path, juce::PathStrokeType(3.0f));
   } else {
-    g.setColour(juce::Colour(0xffdddddd));
-    g.strokePath(path, juce::PathStrokeType(3.0f));
+    // Dimmed cable when a node is selected but this cable isn't connected to it
+    juce::Colour dimColor = (selectedNode != nullptr)
+                                ? juce::Colour(0xff555555)
+                                : juce::Colour(0xffdddddd);
+    g.setColour(dimColor);
+    g.strokePath(path, juce::PathStrokeType(2.0f));
   }
 }
 
@@ -385,6 +405,13 @@ void GraphCanvas::checkForLargeSequences() {
 
   if (foundLarge != hasLargeSequenceWarning) {
     hasLargeSequenceWarning = foundLarge;
+    repaint();
+  }
+}
+
+void GraphCanvas::selectNode(GraphNode *node) {
+  if (selectedNode != node) {
+    selectedNode = node;
     repaint();
   }
 }

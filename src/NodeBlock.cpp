@@ -106,6 +106,10 @@ void NodeBlock::resized() {
 }
 
 void NodeBlock::mouseDown(const juce::MouseEvent &e) {
+  // Notify canvas of selection (for z-ordering and cable highlighting)
+  if (onSelected)
+    onSelected();
+
   auto pos = e.getPosition();
 
   // Check if we hit a port
