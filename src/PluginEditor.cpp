@@ -30,11 +30,10 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   }
 
   // Setup Graph Canvas
-  addAndMakeVisible(graphViewport);
   graphCanvas = std::make_unique<GraphCanvas>(audioProcessor.graphEngine,
                                               audioProcessor.apvts,
                                               audioProcessor.graphLock);
-  graphViewport.setViewedComponent(graphCanvas.get(), false);
+  addAndMakeVisible(graphCanvas.get());
   graphCanvas->rebuild();
 
   setSize(900, 700);
@@ -86,7 +85,9 @@ void EuclideanArpEditor::resized() {
   libraryContent.setBounds(0, 0, 150, btnY);
 
   // Main Graph Canvas
-  graphViewport.setBounds(bounds);
+  if (graphCanvas != nullptr) {
+    graphCanvas->setBounds(bounds);
+  }
 }
 
 void EuclideanArpEditor::addNodeFromLibrary(const juce::String &nodeType) {

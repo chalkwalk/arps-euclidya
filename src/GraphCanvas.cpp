@@ -3,7 +3,16 @@
 GraphCanvas::GraphCanvas(GraphEngine &engine,
                          juce::AudioProcessorValueTreeState &apvtsRef,
                          juce::CriticalSection &lock)
-    : graphEngine(engine), apvts(apvtsRef), graphLock(lock) {}
+    : graphEngine(engine), apvts(apvtsRef), graphLock(lock) {
+  setWantsKeyboardFocus(true);
+
+  addAndMakeVisible(hScroll);
+  addAndMakeVisible(vScroll);
+  hScroll.addListener(this);
+  vScroll.addListener(this);
+  hScroll.setAutoHide(false);
+  vScroll.setAutoHide(false);
+}
 
 void GraphCanvas::rebuild() {
   nodeBlocks.clear();
@@ -13,8 +22,8 @@ void GraphCanvas::rebuild() {
 
   for (auto &node : nodes) {
     auto *block = new NodeBlock(node, apvts, *this);
-
-    block->setTopLeftPosition((int)node->nodeX, (int)node->nodeY);
+    // The bounds are set via updateTransforms later
+    // block->setTopLeftPosition((int)node->nodeX, (int)node->nodeY);
 
     block->onDelete = [this, nodePtr = node.get()]() {
       const juce::ScopedLock sl2(graphLock);
@@ -25,7 +34,7 @@ void GraphCanvas::rebuild() {
     };
 
     block->onPositionChanged = [this]() {
-      updateCanvasSize();
+      updateTransforms();
       repaint();
     };
 
@@ -52,8 +61,22 @@ void GraphCanvas::rebuild() {
     nodeBlocks.add(block);
   }
 
-  updateCanvasSize();
+  updateTransforms();
   repaint();
+}
+
+juce::AffineTransform GraphCanvas::getCameraTransform() const {
+  return juce::AffineTransform::scale(zoomFactor).translated(panX, panY);
+}
+
+void GraphCanvas::updateTransforms() {
+  auto transform = getCameraTransform();
+  for (auto *block : nodeBlocks) {
+    block->setTransform(transform);
+    block->setBounds((int)block->getNode()->nodeX, (int)block->getNode()->nodeY,
+                     block->getWidth(), block->getHeight());
+  }
+  updateScrollBars();
 }
 
 void GraphCanvas::addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node) {
@@ -81,11 +104,19 @@ void GraphCanvas::paint(juce::Graphics &g) {
   // Background
   g.fillAll(juce::Colour(0xff1a1a1a));
 
-  // Draw grid dots
+  // Draw infinitely panning grid dots
   g.setColour(juce::Colour(0xff2a2a2a));
-  for (int x = 0; x < getWidth(); x += 20) {
-    for (int y = 0; y < getHeight(); y += 20) {
-      g.fillRect(x, y, 1, 1);
+  float scaledGrid = 20.0f * zoomFactor;
+  float offsetX = std::fmod(panX, scaledGrid);
+  if (offsetX > 0)
+    offsetX -= scaledGrid;
+  float offsetY = std::fmod(panY, scaledGrid);
+  if (offsetY > 0)
+    offsetY -= scaledGrid;
+
+  for (float x = offsetX; x < getWidth(); x += scaledGrid) {
+    for (float y = offsetY; y < getHeight(); y += scaledGrid) {
+      g.fillRect(x, y, 1.0f, 1.0f);
     }
   }
 
@@ -105,6 +136,9 @@ void GraphCanvas::paint(juce::Graphics &g) {
 }
 
 void GraphCanvas::paintOverChildren(juce::Graphics &g) {
+  g.saveState();
+  g.addTransform(getCameraTransform());
+
   // Draw all existing cables ON TOP of nodes
   const juce::ScopedLock sl(graphLock);
   auto &nodes = graphEngine.getNodes();
@@ -148,13 +182,20 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     } else {
       start = cableDragSourceBlock->getInputPortCentre(cableDragSourcePort);
     }
-    drawCable(g, start, cableDragEnd, true);
+    float ex = (float)cableDragEnd.x;
+    float ey = (float)cableDragEnd.y;
+    getCameraTransform().inverted().transformPoint(ex, ey);
+    drawCable(g, start,
+              juce::Point<int>(juce::roundToInt(ex), juce::roundToInt(ey)),
+              true);
   }
+
+  g.restoreState(); // Pop the camera transform to draw tooltips in screen space
 
   // Draw cable hover tooltip
   if (showCableTooltip) {
-    auto font = juce::Font(12.0f);
-    int textW = (int)font.getStringWidthFloat(cableTooltipText) + 12;
+    auto font = juce::Font(juce::FontOptions(12.0f));
+    int textW = font.getStringWidth(cableTooltipText) + 12;
     int textH = 20;
     auto tooltipRect = juce::Rectangle<int>(
         cableTooltipPos.x + 10, cableTooltipPos.y - 25, textW, textH);
@@ -199,9 +240,11 @@ void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
 }
 
 void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
-  // Right-click on canvas background to delete a cable near the click
   if (e.mods.isRightButtonDown()) {
-    auto localPos = e.getPosition();
+    float mx = (float)e.getPosition().x;
+    float my = (float)e.getPosition().y;
+    getCameraTransform().inverted().transformPoint(mx, my);
+    auto localPos = juce::Point<float>(mx, my);
     const juce::ScopedLock sl(graphLock);
     auto &nodes = graphEngine.getNodes();
 
@@ -226,10 +269,9 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
           path.cubicTo(start.x + dx, (float)start.y, end.x - dx, (float)end.y,
                        (float)end.x, (float)end.y);
 
-          // Use path proximity
           juce::Point<float> nearest;
-          path.getNearestPoint(localPos.toFloat(), nearest);
-          if (nearest.getDistanceFrom(localPos.toFloat()) < 12.0f) {
+          path.getNearestPoint(localPos, nearest);
+          if (nearest.getDistanceFrom(localPos) < 12.0f) {
             graphEngine.removeConnection(node.get(), outPort, conn.targetNode,
                                          conn.targetInputPort);
             repaint();
@@ -238,6 +280,54 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
         }
       }
     }
+  } else if (e.mods.isMiddleButtonDown() ||
+             (!e.mods.isPopupMenu() && !e.mods.isAnyModifierKeyDown())) {
+    // If we click empty background, initiate pan
+    isPanning = true;
+    lastPanScreenPos = e.getScreenPosition();
+  }
+}
+
+void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
+  if (isPanning) {
+    auto delta = e.getScreenPosition() - lastPanScreenPos;
+    panX += (float)delta.x;
+    panY += (float)delta.y;
+    lastPanScreenPos = e.getScreenPosition();
+    updateTransforms();
+    repaint();
+  }
+}
+
+void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  if (isPanning) {
+    isPanning = false;
+  }
+}
+
+void GraphCanvas::mouseWheelMove(const juce::MouseEvent &e,
+                                 const juce::MouseWheelDetails &wheel) {
+  // Semantic zoom natively mapping focal origin
+  float wheelAmount = wheel.deltaY != 0.0f ? wheel.deltaY : wheel.deltaX;
+  if (std::abs(wheelAmount) < 0.0001f)
+    return;
+
+  float zoomDelta = wheelAmount > 0.0f ? 1.1f : 0.9f;
+  auto mousePos = e.position;
+
+  float newZoom = juce::jlimit(0.2f, 3.0f, zoomFactor * zoomDelta);
+
+  if (std::abs(newZoom - zoomFactor) > 0.0001f) {
+    float worldX = (mousePos.x - panX) / zoomFactor;
+    float worldY = (mousePos.y - panY) / zoomFactor;
+
+    zoomFactor = newZoom;
+    panX = mousePos.x - worldX * zoomFactor;
+    panY = mousePos.y - worldY * zoomFactor;
+
+    updateTransforms();
+    repaint();
   }
 }
 
@@ -247,13 +337,13 @@ void GraphCanvas::startCableDrag(NodeBlock *block, int portIndex, bool isOutput,
   cableDragSourceBlock = block;
   cableDragSourcePort = portIndex;
   cableDragFromOutput = isOutput;
-  cableDragEnd = canvasPos;
+  cableDragEnd = canvasPos; // This is in screen coordinates
   repaint();
 }
 
 void GraphCanvas::updateCableDrag(juce::Point<int> canvasPos) {
   if (isDraggingCable) {
-    cableDragEnd = canvasPos;
+    cableDragEnd = canvasPos; // This is in screen coordinates
     repaint();
   }
 }
@@ -266,14 +356,21 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
 
   // Find target port under the release point
   for (auto *block : nodeBlocks) {
-    auto blockLocal = canvasPos - block->getPosition();
+    // Convert canvasPos (screen coords) to block's local world coords for
+    // hit-testing
+    float cx = (float)canvasPos.x;
+    float cy = (float)canvasPos.y;
+    getCameraTransform().inverted().transformPoint(cx, cy);
+    auto blockLocalWorld =
+        juce::Point<float>(cx, cy) - block->getPosition().toFloat();
 
     if (cableDragFromOutput) {
       // Dragging from output → looking for an input port
       int numIn = block->getNode()->getNumInputPorts();
       for (int i = 0; i < numIn; ++i) {
-        auto portCentre = block->getInputPortCentre(i) - block->getPosition();
-        if (blockLocal.getDistanceFrom(portCentre) <=
+        auto portCentreWorld = block->getInputPortCentre(i).toFloat() -
+                               block->getPosition().toFloat();
+        if (blockLocalWorld.getDistanceFrom(portCentreWorld) <=
             NodeBlock::PORT_HIT_RADIUS) {
           const juce::ScopedLock sl(graphLock);
           graphEngine.addExplicitConnection(
@@ -286,8 +383,9 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
       // Dragging from input → looking for an output port
       int numOut = block->getNode()->getNumOutputPorts();
       for (int i = 0; i < numOut; ++i) {
-        auto portCentre = block->getOutputPortCentre(i) - block->getPosition();
-        if (blockLocal.getDistanceFrom(portCentre) <=
+        auto portCentreWorld = block->getOutputPortCentre(i).toFloat() -
+                               block->getPosition().toFloat();
+        if (blockLocalWorld.getDistanceFrom(portCentreWorld) <=
             NodeBlock::PORT_HIT_RADIUS) {
           const juce::ScopedLock sl(graphLock);
           graphEngine.addExplicitConnection(
@@ -312,20 +410,79 @@ NodeBlock *GraphCanvas::findBlockForNode(GraphNode *node) const {
   return nullptr;
 }
 
-void GraphCanvas::updateCanvasSize() {
-  int maxX = 800;
-  int maxY = 600;
+void GraphCanvas::resized() {
+  auto bounds = getLocalBounds();
+  hScroll.setBounds(bounds.removeFromBottom(16).withTrimmedRight(16));
+  vScroll.setBounds(bounds.removeFromRight(16));
+  updateScrollBars();
+}
+
+void GraphCanvas::scrollBarMoved(juce::ScrollBar *scrollBar,
+                                 double newRangeStart) {
+  if (scrollBar == &hScroll) {
+    panX = (float)(-newRangeStart * zoomFactor);
+  } else if (scrollBar == &vScroll) {
+    panY = (float)(-newRangeStart * zoomFactor);
+  }
+  updateTransforms();
+  repaint();
+}
+
+void GraphCanvas::updateScrollBars() {
+  if (getWidth() <= 0 || getHeight() <= 0)
+    return;
+
+  float minX = 0.0f, minY = 0.0f, maxX = 0.0f, maxY = 0.0f;
+  bool hasNodes = false;
 
   for (auto *block : nodeBlocks) {
-    maxX = std::max(maxX, block->getRight() + 50);
-    maxY = std::max(maxY, block->getBottom() + 50);
+    float x = block->getNode()->nodeX;
+    float y = block->getNode()->nodeY;
+    float w = (float)block->getWidth();
+    float h = (float)block->getHeight();
+    if (!hasNodes) {
+      minX = x;
+      minY = y;
+      maxX = x + w;
+      maxY = y + h;
+      hasNodes = true;
+    } else {
+      minX = std::min(minX, x);
+      minY = std::min(minY, y);
+      maxX = std::max(maxX, x + w);
+      maxY = std::max(maxY, y + h);
+    }
   }
 
-  setSize(maxX, maxY);
+  juce::Rectangle<float> viewScreen(0.0f, 0.0f, (float)getWidth() - 16.0f,
+                                    (float)getHeight() - 16.0f);
+  auto viewWorld = viewScreen.transformedBy(getCameraTransform().inverted());
+
+  float limitMinX = std::min(minX, viewWorld.getX());
+  float limitMaxX = std::max(maxX, viewWorld.getRight());
+  float limitMinY = std::min(minY, viewWorld.getY());
+  float limitMaxY = std::max(maxY, viewWorld.getBottom());
+
+  // Pad the limits to allow over-scroll
+  limitMinX -= 400.0f;
+  limitMaxX += 400.0f;
+  limitMinY -= 400.0f;
+  limitMaxY += 400.0f;
+
+  hScroll.setRangeLimits(limitMinX, limitMaxX);
+  hScroll.setCurrentRange(viewWorld.getX(), viewWorld.getWidth(),
+                          juce::dontSendNotification);
+
+  vScroll.setRangeLimits(limitMinY, limitMaxY);
+  vScroll.setCurrentRange(viewWorld.getY(), viewWorld.getHeight(),
+                          juce::dontSendNotification);
 }
 
 void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
-  auto localPos = e.getPosition();
+  float mx = (float)e.getPosition().x;
+  float my = (float)e.getPosition().y;
+  getCameraTransform().inverted().transformPoint(mx, my);
+  auto localPosWorld = juce::Point<float>(mx, my);
   bool found = false;
 
   const juce::ScopedLock sl(graphLock);
@@ -352,14 +509,15 @@ void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
                      (float)end.x, (float)end.y);
 
         juce::Point<float> nearest;
-        path.getNearestPoint(localPos.toFloat(), nearest);
-        if (nearest.getDistanceFrom(localPos.toFloat()) < 12.0f) {
+        path.getNearestPoint(localPosWorld, nearest);
+        if (nearest.getDistanceFrom(localPosWorld) < 12.0f) {
           auto &outSeq = node->getOutputSequence(outPort);
           int stepCount = (int)outSeq.size();
           cableTooltipText = juce::String(stepCount) + " steps";
           if (stepCount > 10000)
             cableTooltipText += juce::String::fromUTF8(" \xe2\x9a\xa0");
-          cableTooltipPos = localPos;
+          // position tooltip at actual cursor screen coordinate
+          cableTooltipPos = e.getPosition();
           showCableTooltip = true;
           found = true;
           break;

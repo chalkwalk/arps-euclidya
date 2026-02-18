@@ -25,8 +25,7 @@ private:
   juce::Component libraryContent;
   juce::OwnedArray<juce::TextButton> libraryButtons;
 
-  // Graph canvas (replaces the linear graphContent)
-  juce::Viewport graphViewport;
+  // Graph canvas
   std::unique_ptr<GraphCanvas> graphCanvas;
 
   // Macros

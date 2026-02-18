@@ -4,7 +4,7 @@
 #include "NodeBlock.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class GraphCanvas : public juce::Component {
+class GraphCanvas : public juce::Component, public juce::ScrollBar::Listener {
 public:
   GraphCanvas(GraphEngine &engine, juce::AudioProcessorValueTreeState &apvts,
               juce::CriticalSection &lock);
@@ -12,11 +12,22 @@ public:
 
   void paint(juce::Graphics &g) override;
   void paintOverChildren(juce::Graphics &g) override;
+  void resized() override;
+  void scrollBarMoved(juce::ScrollBar *scrollBarThatHasMoved,
+                      double newRangeStart) override;
 
   // Mouse handling for right-click cable deletion and hover tooltips
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseMove(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  void mouseWheelMove(const juce::MouseEvent &e,
+                      const juce::MouseWheelDetails &wheel) override;
+
+  // Zoom manipulation
+  void setZoomFactor(float newZoom);
+  float getZoomFactor() const { return zoomFactor; }
 
   // Rebuild all NodeBlocks from the engine's node list
   void rebuild();
@@ -64,6 +75,20 @@ private:
   juce::String cableTooltipText;
   juce::Point<int> cableTooltipPos;
   bool showCableTooltip = false;
+
+  // Camera Projection
+  bool isPanning = false;
+  juce::Point<int> lastPanScreenPos;
+  float panX = 0.0f;
+  float panY = 0.0f;
+  float zoomFactor = 1.0f;
+
+  juce::ScrollBar hScroll{false};
+  juce::ScrollBar vScroll{true};
+
+  juce::AffineTransform getCameraTransform() const;
+  void updateTransforms();
+  void updateScrollBars();
 
   // Warning banner
   bool hasLargeSequenceWarning = false;
