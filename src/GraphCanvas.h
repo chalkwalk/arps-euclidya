@@ -85,10 +85,12 @@ private:
 
   juce::ScrollBar hScroll{false};
   juce::ScrollBar vScroll{true};
+  juce::TextButton zoomFitButton;
 
   juce::AffineTransform getCameraTransform() const;
   void updateTransforms();
   void updateScrollBars();
+  void zoomToFit();
 
   // Warning banner
   bool hasLargeSequenceWarning = false;

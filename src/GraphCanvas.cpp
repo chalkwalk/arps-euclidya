@@ -10,6 +10,16 @@ GraphCanvas::GraphCanvas(GraphEngine &engine,
   addAndMakeVisible(vScroll);
   hScroll.addListener(this);
   vScroll.addListener(this);
+  addAndMakeVisible(zoomFitButton);
+  zoomFitButton.setButtonText("[ ]");
+  zoomFitButton.setTooltip("Zoom to Fit");
+  zoomFitButton.onClick = [this] { zoomToFit(); };
+
+  hScroll.setColour(juce::ScrollBar::trackColourId, juce::Colour(0x66111111));
+  hScroll.setColour(juce::ScrollBar::thumbColourId, juce::Colour(0xff555555));
+  vScroll.setColour(juce::ScrollBar::trackColourId, juce::Colour(0x66111111));
+  vScroll.setColour(juce::ScrollBar::thumbColourId, juce::Colour(0xff555555));
+
   hScroll.setAutoHide(false);
   vScroll.setAutoHide(false);
 }
@@ -42,6 +52,9 @@ void GraphCanvas::rebuild() {
     block->onSelected = [this, b = block]() {
       selectNode(b->getNode().get());
       b->toFront(true);
+      hScroll.toFront(false);
+      vScroll.toFront(false);
+      zoomFitButton.toFront(false);
       repaint();
     };
 
@@ -60,6 +73,10 @@ void GraphCanvas::rebuild() {
     addAndMakeVisible(block);
     nodeBlocks.add(block);
   }
+
+  hScroll.toFront(false);
+  vScroll.toFront(false);
+  zoomFitButton.toFront(false);
 
   updateTransforms();
   repaint();
@@ -137,6 +154,14 @@ void GraphCanvas::paint(juce::Graphics &g) {
 
 void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   g.saveState();
+
+  if (hScroll.isVisible())
+    g.excludeClipRegion(hScroll.getBounds());
+  if (vScroll.isVisible())
+    g.excludeClipRegion(vScroll.getBounds());
+  if (zoomFitButton.isVisible())
+    g.excludeClipRegion(zoomFitButton.getBounds());
+
   g.addTransform(getCameraTransform());
 
   // Draw all existing cables ON TOP of nodes
@@ -410,12 +435,7 @@ NodeBlock *GraphCanvas::findBlockForNode(GraphNode *node) const {
   return nullptr;
 }
 
-void GraphCanvas::resized() {
-  auto bounds = getLocalBounds();
-  hScroll.setBounds(bounds.removeFromBottom(16).withTrimmedRight(16));
-  vScroll.setBounds(bounds.removeFromRight(16));
-  updateScrollBars();
-}
+void GraphCanvas::resized() { updateScrollBars(); }
 
 void GraphCanvas::scrollBarMoved(juce::ScrollBar *scrollBar,
                                  double newRangeStart) {
@@ -454,28 +474,99 @@ void GraphCanvas::updateScrollBars() {
     }
   }
 
-  juce::Rectangle<float> viewScreen(0.0f, 0.0f, (float)getWidth() - 16.0f,
-                                    (float)getHeight() - 16.0f);
-  auto viewWorld = viewScreen.transformedBy(getCameraTransform().inverted());
+  if (hasNodes) {
+    minX -= 60.0f;
+    minY -= 60.0f;
+    maxX += 60.0f;
+    maxY += 60.0f;
+  } else {
+    minX = 0.0f;
+    minY = 0.0f;
+    maxX = 100.0f;
+    maxY = 100.0f;
+  }
 
-  float limitMinX = std::min(minX, viewWorld.getX());
-  float limitMaxX = std::max(maxX, viewWorld.getRight());
-  float limitMinY = std::min(minY, viewWorld.getY());
-  float limitMaxY = std::max(maxY, viewWorld.getBottom());
+  float currentViewX = -panX / zoomFactor;
+  float currentViewY = -panY / zoomFactor;
+  float viewW = (float)getWidth() / zoomFactor;
+  float viewH = (float)getHeight() / zoomFactor;
 
-  // Pad the limits to allow over-scroll
-  limitMinX -= 400.0f;
-  limitMaxX += 400.0f;
-  limitMinY -= 400.0f;
-  limitMaxY += 400.0f;
+  // Union of node bounding box AND current viewport position
+  float limitMinX = std::min(minX, currentViewX);
+  float limitMaxX = std::max(maxX, currentViewX + viewW);
+  float limitMinY = std::min(minY, currentViewY);
+  float limitMaxY = std::max(maxY, currentViewY + viewH);
+
+  bool showH = (limitMaxX - limitMinX) > viewW + 1.0f;
+  bool showV = (limitMaxY - limitMinY) > viewH + 1.0f;
+
+  hScroll.setVisible(showH);
+  vScroll.setVisible(showV);
+  zoomFitButton.setVisible(showH || showV);
+
+  int sbW = 14;
+  int w = getWidth();
+  int h = getHeight();
+
+  int hScrollWidth = showV ? w - sbW : w;
+  int vScrollHeight = showH ? h - sbW : h;
+
+  hScroll.setBounds(0, h - sbW, hScrollWidth, sbW);
+  vScroll.setBounds(w - sbW, 0, sbW, vScrollHeight);
+  zoomFitButton.setBounds(w - sbW, h - sbW, sbW, sbW);
 
   hScroll.setRangeLimits(limitMinX, limitMaxX);
-  hScroll.setCurrentRange(viewWorld.getX(), viewWorld.getWidth(),
-                          juce::dontSendNotification);
+  hScroll.setCurrentRange(currentViewX, viewW, juce::dontSendNotification);
 
   vScroll.setRangeLimits(limitMinY, limitMaxY);
-  vScroll.setCurrentRange(viewWorld.getY(), viewWorld.getHeight(),
-                          juce::dontSendNotification);
+  vScroll.setCurrentRange(currentViewY, viewH, juce::dontSendNotification);
+}
+
+void GraphCanvas::zoomToFit() {
+  if (nodeBlocks.isEmpty())
+    return;
+
+  float minX = nodeBlocks[0]->getNode()->nodeX;
+  float minY = nodeBlocks[0]->getNode()->nodeY;
+  float maxX = minX + nodeBlocks[0]->getWidth();
+  float maxY = minY + nodeBlocks[0]->getHeight();
+
+  for (auto *block : nodeBlocks) {
+    float x = block->getNode()->nodeX;
+    float y = block->getNode()->nodeY;
+    float w = (float)block->getWidth();
+    float h = (float)block->getHeight();
+    minX = std::min(minX, x);
+    minY = std::min(minY, y);
+    maxX = std::max(maxX, x + w);
+    maxY = std::max(maxY, y + h);
+  }
+
+  float pad = 60.0f;
+  minX -= pad;
+  minY -= pad;
+  maxX += pad;
+  maxY += pad;
+
+  float worldW = maxX - minX;
+  float worldH = maxY - minY;
+
+  if (worldW <= 0.0f || worldH <= 0.0f)
+    return;
+
+  float zoomX = (float)getWidth() / worldW;
+  float zoomY = (float)getHeight() / worldH;
+
+  zoomFactor = juce::jlimit(0.1f, 3.0f, std::min(zoomX, zoomY));
+
+  float scaledW = worldW * zoomFactor;
+  float scaledH = worldH * zoomFactor;
+
+  panX = (getWidth() - scaledW) * 0.5f - minX * zoomFactor;
+  panY = (getHeight() - scaledH) * 0.5f - minY * zoomFactor;
+
+  updateTransforms();
+  repaint();
 }
 
 void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
