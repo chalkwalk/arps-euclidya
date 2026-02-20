@@ -43,6 +43,7 @@ target_sources(EuclideanArp
         MultiplyNode.cpp
         NodeBlock.cpp
         GraphCanvas.cpp
+        EuclideanLookAndFeel.cpp
     PUBLIC    NodeEditorPanel.cpp)
 
 clap_juce_extensions_plugin(TARGET EuclideanArp CLAP_ID "com.ChalkWalkMusic.EuclideanArp" CLAP_FEATURES "note-effect" "tool")
@@ -56,6 +57,7 @@ target_compile_definitions(EuclideanArp
 target_link_libraries(EuclideanArp
     PRIVATE
         juce::juce_audio_utils
+        juce::juce_audio_plugin_client
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags

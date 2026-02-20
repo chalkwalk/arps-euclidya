@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EuclideanLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "PluginProcessor.h"
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -33,6 +34,8 @@ private:
   juce::OwnedArray<juce::Slider> macroSliders;
   juce::OwnedArray<juce::AudioProcessorValueTreeState::SliderAttachment>
       macroAttachments;
+
+  EuclideanLookAndFeel customLookAndFeel;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpEditor)
 };

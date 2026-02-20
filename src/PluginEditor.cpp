@@ -4,6 +4,9 @@
 EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
     : AudioProcessorEditor(p), audioProcessor(p) {
 
+  // Apply custom Neon styling entirely
+  juce::LookAndFeel::setDefaultLookAndFeel(&customLookAndFeel);
+
   // Setup Macros
   addAndMakeVisible(macroBar);
   for (int i = 0; i < 32; ++i) {
@@ -40,7 +43,10 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   startTimerHz(30);
 }
 
-EuclideanArpEditor::~EuclideanArpEditor() { stopTimer(); }
+EuclideanArpEditor::~EuclideanArpEditor() {
+  stopTimer();
+  juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
+}
 
 void EuclideanArpEditor::timerCallback() {
   // Periodically refresh macro display names to reflect any mapping changes
