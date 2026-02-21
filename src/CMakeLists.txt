@@ -44,6 +44,7 @@ target_sources(EuclideanArp
         NodeBlock.cpp
         GraphCanvas.cpp
         EuclideanLookAndFeel.cpp
+        ModuleLibraryPanel.cpp
     PUBLIC    NodeEditorPanel.cpp)
 
 clap_juce_extensions_plugin(TARGET EuclideanArp CLAP_ID "com.ChalkWalkMusic.EuclideanArp" CLAP_FEATURES "note-effect" "tool")

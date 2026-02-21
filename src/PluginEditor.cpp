@@ -22,15 +22,18 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   }
 
   // Setup Library
-  addAndMakeVisible(libraryViewport);
-  libraryViewport.setViewedComponent(&libraryContent, false);
-  auto nodeTypes = NodeFactory::getAvailableNodeTypes();
-  for (const auto &nt : nodeTypes) {
-    auto btn = new juce::TextButton(nt);
-    libraryContent.addAndMakeVisible(btn);
-    libraryButtons.add(btn);
-    btn->onClick = [this, nt]() { addNodeFromLibrary(nt); };
-  }
+  addAndMakeVisible(libraryPanel);
+  libraryPanel.onNodeSelected = [this](const juce::String &nt) {
+    addNodeFromLibrary(nt);
+  };
+
+  addAndMakeVisible(toggleSidebarButton);
+  toggleSidebarButton.setButtonText("<");
+  toggleSidebarButton.onClick = [this]() {
+    isSidebarExpanded = !isSidebarExpanded;
+    toggleSidebarButton.setButtonText(isSidebarExpanded ? "<" : ">");
+    resized();
+  };
 
   // Setup Graph Canvas
   graphCanvas = std::make_unique<GraphCanvas>(audioProcessor.graphEngine,
@@ -58,7 +61,8 @@ void EuclideanArpEditor::timerCallback() {
 void EuclideanArpEditor::paint(juce::Graphics &g) {
   g.fillAll(juce::Colour(0xff111111));
   g.setColour(juce::Colour(0xff222222));
-  g.fillRect(libraryViewport.getBounds());
+  if (isSidebarExpanded)
+    g.fillRect(libraryPanel.getBounds());
   g.fillRect(macroBar.getBounds());
 }
 
@@ -80,15 +84,13 @@ void EuclideanArpEditor::resized() {
   }
 
   // Left Library
-  auto libraryBounds = bounds.removeFromLeft(150);
-  libraryViewport.setBounds(libraryBounds);
+  int sidebarWidth = isSidebarExpanded ? 180 : 0;
 
-  int btnY = 5;
-  for (auto btn : libraryButtons) {
-    btn->setBounds(5, btnY, 140, 30);
-    btnY += 35;
-  }
-  libraryContent.setBounds(0, 0, 150, btnY);
+  auto libraryBounds = bounds.removeFromLeft(sidebarWidth);
+  libraryPanel.setBounds(libraryBounds);
+
+  auto toggleBounds = bounds.removeFromLeft(20);
+  toggleSidebarButton.setBounds(toggleBounds);
 
   // Main Graph Canvas
   if (graphCanvas != nullptr) {

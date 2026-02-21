@@ -2,6 +2,7 @@
 
 #include "EuclideanLookAndFeel.h"
 #include "GraphCanvas.h"
+#include "ModuleLibraryPanel.h"
 #include "PluginProcessor.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -22,9 +23,9 @@ private:
   EuclideanArpProcessor &audioProcessor;
 
   // Library panel
-  juce::Viewport libraryViewport;
-  juce::Component libraryContent;
-  juce::OwnedArray<juce::TextButton> libraryButtons;
+  ModuleLibraryPanel libraryPanel;
+  juce::TextButton toggleSidebarButton;
+  bool isSidebarExpanded = true;
 
   // Graph canvas
   std::unique_ptr<GraphCanvas> graphCanvas;
