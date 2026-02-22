@@ -35,7 +35,12 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
   int bodyHeight = std::max(minPortHeight + 10, controlsHeight);
   int totalHeight = HEADER_HEIGHT + bodyHeight + 10;
 
-  setSize(300, totalHeight);
+  int width =
+      (customControls != nullptr)
+          ? std::max(160, customControls->getWidth() + (PORT_MARGIN + 4) * 2)
+          : 160;
+
+  setSize(width, totalHeight);
 }
 
 void NodeBlock::paint(juce::Graphics &g) {
