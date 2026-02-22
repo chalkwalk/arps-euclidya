@@ -8,6 +8,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class EuclideanArpEditor : public juce::AudioProcessorEditor,
+                           public juce::DragAndDropContainer,
                            private juce::Timer {
 public:
   EuclideanArpEditor(EuclideanArpProcessor &);

@@ -4,7 +4,9 @@
 #include "NodeBlock.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class GraphCanvas : public juce::Component, public juce::ScrollBar::Listener {
+class GraphCanvas : public juce::Component,
+                    public juce::ScrollBar::Listener,
+                    public juce::DragAndDropTarget {
 public:
   GraphCanvas(GraphEngine &engine, juce::AudioProcessorValueTreeState &apvts,
               juce::CriticalSection &lock);
@@ -35,6 +37,15 @@ public:
   // Add a node and place it at a default position
   void addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node);
 
+  // Add a node explicitly converting screen coordinates to world position
+  void addNodeAtPosition(std::shared_ptr<GraphNode> node,
+                         juce::Point<int> screenPos);
+
+  // DragAndDropTarget overrides
+  bool
+  isInterestedInDragSource(const SourceDetails &dragSourceDetails) override;
+  void itemDropped(const SourceDetails &dragSourceDetails) override;
+
   // Called by NodeBlock when a port drag starts/moves/ends
   void startCableDrag(NodeBlock *block, int portIndex, bool isOutput,
                       juce::Point<int> canvasPos);
@@ -50,6 +61,9 @@ public:
 
   // Callback when the graph structure changes
   std::function<void()> onGraphChanged;
+
+  // Callback when a node type string is dropped from the library DragAndDrop
+  std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
 
 private:
   GraphEngine &graphEngine;

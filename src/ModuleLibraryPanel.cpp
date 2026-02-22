@@ -50,7 +50,26 @@ void ModuleLibraryPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
 void ModuleLibraryPanel::listBoxItemClicked(int rowNumber,
                                             const juce::MouseEvent &e) {
   juce::ignoreUnused(rowNumber, e);
-  // Reserved for Drag and Drop (Phase 3)
+  if (rowNumber >= 0 && rowNumber < (int)filteredNodeTypes.size()) {
+    auto dragType = filteredNodeTypes[(size_t)rowNumber];
+
+    // Attempt to find the top level DragAndDropContainer (the PluginEditor)
+    if (auto *dragContainer =
+            juce::DragAndDropContainer::findParentDragContainerFor(this)) {
+      // The drag description is just the node name string.
+      // The Component generated for drag logic is dynamically created as a
+      // label.
+      auto *dragComponent = new juce::Label("dragLabel", dragType);
+      dragComponent->setSize(120, 30);
+      dragComponent->setJustificationType(juce::Justification::centred);
+      dragComponent->setColour(juce::Label::backgroundColourId,
+                               juce::Colour(0xff222222));
+      dragComponent->setColour(juce::Label::textColourId, juce::Colours::white);
+
+      dragContainer->startDragging(juce::var(dragType), dragComponent,
+                                   juce::Image(), true);
+    }
+  }
 }
 
 void ModuleLibraryPanel::listBoxItemDoubleClicked(int rowNumber,

@@ -22,6 +22,9 @@ GraphCanvas::GraphCanvas(GraphEngine &engine,
 
   hScroll.setAutoHide(false);
   vScroll.setAutoHide(false);
+
+  // Intercept all child mouse events to support universal middle-click panning
+  addMouseListener(this, true);
 }
 
 void GraphCanvas::rebuild() {
@@ -265,6 +268,9 @@ void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
 }
 
 void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
+  if (e.eventComponent != this && !e.mods.isMiddleButtonDown())
+    return;
+
   if (e.mods.isRightButtonDown()) {
     float mx = (float)e.getPosition().x;
     float my = (float)e.getPosition().y;
@@ -314,6 +320,9 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
 }
 
 void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
+  if (e.eventComponent != this && !e.mods.isMiddleButtonDown())
+    return;
+
   if (isPanning) {
     auto delta = e.getScreenPosition() - lastPanScreenPos;
     panX += (float)delta.x;
@@ -326,6 +335,9 @@ void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
 
 void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
+  if (e.eventComponent != this && !e.mods.isMiddleButtonDown())
+    return;
+
   if (isPanning) {
     isPanning = false;
   }
@@ -333,6 +345,9 @@ void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
 
 void GraphCanvas::mouseWheelMove(const juce::MouseEvent &e,
                                  const juce::MouseWheelDetails &wheel) {
+  if (e.eventComponent != this)
+    return;
+
   // Semantic zoom natively mapping focal origin
   float wheelAmount = wheel.deltaY != 0.0f ? wheel.deltaY : wheel.deltaX;
   if (std::abs(wheelAmount) < 0.0001f)
@@ -655,6 +670,42 @@ void GraphCanvas::checkForLargeSequences() {
   if (foundLarge != hasLargeSequenceWarning) {
     hasLargeSequenceWarning = foundLarge;
     repaint();
+  }
+}
+
+void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
+                                    juce::Point<int> screenPos) {
+  juce::ScopedLock l(graphLock);
+
+  // Convert screen drop pixel to internal world position considering pan & zoom
+  float worldX = (float)screenPos.x;
+  float worldY = (float)screenPos.y;
+  getCameraTransform().inverted().transformPoint(worldX, worldY);
+
+  node->nodeX = worldX;
+  node->nodeY = worldY;
+
+  graphEngine.addNode(node);
+
+  // Rebuild the NodeBlock wrappers
+  rebuild();
+
+  // Recalculate and apply scaled block bounds cleanly derived from nodeX/nodeY
+  updateTransforms();
+
+  if (onGraphChanged)
+    onGraphChanged();
+}
+
+bool GraphCanvas::isInterestedInDragSource(
+    const SourceDetails &dragSourceDetails) {
+  return dragSourceDetails.description.isString();
+}
+
+void GraphCanvas::itemDropped(const SourceDetails &dragSourceDetails) {
+  if (onNodeDropped) {
+    onNodeDropped(dragSourceDetails.description.toString(),
+                  dragSourceDetails.localPosition);
   }
 }
 

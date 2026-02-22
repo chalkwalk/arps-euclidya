@@ -106,6 +106,10 @@ void NodeBlock::resized() {
 }
 
 void NodeBlock::mouseDown(const juce::MouseEvent &e) {
+  if (e.mods.isMiddleButtonDown()) {
+    return;
+  }
+
   // Notify canvas of selection (for z-ordering and cable highlighting)
   if (onSelected)
     onSelected();
@@ -142,6 +146,10 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
 }
 
 void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
+  if (e.mods.isMiddleButtonDown()) {
+    return;
+  }
+
   if (isDraggingCable) {
     if (onPortDragging) {
       auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
@@ -160,14 +168,15 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
 }
 
 void NodeBlock::mouseUp(const juce::MouseEvent &e) {
-  if (isDraggingCable) {
-    if (onPortDragEnd) {
-      auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
-      onPortDragEnd(canvasPos);
-    }
-    isDraggingCable = false;
+  if (e.mods.isMiddleButtonDown()) {
     return;
   }
+
+  if (isDraggingCable && onPortDragEnd) {
+    auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
+    onPortDragEnd(canvasPos);
+  }
+  isDraggingCable = false;
   isDraggingNode = false;
 }
 
