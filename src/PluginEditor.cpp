@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "MacroParameter.h"
 #include "NodeFactory.h"
 
 EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
@@ -10,15 +11,14 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   // Setup Macros
   addAndMakeVisible(macroBar);
   for (int i = 0; i < 32; ++i) {
-    auto slider = new juce::Slider(juce::Slider::RotaryHorizontalVerticalDrag,
-                                   juce::Slider::NoTextBox);
-    macroBar.addAndMakeVisible(slider);
-    macroSliders.add(slider);
+    auto wrapper = new MacroControl();
+    macroBar.addAndMakeVisible(wrapper);
+    macroControls.add(wrapper);
 
     juce::String paramId = "macro_" + juce::String(i + 1);
     macroAttachments.add(
         new juce::AudioProcessorValueTreeState::SliderAttachment(
-            audioProcessor.apvts, paramId, *slider));
+            audioProcessor.apvts, paramId, wrapper->slider));
   }
 
   // Setup Library
@@ -65,6 +65,20 @@ EuclideanArpEditor::~EuclideanArpEditor() {
 void EuclideanArpEditor::timerCallback() {
   // Periodically refresh macro display names to reflect any mapping changes
   audioProcessor.updateMacroNames();
+
+  for (int i = 0; i < 32; ++i) {
+    if (audioProcessor.macroParams[i] != nullptr) {
+      juce::String newName = audioProcessor.macroParams[i]->getName(100);
+      macroControls[i]->label.setText(newName, juce::dontSendNotification);
+
+      bool mapped = !newName.startsWith("Macro ");
+      if (macroControls[i]->isMapped != mapped) {
+        macroControls[i]->isMapped = mapped;
+        macroControls[i]->repaint();
+      }
+    }
+  }
+
   // Check for large sequences and update warning banner
   graphCanvas->checkForLargeSequences();
 }
@@ -90,8 +104,8 @@ void EuclideanArpEditor::resized() {
   for (int i = 0; i < 32; ++i) {
     int row = i / 16;
     int col = i % 16;
-    macroSliders[i]->setBounds(col * sliderWidth, row * sliderHeight,
-                               sliderWidth, sliderHeight);
+    macroControls[i]->setBounds(col * sliderWidth, row * sliderHeight,
+                                sliderWidth, sliderHeight);
   }
 
   // Left Library

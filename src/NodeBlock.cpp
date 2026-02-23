@@ -47,21 +47,21 @@ void NodeBlock::paint(juce::Graphics &g) {
   auto bounds = getLocalBounds().toFloat();
 
   // Node body: rounded rectangle
-  g.setColour(juce::Colour(0xff2a2a2a));
+  g.setColour(juce::Colour(0xff121a24));
   g.fillRoundedRectangle(bounds, 6.0f);
 
   // Header bar
   auto headerBounds =
       juce::Rectangle<float>(bounds.getX() + 1, bounds.getY() + 1,
                              bounds.getWidth() - 2, (float)HEADER_HEIGHT - 1);
-  g.setColour(juce::Colour(0xff3a3a3a));
+  g.setColour(juce::Colour(0xff1d2a3a));
   g.fillRoundedRectangle(headerBounds.getX(), headerBounds.getY(),
                          headerBounds.getWidth(), headerBounds.getHeight(),
                          5.0f);
 
-  // Border
-  g.setColour(juce::Colour(0xff555555));
-  g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
+  // Border (Neon tinted)
+  g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
+  g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.5f);
 
   // Draw input ports
   int numIn = targetNode->getNumInputPorts();

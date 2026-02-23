@@ -1,13 +1,13 @@
 #include "EuclideanLookAndFeel.h"
 
 const juce::Colour EuclideanLookAndFeel::getNeonColor() {
-  return juce::Colour(0xff00ffff);
-} // Cyan
+  return juce::Colour(0xff0df0e3); // Teal
+}
 const juce::Colour EuclideanLookAndFeel::getBackgroundCharcoal() {
-  return juce::Colour(0xff121212);
+  return juce::Colour(0xff0b1016);
 }
 const juce::Colour EuclideanLookAndFeel::getForegroundSlate() {
-  return juce::Colour(0xff2a2a2a);
+  return juce::Colour(0xff121a24);
 }
 
 EuclideanLookAndFeel::EuclideanLookAndFeel() {
