@@ -118,6 +118,11 @@ void EuclideanArpProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     logMidiEvent(3, 0, 0, 0.0f);
   }
 
+  // Inject UI-generated synthetic notes and extract DAW MIDI to update the
+  // on-screen keyboard
+  keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(),
+                                      true);
+
   midiHandler.processMidi(midiMessages);
 
   {

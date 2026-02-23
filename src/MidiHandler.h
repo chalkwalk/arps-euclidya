@@ -27,6 +27,7 @@ public:
   // added/removed)
   bool hasChanged();
   void forceDirty();
+  void clearAllNotes();
 
   // Toggles the MPE instrument between strict MPE Zones and legacy
   // compatibility mode

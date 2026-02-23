@@ -3,7 +3,9 @@
 #include "NodeFactory.h"
 
 EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
-    : AudioProcessorEditor(p), audioProcessor(p) {
+    : AudioProcessorEditor(p), audioProcessor(p),
+      midiKeyboard(p.keyboardState,
+                   juce::MidiKeyboardComponent::horizontalKeyboard) {
 
   // Apply custom Neon styling entirely
   juce::LookAndFeel::setDefaultLookAndFeel(&customLookAndFeel);
@@ -49,6 +51,20 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
     if (newNode) {
       graphCanvas->addNodeAtPosition(newNode, screenPos);
     }
+  };
+
+  // Setup MIDI Keyboard and Clear Button
+  addAndMakeVisible(midiKeyboard);
+  midiKeyboard.setMidiChannel(1);
+  midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId,
+                         customLookAndFeel.getNeonColor());
+
+  addAndMakeVisible(clearNotesButton);
+  clearNotesButton.setButtonText("Clear Notes");
+  clearNotesButton.onClick = [this]() {
+    audioProcessor.keyboardState.allNotesOff(0);
+    audioProcessor.midiHandler.clearAllNotes();
+    audioProcessor.graphEngine.recalculate();
   };
 
   graphCanvas->rebuild();
@@ -107,6 +123,14 @@ void EuclideanArpEditor::resized() {
     macroControls[i]->setBounds(col * sliderWidth, row * sliderHeight,
                                 sliderWidth, sliderHeight);
   }
+
+  // Bottom Keyboard bar
+  auto bottomBounds = bounds.removeFromBottom(80);
+
+  auto clearBtnBounds = bottomBounds.removeFromLeft(120).reduced(10, 20);
+  clearNotesButton.setBounds(clearBtnBounds);
+
+  midiKeyboard.setBounds(bottomBounds.reduced(4));
 
   // Left Library
   int sidebarWidth = isSidebarExpanded ? 180 : 0;

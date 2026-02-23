@@ -81,6 +81,12 @@ void MidiHandler::forceDirty() {
   isDirty = true;
 }
 
+void MidiHandler::clearAllNotes() {
+  std::lock_guard<std::mutex> lock(stateMutex);
+  mpeInstrument.releaseAllNotes();
+  isDirty = true;
+}
+
 void MidiHandler::setLegacyMode(bool shouldEnable) {
   std::lock_guard<std::mutex> lock(stateMutex);
   if (shouldEnable) {

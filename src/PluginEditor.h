@@ -80,5 +80,34 @@ private:
 
   EuclideanLookAndFeel customLookAndFeel;
 
+  class LatchingKeyboardComponent : public juce::MidiKeyboardComponent {
+  public:
+    LatchingKeyboardComponent(juce::MidiKeyboardState &state, Orientation o)
+        : juce::MidiKeyboardComponent(state, o), keyboardState(state) {}
+
+    bool mouseDownOnKey(int midiNoteNumber, const juce::MouseEvent &) override {
+      if (keyboardState.isNoteOn(1, midiNoteNumber)) {
+        keyboardState.noteOff(1, midiNoteNumber, 0.0f);
+      } else {
+        keyboardState.noteOn(1, midiNoteNumber, 1.0f);
+      }
+      return false; // Prevent default press/hold behaviour
+    }
+
+    bool mouseDraggedToKey(int, const juce::MouseEvent &) override {
+      return false; // Prevent drag painting
+    }
+
+    void mouseUpOnKey(int, const juce::MouseEvent &) override {
+      // Do nothing, releasing the mouse should not lift the latch
+    }
+
+  private:
+    juce::MidiKeyboardState &keyboardState;
+  };
+
+  LatchingKeyboardComponent midiKeyboard;
+  juce::TextButton clearNotesButton;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpEditor)
 };

@@ -51,6 +51,7 @@ public:
   class EuclideanArpEditor *getEditor();
 
   juce::AudioProcessorValueTreeState apvts;
+  juce::MidiKeyboardState keyboardState;
   std::array<std::atomic<float> *, 32> macros = {nullptr};
   std::array<MacroParameter *, 32> macroParams = {nullptr};
 
