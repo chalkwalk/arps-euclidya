@@ -23,8 +23,10 @@ public:
       label.setJustificationType(juce::Justification::centred);
       addAndMakeVisible(label);
 
-      slider.onValueChange = [&slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
+        if (walkNode.onNodeDirtied)
+          walkNode.onNodeDirtied();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {
@@ -82,8 +84,10 @@ public:
       label.setJustificationType(juce::Justification::centred);
       addAndMakeVisible(label);
 
-      slider.onValueChange = [&slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (float)slider.getValue();
+        if (walkNode.onNodeDirtied)
+          walkNode.onNodeDirtied();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {

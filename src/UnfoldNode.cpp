@@ -13,6 +13,8 @@ public:
 
     orderingCombo.onChange = [this]() {
       unfoldNode.ordering = orderingCombo.getSelectedId() - 1;
+      if (unfoldNode.onNodeDirtied)
+        unfoldNode.onNodeDirtied();
     };
 
     addAndMakeVisible(orderingCombo);

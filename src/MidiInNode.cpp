@@ -26,6 +26,8 @@ public:
       slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
         midiInNode.getMidiHandler().forceDirty();
+        if (midiInNode.onNodeDirtied)
+          midiInNode.onNodeDirtied();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {
@@ -80,6 +82,8 @@ public:
       midiInNode.legacyMode = legacyModeToggle.getToggleState();
       midiInNode.getMidiHandler().setLegacyMode(midiInNode.legacyMode);
       midiInNode.getMidiHandler().forceDirty();
+      if (midiInNode.onNodeDirtied)
+        midiInNode.onNodeDirtied();
     };
     addAndMakeVisible(legacyModeToggle);
 

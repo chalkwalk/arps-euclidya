@@ -56,6 +56,8 @@ public:
     slider.setValue(node.repeatCount);
     slider.onValueChange = [this]() {
       multiplyNode.repeatCount = (int)slider.getValue();
+      if (multiplyNode.onNodeDirtied)
+        multiplyNode.onNodeDirtied();
     };
     addAndMakeVisible(slider);
 

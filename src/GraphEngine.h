@@ -30,6 +30,8 @@ public:
     return nodes;
   }
 
+  std::function<void()> onGraphDirtied;
+
   // Check if adding a connection would create a cycle
   bool wouldCreateCycle(GraphNode *source, GraphNode *target) const;
 

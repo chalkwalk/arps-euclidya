@@ -99,6 +99,8 @@ public:
     modeBox.onChange = [this]() {
       splitNode.splitMode = modeBox.getSelectedId() - 1;
       percentSlider.setVisible(splitNode.splitMode == 2);
+      if (splitNode.onNodeDirtied)
+        splitNode.onNodeDirtied();
     };
     addAndMakeVisible(modeBox);
 
@@ -108,6 +110,8 @@ public:
     percentSlider.setValue(node.splitPercent);
     percentSlider.onValueChange = [this]() {
       splitNode.splitPercent = (int)percentSlider.getValue();
+      if (splitNode.onNodeDirtied)
+        splitNode.onNodeDirtied();
     };
     percentSlider.setVisible(node.splitMode == 2);
     addAndMakeVisible(percentSlider);

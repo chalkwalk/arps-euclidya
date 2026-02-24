@@ -6,6 +6,9 @@
 #include <unordered_set>
 
 void GraphEngine::addNode(std::shared_ptr<GraphNode> node) {
+  if (onGraphDirtied) {
+    node->onNodeDirtied = onGraphDirtied;
+  }
   nodes.push_back(node);
 }
 
@@ -36,6 +39,8 @@ void GraphEngine::removeNode(GraphNode *node) {
   if (it != nodes.end()) {
     nodes.erase(it, nodes.end());
   }
+
+  recalculate();
 }
 
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
@@ -73,6 +78,7 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
   }
 
   source->addConnection(outPort, target, inPort);
+  recalculate();
   return true;
 }
 
@@ -97,6 +103,7 @@ void GraphEngine::removeConnection(GraphNode *source, int outPort,
     // If we actually removed a connection, clear the target's cached input
     if (it->second.size() < sizeBefore && target != nullptr) {
       target->clearInputSequence(inPort);
+      recalculate();
     }
   }
 }

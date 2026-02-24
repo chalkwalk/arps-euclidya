@@ -23,8 +23,10 @@ public:
       label.setJustificationType(juce::Justification::centred);
       addAndMakeVisible(label);
 
-      slider.onValueChange = [&slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
+        if (midiOutNode.onNodeDirtied)
+          midiOutNode.onNodeDirtied();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {
@@ -91,6 +93,8 @@ public:
                               juce::dontSendNotification);
     clockDivBox.onChange = [this]() {
       midiOutNode.clockDivisionIndex = clockDivBox.getSelectedId() - 1;
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(clockDivBox);
 
@@ -103,6 +107,8 @@ public:
                                  juce::dontSendNotification);
     tripletToggle.onClick = [this]() {
       midiOutNode.triplet = tripletToggle.getToggleState();
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(tripletToggle);
 
@@ -113,6 +119,8 @@ public:
                               juce::dontSendNotification);
     syncModeBox.onChange = [this]() {
       midiOutNode.transportSyncMode = syncModeBox.getSelectedId() - 1;
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(syncModeBox);
 
@@ -125,6 +133,8 @@ public:
                                       juce::dontSendNotification);
     patternResetToggle.onClick = [this]() {
       midiOutNode.patternResetOnRelease = patternResetToggle.getToggleState();
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(patternResetToggle);
 
@@ -133,6 +143,8 @@ public:
                                      juce::dontSendNotification);
     rhythmResetToggle.onClick = [this]() {
       midiOutNode.rhythmResetOnRelease = rhythmResetToggle.getToggleState();
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(rhythmResetToggle);
 
@@ -144,6 +156,8 @@ public:
                                    juce::dontSendNotification);
     outputChannelBox.onChange = [this]() {
       midiOutNode.outputChannel = outputChannelBox.getSelectedId();
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(outputChannelBox);
 

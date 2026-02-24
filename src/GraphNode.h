@@ -56,6 +56,8 @@ public:
     return {};
   }
 
+  std::function<void()> onNodeDirtied;
+
   void setInputSequence(int inputPort, const NoteSequence &sequence);
   void clearInputSequence(int inputPort);
   const NoteSequence &getOutputSequence(int outputPort) const;

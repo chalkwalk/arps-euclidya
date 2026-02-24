@@ -36,6 +36,8 @@ public:
                                 juce::dontSendNotification);
     tonalityCombo.onChange = [this]() {
       quantizerNode.tonality = tonalityCombo.getSelectedId() - 1;
+      if (quantizerNode.onNodeDirtied)
+        quantizerNode.onNodeDirtied();
     };
     addAndMakeVisible(tonalityCombo);
 
@@ -50,6 +52,8 @@ public:
                             juce::dontSendNotification);
     rootCombo.onChange = [this]() {
       quantizerNode.rootNote = rootCombo.getSelectedId() - 1;
+      if (quantizerNode.onNodeDirtied)
+        quantizerNode.onNodeDirtied();
     };
     addAndMakeVisible(rootCombo);
 
@@ -63,6 +67,8 @@ public:
     modeCombo.setSelectedId(quantizerNode.mode + 1, juce::dontSendNotification);
     modeCombo.onChange = [this]() {
       quantizerNode.mode = modeCombo.getSelectedId() - 1;
+      if (quantizerNode.onNodeDirtied)
+        quantizerNode.onNodeDirtied();
     };
     addAndMakeVisible(modeCombo);
 

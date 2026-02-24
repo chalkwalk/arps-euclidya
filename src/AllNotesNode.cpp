@@ -13,6 +13,8 @@ public:
 
     octaveCombo.onChange = [this]() {
       allNotesNode.baseOctave = octaveCombo.getSelectedId() - 1;
+      if (allNotesNode.onNodeDirtied)
+        allNotesNode.onNodeDirtied();
     };
 
     addAndMakeVisible(octaveCombo);

@@ -81,6 +81,8 @@ public:
     modeBox.setSelectedId(node.splitMode + 1, juce::dontSendNotification);
     modeBox.onChange = [this]() {
       chordSplitNode.splitMode = modeBox.getSelectedId() - 1;
+      if (chordSplitNode.onNodeDirtied)
+        chordSplitNode.onNodeDirtied();
     };
     addAndMakeVisible(modeBox);
 

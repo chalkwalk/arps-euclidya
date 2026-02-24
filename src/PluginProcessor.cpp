@@ -15,7 +15,14 @@ EuclideanArpProcessor::EuclideanArpProcessor()
     macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
     macroParams[i] = dynamic_cast<MacroParameter *>(
         apvts.getParameter("macro_" + juce::String(i + 1)));
+    apvts.addParameterListener("macro_" + juce::String(i + 1), this);
   }
+
+  // Create graph engine recalculation callback for internal UI sliders
+  graphEngine.onGraphDirtied = [this]() {
+    const juce::ScopedLock sl(graphLock);
+    graphEngine.recalculate();
+  };
 
   // Create default graph (Midi In -> Sort -> Midi Out)
   auto inNode = std::make_shared<MidiInNode>(midiHandler, macros);
@@ -26,7 +33,11 @@ EuclideanArpProcessor::EuclideanArpProcessor()
       std::make_shared<MidiOutNode>(midiHandler, clockManager, macros));
 }
 
-EuclideanArpProcessor::~EuclideanArpProcessor() {}
+EuclideanArpProcessor::~EuclideanArpProcessor() {
+  for (int i = 0; i < 32; ++i) {
+    apvts.removeParameterListener("macro_" + juce::String(i + 1), this);
+  }
+}
 
 void EuclideanArpProcessor::logMidiEvent(int type, int channel, int d1,
                                          float d2) {
@@ -261,6 +272,13 @@ void EuclideanArpProcessor::updateMacroNames() {
       macroParams[i]->setMappingName("MULTIPLE");
     }
   }
+}
+
+void EuclideanArpProcessor::parameterChanged(const juce::String &parameterID,
+                                             float newValue) {
+  juce::ignoreUnused(parameterID, newValue);
+  const juce::ScopedLock sl(graphLock);
+  graphEngine.recalculate();
 }
 
 // This creates new instances of the plugin

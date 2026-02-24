@@ -19,7 +19,9 @@ class EuclideanArpEditor;
 #include "GraphEngine.h"
 #include "MidiHandler.h"
 
-class EuclideanArpProcessor : public juce::AudioProcessor {
+class EuclideanArpProcessor
+    : public juce::AudioProcessor,
+      public juce::AudioProcessorValueTreeState::Listener {
 public:
   EuclideanArpProcessor();
   ~EuclideanArpProcessor() override;
@@ -47,6 +49,9 @@ public:
 
   void getStateInformation(juce::MemoryBlock &destData) override;
   void setStateInformation(const void *data, int sizeInBytes) override;
+
+  void parameterChanged(const juce::String &parameterID,
+                        float newValue) override;
 
   class EuclideanArpEditor *getEditor();
 

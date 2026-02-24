@@ -24,8 +24,10 @@ public:
       label.setJustificationType(juce::Justification::centred);
       addAndMakeVisible(label);
 
-      slider.onValueChange = [&slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
+        if (octaveNode.onNodeDirtied)
+          octaveNode.onNodeDirtied();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {
@@ -75,6 +77,8 @@ public:
                                 juce::dontSendNotification);
     uniqueToggle.onClick = [this]() {
       octaveNode.uniqueOnly = uniqueToggle.getToggleState();
+      if (octaveNode.onNodeDirtied)
+        octaveNode.onNodeDirtied();
     };
     addAndMakeVisible(uniqueToggle);
 
