@@ -41,6 +41,8 @@ target_sources(EuclideanArp
         ConcatenateNode.cpp
         ChordSplitNode.cpp
         MultiplyNode.cpp
+        ZipNode.cpp
+        UnzipNode.cpp
         NodeBlock.cpp
         GraphCanvas.cpp
         EuclideanLookAndFeel.cpp
@@ -61,5 +63,4 @@ target_link_libraries(EuclideanArp
         juce::juce_audio_plugin_client
     PUBLIC
         juce::juce_recommended_config_flags
-        juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)

@@ -19,7 +19,9 @@
 #include "SplitNode.h"
 #include "TransposeNode.h"
 #include "UnfoldNode.h"
+#include "UnzipNode.h"
 #include "WalkNode.h"
+#include "ZipNode.h"
 #include <memory>
 #include <string>
 
@@ -65,6 +67,10 @@ public:
       return std::make_shared<ChordSplitNode>();
     if (type == "Multiply")
       return std::make_shared<MultiplyNode>(macros);
+    if (type == "Zip")
+      return std::make_shared<ZipNode>();
+    if (type == "Unzip")
+      return std::make_shared<UnzipNode>();
     if (type == "Midi Out")
       return std::make_shared<MidiOutNode>(midiCtx, clockCtx, macros);
     return nullptr;
@@ -80,6 +86,7 @@ public:
             "Quantizer",   "All Notes",
             "Split",       "Concatenate",
             "Chord Split", "Multiply",
+            "Zip",         "Unzip",
             "Midi Out"};
   }
 };
