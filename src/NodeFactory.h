@@ -15,8 +15,11 @@
 #include "OctaveTransposeNode.h"
 #include "QuantizerNode.h"
 #include "ReverseNode.h"
+#include "RouteNode.h"
+#include "SelectNode.h"
 #include "SortNode.h"
 #include "SplitNode.h"
+#include "SwitchNode.h"
 #include "TransposeNode.h"
 #include "UnfoldNode.h"
 #include "UnzipNode.h"
@@ -71,6 +74,12 @@ public:
       return std::make_shared<ZipNode>();
     if (type == "Unzip")
       return std::make_shared<UnzipNode>();
+    if (type == "Route")
+      return std::make_shared<RouteNode>(macros);
+    if (type == "Select")
+      return std::make_shared<SelectNode>(macros);
+    if (type == "Switch")
+      return std::make_shared<SwitchNode>(macros);
     if (type == "Midi Out")
       return std::make_shared<MidiOutNode>(midiCtx, clockCtx, macros);
     return nullptr;
@@ -87,6 +96,8 @@ public:
             "Split",       "Concatenate",
             "Chord Split", "Multiply",
             "Zip",         "Unzip",
+            "Route",       "Select",
+            "Switch",
             "Midi Out"};
   }
 };

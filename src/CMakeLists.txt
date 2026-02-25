@@ -43,6 +43,9 @@ target_sources(EuclideanArp
         MultiplyNode.cpp
         ZipNode.cpp
         UnzipNode.cpp
+        RouteNode.cpp
+        SelectNode.cpp
+        SwitchNode.cpp
         NodeBlock.cpp
         GraphCanvas.cpp
         EuclideanLookAndFeel.cpp
