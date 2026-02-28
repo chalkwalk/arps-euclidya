@@ -17,6 +17,7 @@
 #include "ReverseNode.h"
 #include "RouteNode.h"
 #include "SelectNode.h"
+#include "SequenceNode.h"
 #include "SortNode.h"
 #include "SplitNode.h"
 #include "SwitchNode.h"
@@ -74,6 +75,8 @@ public:
       return std::make_shared<ZipNode>();
     if (type == "Unzip")
       return std::make_shared<UnzipNode>();
+    if (type == "Sequence")
+      return std::make_shared<SequenceNode>(macros);
     if (type == "Route")
       return std::make_shared<RouteNode>(macros);
     if (type == "Select")
@@ -97,7 +100,7 @@ public:
             "Chord Split", "Multiply",
             "Zip",         "Unzip",
             "Route",       "Select",
-            "Switch",
+            "Switch",      "Sequence",
             "Midi Out"};
   }
 };
