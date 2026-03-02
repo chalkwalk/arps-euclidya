@@ -72,6 +72,8 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   graphCanvas->rebuild();
 
   setSize(900, 700);
+  setResizable(true, true);
+  setResizeLimits(600, 400, 1920, 1200);
   startTimerHz(30);
 }
 
