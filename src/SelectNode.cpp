@@ -2,62 +2,70 @@
 #include "MacroMappingMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class SelectNodeEditor : public juce::Component {
+class SelectNodeEditor : public juce::Component, private juce::Timer {
 public:
-  SelectNodeEditor(SelectNode &node, juce::AudioProcessorValueTreeState &apvts)
+  SelectNodeEditor(SelectNode &node, juce::AudioProcessorValueTreeState &)
       : selectNode(node) {
 
-    sourceBox.addItem("In 0", 1);
-    sourceBox.addItem("In 1", 2);
-    sourceBox.setSelectedId(selectNode.selectSource + 1,
-                            juce::dontSendNotification);
-    sourceBox.onChange = [this]() {
-      selectNode.selectSource = sourceBox.getSelectedId() - 1;
+    toggle.setButtonText(selectNode.selectSource == 0 ? "In 0" : "In 1");
+    toggle.setToggleState(selectNode.selectSource != 0,
+                          juce::dontSendNotification);
+    toggle.setClickingTogglesState(true);
+    toggle.onClick = [this]() {
+      selectNode.selectSource = toggle.getToggleState() ? 1 : 0;
+      toggle.setButtonText(selectNode.selectSource == 0 ? "In 0" : "In 1");
       if (selectNode.onNodeDirtied)
         selectNode.onNodeDirtied();
     };
-    addAndMakeVisible(sourceBox);
+    addAndMakeVisible(toggle);
 
-    auto updateVisibility = [this](int macro) {
-      if (macro == -1) {
-        sourceBox.setAlpha(1.0f);
-        sourceBox.setEnabled(true);
-      } else {
-        sourceBox.setAlpha(0.5f);
-        sourceBox.setEnabled(false);
-      }
-    };
+    toggle.addMouseListener(this, true);
 
-    updateVisibility(selectNode.macroSelectSource);
-
-    sourceBox.addMouseListener(this, true);
+    if (selectNode.macroSelectSource != -1)
+      startTimerHz(10);
 
     setSize(160, 40);
   }
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isRightButtonDown()) {
-      MacroMappingMenu::showMenu(&sourceBox, selectNode.macroSelectSource,
+      MacroMappingMenu::showMenu(&toggle, selectNode.macroSelectSource,
                                  [this](int macroIndex) {
                                    selectNode.macroSelectSource = macroIndex;
-                                   if (macroIndex == -1) {
-                                     sourceBox.setAlpha(1.0f);
-                                     sourceBox.setEnabled(true);
-                                   } else {
-                                     sourceBox.setAlpha(0.5f);
-                                     sourceBox.setEnabled(false);
-                                   }
+                                   if (macroIndex != -1)
+                                     startTimerHz(10);
+                                   else
+                                     stopTimer();
+                                   repaint();
                                    if (selectNode.onNodeDirtied)
                                      selectNode.onNodeDirtied();
                                  });
     }
   }
 
-  void resized() override { sourceBox.setBounds(getLocalBounds().reduced(2)); }
+  void timerCallback() override {
+    if (selectNode.macroSelectSource != -1 &&
+        selectNode.macros[(size_t)selectNode.macroSelectSource] != nullptr) {
+      bool val =
+          selectNode.macros[(size_t)selectNode.macroSelectSource]->load() >=
+          0.5f;
+      toggle.setToggleState(val, juce::dontSendNotification);
+      toggle.setButtonText(val ? "In 1" : "In 0");
+    }
+  }
+
+  void paint(juce::Graphics &g) override {
+    if (selectNode.macroSelectSource != -1) {
+      g.setColour(juce::Colours::orange.withAlpha(0.6f));
+      g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1), 4.0f, 1.5f);
+    }
+  }
+
+  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
 
 private:
   SelectNode &selectNode;
-  juce::ComboBox sourceBox;
+  juce::ToggleButton toggle;
 };
 
 SelectNode::SelectNode(std::array<std::atomic<float> *, 32> &inMacros)
@@ -85,10 +93,8 @@ void SelectNode::loadNodeState(juce::XmlElement *xml) {
 void SelectNode::process() {
   int actualSrc =
       macroSelectSource != -1 && macros[(size_t)macroSelectSource] != nullptr
-          ? (int)std::round(macros[(size_t)macroSelectSource]->load())
+          ? (macros[(size_t)macroSelectSource]->load() >= 0.5f ? 1 : 0)
           : selectSource;
-
-  actualSrc = std::clamp(actualSrc, 0, 1);
 
   auto it = inputSequences.find(actualSrc);
   NoteSequence outSeq =

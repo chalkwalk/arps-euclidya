@@ -20,7 +20,5 @@ public:
 
   bool switchOn = true;
   int macroSwitch = -1;
-
-private:
   std::array<std::atomic<float> *, 32> &macros;
 };

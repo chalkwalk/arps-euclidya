@@ -20,7 +20,5 @@ public:
 
   int selectSource = 0;
   int macroSelectSource = -1;
-
-private:
   std::array<std::atomic<float> *, 32> &macros;
 };

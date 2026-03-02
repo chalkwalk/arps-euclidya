@@ -20,7 +20,5 @@ public:
 
   int routeDest = 0;
   int macroRouteDest = -1;
-
-private:
   std::array<std::atomic<float> *, 32> &macros;
 };

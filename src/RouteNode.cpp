@@ -2,61 +2,68 @@
 #include "MacroMappingMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class RouteNodeEditor : public juce::Component {
+class RouteNodeEditor : public juce::Component, private juce::Timer {
 public:
-  RouteNodeEditor(RouteNode &node, juce::AudioProcessorValueTreeState &apvts)
+  RouteNodeEditor(RouteNode &node, juce::AudioProcessorValueTreeState &)
       : routeNode(node) {
 
-    destBox.addItem("Out 0", 1);
-    destBox.addItem("Out 1", 2);
-    destBox.setSelectedId(routeNode.routeDest + 1, juce::dontSendNotification);
-    destBox.onChange = [this]() {
-      routeNode.routeDest = destBox.getSelectedId() - 1;
+    toggle.setButtonText(routeNode.routeDest == 0 ? "Out 0" : "Out 1");
+    toggle.setToggleState(routeNode.routeDest != 0, juce::dontSendNotification);
+    toggle.setClickingTogglesState(true);
+    toggle.onClick = [this]() {
+      routeNode.routeDest = toggle.getToggleState() ? 1 : 0;
+      toggle.setButtonText(routeNode.routeDest == 0 ? "Out 0" : "Out 1");
       if (routeNode.onNodeDirtied)
         routeNode.onNodeDirtied();
     };
-    addAndMakeVisible(destBox);
+    addAndMakeVisible(toggle);
 
-    auto updateVisibility = [this](int macro) {
-      if (macro == -1) {
-        destBox.setAlpha(1.0f);
-        destBox.setEnabled(true);
-      } else {
-        destBox.setAlpha(0.5f);
-        destBox.setEnabled(false);
-      }
-    };
+    toggle.addMouseListener(this, true);
 
-    updateVisibility(routeNode.macroRouteDest);
-
-    destBox.addMouseListener(this, true);
+    if (routeNode.macroRouteDest != -1)
+      startTimerHz(10);
 
     setSize(160, 40);
   }
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isRightButtonDown()) {
-      MacroMappingMenu::showMenu(&destBox, routeNode.macroRouteDest,
+      MacroMappingMenu::showMenu(&toggle, routeNode.macroRouteDest,
                                  [this](int macroIndex) {
                                    routeNode.macroRouteDest = macroIndex;
-                                   if (macroIndex == -1) {
-                                     destBox.setAlpha(1.0f);
-                                     destBox.setEnabled(true);
-                                   } else {
-                                     destBox.setAlpha(0.5f);
-                                     destBox.setEnabled(false);
-                                   }
+                                   if (macroIndex != -1)
+                                     startTimerHz(10);
+                                   else
+                                     stopTimer();
+                                   repaint();
                                    if (routeNode.onNodeDirtied)
                                      routeNode.onNodeDirtied();
                                  });
     }
   }
 
-  void resized() override { destBox.setBounds(getLocalBounds().reduced(2)); }
+  void timerCallback() override {
+    if (routeNode.macroRouteDest != -1 &&
+        routeNode.macros[(size_t)routeNode.macroRouteDest] != nullptr) {
+      bool val =
+          routeNode.macros[(size_t)routeNode.macroRouteDest]->load() >= 0.5f;
+      toggle.setToggleState(val, juce::dontSendNotification);
+      toggle.setButtonText(val ? "Out 1" : "Out 0");
+    }
+  }
+
+  void paint(juce::Graphics &g) override {
+    if (routeNode.macroRouteDest != -1) {
+      g.setColour(juce::Colours::orange.withAlpha(0.6f));
+      g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1), 4.0f, 1.5f);
+    }
+  }
+
+  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
 
 private:
   RouteNode &routeNode;
-  juce::ComboBox destBox;
+  juce::ToggleButton toggle;
 };
 
 RouteNode::RouteNode(std::array<std::atomic<float> *, 32> &inMacros)
@@ -84,10 +91,8 @@ void RouteNode::loadNodeState(juce::XmlElement *xml) {
 void RouteNode::process() {
   int actualDest =
       macroRouteDest != -1 && macros[(size_t)macroRouteDest] != nullptr
-          ? (int)std::round(macros[(size_t)macroRouteDest]->load())
+          ? (macros[(size_t)macroRouteDest]->load() >= 0.5f ? 1 : 0)
           : routeDest;
-
-  actualDest = std::clamp(actualDest, 0, 1);
 
   auto it = inputSequences.find(0);
   NoteSequence emptySeq;
