@@ -17,8 +17,12 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                          juce::Colour(0xff882222));
   addAndMakeVisible(deleteButton);
   deleteButton.onClick = [this] {
-    if (onDelete)
-      onDelete();
+    // Defer deletion: rebuild() destroys nodeBlocks (including this NodeBlock)
+    // so we must not do it while this button's click handler is on the stack.
+    juce::MessageManager::callAsync([cb = onDelete]() {
+      if (cb)
+        cb();
+    });
   };
 
   customControls = node->createEditorComponent(apvts);

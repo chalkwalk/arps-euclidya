@@ -25,6 +25,8 @@ public:
   void listBoxItemClicked(int rowNumber, const juce::MouseEvent &e) override;
   void listBoxItemDoubleClicked(int rowNumber,
                                 const juce::MouseEvent &e) override;
+  juce::var
+  getDragSourceDescription(const juce::SparseSet<int> &selectedRows) override;
 
   // To allow the parent to focus the search bar directly (e.g., on a hotkey)
   void focusSearch();

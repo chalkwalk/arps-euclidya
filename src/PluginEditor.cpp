@@ -58,6 +58,8 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   midiKeyboard.setMidiChannel(1);
   midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId,
                          customLookAndFeel.getNeonColor());
+  midiKeyboard.setKeyPressBaseOctave(-1); // Disable computer keyboard input
+  midiKeyboard.setWantsKeyboardFocus(false);
 
   addAndMakeVisible(clearNotesButton);
   clearNotesButton.setButtonText("Clear Notes");
