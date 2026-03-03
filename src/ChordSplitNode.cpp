@@ -76,24 +76,25 @@ void ChordSplitNode::loadNodeState(juce::XmlElement *xml) {
 class ChordSplitNodeEditor : public juce::Component {
 public:
   ChordSplitNodeEditor(ChordSplitNode &node) : chordSplitNode(node) {
-    modeBox.addItem("Top (high → Out 1)", 1);
-    modeBox.addItem("Bottom (low → Out 0)", 2);
-    modeBox.setSelectedId(node.splitMode + 1, juce::dontSendNotification);
-    modeBox.onChange = [this]() {
-      chordSplitNode.splitMode = modeBox.getSelectedId() - 1;
+    toggle.setButtonText(node.splitMode == 0 ? "Top" : "Bottom");
+    toggle.setToggleState(node.splitMode != 0, juce::dontSendNotification);
+    toggle.setClickingTogglesState(true);
+    toggle.onClick = [this]() {
+      chordSplitNode.splitMode = toggle.getToggleState() ? 1 : 0;
+      toggle.setButtonText(chordSplitNode.splitMode == 0 ? "Top" : "Bottom");
       if (chordSplitNode.onNodeDirtied)
         chordSplitNode.onNodeDirtied();
     };
-    addAndMakeVisible(modeBox);
+    addAndMakeVisible(toggle);
 
-    setSize(260, 30);
+    setSize(160, 30);
   }
 
-  void resized() override { modeBox.setBounds(getLocalBounds().reduced(2)); }
+  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
 
 private:
   ChordSplitNode &chordSplitNode;
-  juce::ComboBox modeBox;
+  juce::ToggleButton toggle;
 };
 
 std::unique_ptr<juce::Component>

@@ -113,16 +113,19 @@ public:
     addAndMakeVisible(tripletToggle);
 
     // --- Sync & Reset controls ---
-    syncModeBox.addItem("Clock Sync", 1);
-    syncModeBox.addItem("Key Sync", 2);
-    syncModeBox.setSelectedId(midiOutNode.transportSyncMode + 1,
-                              juce::dontSendNotification);
-    syncModeBox.onChange = [this]() {
-      midiOutNode.transportSyncMode = syncModeBox.getSelectedId() - 1;
+    syncModeToggle.setButtonText(
+        midiOutNode.transportSyncMode == 0 ? "Clock Sync" : "Key Sync");
+    syncModeToggle.setToggleState(midiOutNode.transportSyncMode != 0,
+                                  juce::dontSendNotification);
+    syncModeToggle.setClickingTogglesState(true);
+    syncModeToggle.onClick = [this]() {
+      midiOutNode.transportSyncMode = syncModeToggle.getToggleState() ? 1 : 0;
+      syncModeToggle.setButtonText(
+          midiOutNode.transportSyncMode == 0 ? "Clock Sync" : "Key Sync");
       if (midiOutNode.onNodeDirtied)
         midiOutNode.onNodeDirtied();
     };
-    addAndMakeVisible(syncModeBox);
+    addAndMakeVisible(syncModeToggle);
 
     syncModeLabel.setText("Transport", juce::dontSendNotification);
     syncModeLabel.setJustificationType(juce::Justification::centred);
@@ -238,7 +241,7 @@ public:
 
     // Row 4: Sync Mode
     auto r4 = bounds.removeFromTop(ctrlRowHeight);
-    arrangeLabeledControl(r4, syncModeLabel, syncModeBox, 70);
+    arrangeLabeledControl(r4, syncModeLabel, syncModeToggle, 70);
 
     bounds.removeFromTop(margin);
 
@@ -276,7 +279,7 @@ private:
   juce::ToggleButton tripletToggle;
 
   // Sync & Reset
-  juce::ComboBox syncModeBox;
+  juce::ToggleButton syncModeToggle;
   juce::Label syncModeLabel;
   juce::ToggleButton patternResetToggle;
   juce::ToggleButton rhythmResetToggle;

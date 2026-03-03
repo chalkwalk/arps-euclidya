@@ -3,38 +3,29 @@
 
 class UnfoldNodeEditor : public juce::Component {
 public:
-  UnfoldNodeEditor(UnfoldNode &node, juce::AudioProcessorValueTreeState &apvts)
+  UnfoldNodeEditor(UnfoldNode &node, juce::AudioProcessorValueTreeState &)
       : unfoldNode(node) {
 
-    orderingCombo.addItem("Ascending", 1);
-    orderingCombo.addItem("Descending", 2);
-    orderingCombo.setSelectedId(unfoldNode.ordering + 1,
-                                juce::dontSendNotification);
-
-    orderingCombo.onChange = [this]() {
-      unfoldNode.ordering = orderingCombo.getSelectedId() - 1;
+    toggle.setButtonText(node.ordering == 0 ? "Ascending" : "Descending");
+    toggle.setToggleState(node.ordering != 0, juce::dontSendNotification);
+    toggle.setClickingTogglesState(true);
+    toggle.onClick = [this]() {
+      unfoldNode.ordering = toggle.getToggleState() ? 1 : 0;
+      toggle.setButtonText(unfoldNode.ordering == 0 ? "Ascending"
+                                                    : "Descending");
       if (unfoldNode.onNodeDirtied)
         unfoldNode.onNodeDirtied();
     };
+    addAndMakeVisible(toggle);
 
-    addAndMakeVisible(orderingCombo);
-
-    orderingLabel.setText("Ordering", juce::dontSendNotification);
-    orderingLabel.attachToComponent(&orderingCombo, false);
-    addAndMakeVisible(orderingLabel);
-
-    setSize(400, 150);
+    setSize(160, 30);
   }
 
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(20);
-    orderingCombo.setBounds(bounds.removeFromTop(30).withWidth(120).withX(20));
-  }
+  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
 
 private:
   UnfoldNode &unfoldNode;
-  juce::ComboBox orderingCombo;
-  juce::Label orderingLabel;
+  juce::ToggleButton toggle;
 };
 
 // --- UnfoldNode Impl

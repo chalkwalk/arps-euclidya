@@ -62,18 +62,20 @@ public:
     addAndMakeVisible(rootLabel);
 
     // Mode
-    modeCombo.addItem("Filter", 1);
-    modeCombo.addItem("Snap", 2);
-    modeCombo.setSelectedId(quantizerNode.mode + 1, juce::dontSendNotification);
-    modeCombo.onChange = [this]() {
-      quantizerNode.mode = modeCombo.getSelectedId() - 1;
+    modeToggle.setButtonText(quantizerNode.mode == 0 ? "Filter" : "Snap");
+    modeToggle.setToggleState(quantizerNode.mode != 0,
+                              juce::dontSendNotification);
+    modeToggle.setClickingTogglesState(true);
+    modeToggle.onClick = [this]() {
+      quantizerNode.mode = modeToggle.getToggleState() ? 1 : 0;
+      modeToggle.setButtonText(quantizerNode.mode == 0 ? "Filter" : "Snap");
       if (quantizerNode.onNodeDirtied)
         quantizerNode.onNodeDirtied();
     };
-    addAndMakeVisible(modeCombo);
+    addAndMakeVisible(modeToggle);
 
     modeLabel.setText("Mode", juce::dontSendNotification);
-    modeLabel.attachToComponent(&modeCombo, true);
+    modeLabel.attachToComponent(&modeToggle, true);
     addAndMakeVisible(modeLabel);
 
     setSize(400, 150);
@@ -96,7 +98,7 @@ public:
     bounds.removeFromTop(10);
 
     auto row3 = bounds.removeFromTop(h);
-    modeCombo.setBounds(row3.withTrimmedLeft(labelWidth));
+    modeToggle.setBounds(row3.withTrimmedLeft(labelWidth));
   }
 
 private:
@@ -105,7 +107,7 @@ private:
   juce::Label tonalityLabel;
   juce::ComboBox rootCombo;
   juce::Label rootLabel;
-  juce::ComboBox modeCombo;
+  juce::ToggleButton modeToggle;
   juce::Label modeLabel;
 };
 
