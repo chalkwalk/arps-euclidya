@@ -2,53 +2,76 @@
 #include "MacroMappingMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+// Custom button with right-click handler, mirroring CustomMacroSlider
+class CustomMacroButton : public juce::TextButton {
+public:
+  std::function<void()> onRightClick;
+
+  void mouseDown(const juce::MouseEvent &e) override {
+    if (e.mods.isPopupMenu()) {
+      if (onRightClick)
+        onRightClick();
+    } else {
+      juce::TextButton::mouseDown(e);
+    }
+  }
+};
+
 class SwitchNodeEditor : public juce::Component, private juce::Timer {
 public:
   SwitchNodeEditor(SwitchNode &node, juce::AudioProcessorValueTreeState &)
       : switchNode(node) {
 
-    toggle.setButtonText(switchNode.switchOn ? "On" : "Off");
-    toggle.setToggleState(switchNode.switchOn, juce::dontSendNotification);
-    toggle.setClickingTogglesState(true);
-    toggle.onClick = [this]() {
-      switchNode.switchOn = toggle.getToggleState();
-      toggle.setButtonText(switchNode.switchOn ? "On" : "Off");
+    updateButtonAppearance();
+    addAndMakeVisible(button);
+
+    // Left-click: toggle value (ignored when macro-mapped)
+    button.onClick = [this]() {
+      if (switchNode.macroSwitch != -1)
+        return;
+      switchNode.switchOn = !switchNode.switchOn;
+      updateButtonAppearance();
       if (switchNode.onNodeDirtied)
         switchNode.onNodeDirtied();
     };
-    addAndMakeVisible(toggle);
 
-    toggle.addMouseListener(this, true);
+    // Right-click: macro mapping menu
+    // Mirror the rotary slider pattern: capture only specific member refs,
+    // NEVER capture [this]. Let the timer handle UI updates.
+    button.onRightClick = [&btn = button,
+                           &macroRef = switchNode.macroSwitch]() {
+      MacroMappingMenu::showMenu(&btn, macroRef, [&macroRef](int macroIndex) {
+        macroRef = macroIndex;
+      });
+    };
 
-    if (switchNode.macroSwitch != -1)
-      startTimerHz(10);
-
+    startTimerHz(30);
     setSize(160, 40);
   }
 
-  void mouseDown(const juce::MouseEvent &e) override {
-    if (e.mods.isRightButtonDown()) {
-      MacroMappingMenu::showMenu(&toggle, switchNode.macroSwitch,
-                                 [this](int macroIndex) {
-                                   switchNode.macroSwitch = macroIndex;
-                                   if (macroIndex != -1)
-                                     startTimerHz(10);
-                                   else
-                                     stopTimer();
-                                   repaint();
-                                   if (switchNode.onNodeDirtied)
-                                     switchNode.onNodeDirtied();
-                                 });
-    }
-  }
+  ~SwitchNodeEditor() override { stopTimer(); }
 
+  // Timer acts like MacroAttachment for toggles:
+  // polls the macro value and triggers onNodeDirtied when it changes
   void timerCallback() override {
-    if (switchNode.macroSwitch != -1 &&
+    bool isMapped = switchNode.macroSwitch != -1;
+    bool currentVal;
+    if (isMapped &&
         switchNode.macros[(size_t)switchNode.macroSwitch] != nullptr) {
-      bool val =
+      currentVal =
           switchNode.macros[(size_t)switchNode.macroSwitch]->load() >= 0.5f;
-      toggle.setToggleState(val, juce::dontSendNotification);
-      toggle.setButtonText(val ? "On" : "Off");
+    } else {
+      currentVal = switchNode.switchOn;
+    }
+
+    if (currentVal != lastDisplayedVal || isMapped != wasMapped) {
+      lastDisplayedVal = currentVal;
+      wasMapped = isMapped;
+      updateButtonAppearance();
+      repaint();
+      // Trigger graph recalculation when macro value changes
+      if (isMapped && switchNode.onNodeDirtied)
+        switchNode.onNodeDirtied();
     }
   }
 
@@ -59,11 +82,27 @@ public:
     }
   }
 
-  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
+  void resized() override { button.setBounds(getLocalBounds().reduced(2)); }
 
 private:
+  void updateButtonAppearance() {
+    bool currentVal =
+        (switchNode.macroSwitch != -1 &&
+         switchNode.macros[(size_t)switchNode.macroSwitch] != nullptr)
+            ? (switchNode.macros[(size_t)switchNode.macroSwitch]->load() >=
+               0.5f)
+            : switchNode.switchOn;
+    lastDisplayedVal = currentVal;
+    button.setButtonText(currentVal ? "On" : "Off");
+    button.setColour(juce::TextButton::buttonColourId,
+                     currentVal ? juce::Colour(0xff336633)
+                                : juce::Colour(0xff663333));
+  }
+
   SwitchNode &switchNode;
-  juce::ToggleButton toggle;
+  CustomMacroButton button;
+  bool lastDisplayedVal = false;
+  bool wasMapped = false;
 };
 
 SwitchNode::SwitchNode(std::array<std::atomic<float> *, 32> &inMacros)

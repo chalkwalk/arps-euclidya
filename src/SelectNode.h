@@ -18,6 +18,10 @@ public:
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {{"Select", &macroSelectSource}};
+  }
+
   int selectSource = 0;
   int macroSelectSource = -1;
   std::array<std::atomic<float> *, 32> &macros;

@@ -2,55 +2,69 @@
 #include "MacroMappingMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+class CustomMacroButton : public juce::TextButton {
+public:
+  std::function<void()> onRightClick;
+
+  void mouseDown(const juce::MouseEvent &e) override {
+    if (e.mods.isPopupMenu()) {
+      if (onRightClick)
+        onRightClick();
+    } else {
+      juce::TextButton::mouseDown(e);
+    }
+  }
+};
+
 class SelectNodeEditor : public juce::Component, private juce::Timer {
 public:
   SelectNodeEditor(SelectNode &node, juce::AudioProcessorValueTreeState &)
       : selectNode(node) {
 
-    toggle.setButtonText(selectNode.selectSource == 0 ? "In 0" : "In 1");
-    toggle.setToggleState(selectNode.selectSource != 0,
-                          juce::dontSendNotification);
-    toggle.setClickingTogglesState(true);
-    toggle.onClick = [this]() {
-      selectNode.selectSource = toggle.getToggleState() ? 1 : 0;
-      toggle.setButtonText(selectNode.selectSource == 0 ? "In 0" : "In 1");
+    updateButtonAppearance();
+    addAndMakeVisible(button);
+
+    button.onClick = [this]() {
+      if (selectNode.macroSelectSource != -1)
+        return;
+      selectNode.selectSource = selectNode.selectSource == 0 ? 1 : 0;
+      updateButtonAppearance();
       if (selectNode.onNodeDirtied)
         selectNode.onNodeDirtied();
     };
-    addAndMakeVisible(toggle);
 
-    toggle.addMouseListener(this, true);
+    button.onRightClick = [&btn = button,
+                           &macroRef = selectNode.macroSelectSource]() {
+      MacroMappingMenu::showMenu(&btn, macroRef, [&macroRef](int macroIndex) {
+        macroRef = macroIndex;
+      });
+    };
 
-    if (selectNode.macroSelectSource != -1)
-      startTimerHz(10);
-
+    startTimerHz(30);
     setSize(160, 40);
   }
 
-  void mouseDown(const juce::MouseEvent &e) override {
-    if (e.mods.isRightButtonDown()) {
-      MacroMappingMenu::showMenu(&toggle, selectNode.macroSelectSource,
-                                 [this](int macroIndex) {
-                                   selectNode.macroSelectSource = macroIndex;
-                                   if (macroIndex != -1)
-                                     startTimerHz(10);
-                                   else
-                                     stopTimer();
-                                   repaint();
-                                   if (selectNode.onNodeDirtied)
-                                     selectNode.onNodeDirtied();
-                                 });
-    }
-  }
+  ~SelectNodeEditor() override { stopTimer(); }
 
   void timerCallback() override {
-    if (selectNode.macroSelectSource != -1 &&
+    bool isMapped = selectNode.macroSelectSource != -1;
+    bool currentVal;
+    if (isMapped &&
         selectNode.macros[(size_t)selectNode.macroSelectSource] != nullptr) {
-      bool val =
+      currentVal =
           selectNode.macros[(size_t)selectNode.macroSelectSource]->load() >=
           0.5f;
-      toggle.setToggleState(val, juce::dontSendNotification);
-      toggle.setButtonText(val ? "In 1" : "In 0");
+    } else {
+      currentVal = selectNode.selectSource != 0;
+    }
+
+    if (currentVal != lastDisplayedVal || isMapped != wasMapped) {
+      lastDisplayedVal = currentVal;
+      wasMapped = isMapped;
+      updateButtonAppearance();
+      repaint();
+      if (isMapped && selectNode.onNodeDirtied)
+        selectNode.onNodeDirtied();
     }
   }
 
@@ -61,11 +75,27 @@ public:
     }
   }
 
-  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
+  void resized() override { button.setBounds(getLocalBounds().reduced(2)); }
 
 private:
+  void updateButtonAppearance() {
+    bool isIn1 =
+        (selectNode.macroSelectSource != -1 &&
+         selectNode.macros[(size_t)selectNode.macroSelectSource] != nullptr)
+            ? (selectNode.macros[(size_t)selectNode.macroSelectSource]
+                   ->load() >= 0.5f)
+            : (selectNode.selectSource != 0);
+    lastDisplayedVal = isIn1;
+    button.setButtonText(isIn1 ? "In 1" : "In 0");
+    button.setColour(juce::TextButton::buttonColourId,
+                     isIn1 ? juce::Colour(0xff335566)
+                           : juce::Colour(0xff444444));
+  }
+
   SelectNode &selectNode;
-  juce::ToggleButton toggle;
+  CustomMacroButton button;
+  bool lastDisplayedVal = false;
+  bool wasMapped = false;
 };
 
 SelectNode::SelectNode(std::array<std::atomic<float> *, 32> &inMacros)

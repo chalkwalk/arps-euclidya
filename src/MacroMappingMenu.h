@@ -15,26 +15,28 @@ public:
                    currentMappedMacro == (i - 1));
     }
 
-    menu.showMenuAsync(
-        juce::PopupMenu::Options().withTargetComponent(targetComponent),
-        [targetComponent, onMacroMapped](int result) {
-          if (result == 0)
-            return; // Dismissed
+    // Use screen area for positioning instead of holding a component pointer,
+    // since the component may be destroyed by rebuild() before the async
+    // callback fires.
+    auto options = juce::PopupMenu::Options();
+    if (targetComponent != nullptr)
+      options =
+          options.withTargetScreenArea(targetComponent->getScreenBounds());
 
-          if (result == 1) {
-            if (auto *tc = dynamic_cast<juce::SettableTooltipClient *>(
-                    targetComponent))
-              tc->setTooltip("");
-            if (onMacroMapped)
-              onMacroMapped(-1);
-          } else {
-            int macroIndex = result - 2;
-            if (auto *tc = dynamic_cast<juce::SettableTooltipClient *>(
-                    targetComponent))
-              tc->setTooltip("Mapped to Macro " + juce::String(macroIndex + 1));
-            if (onMacroMapped)
-              onMacroMapped(macroIndex);
-          }
-        });
+    // Capture onMacroMapped by value (safe copy).
+    // Do NOT capture targetComponent — it may be destroyed before callback.
+    menu.showMenuAsync(options, [onMacroMapped](int result) {
+      if (result == 0)
+        return; // Dismissed
+
+      if (result == 1) {
+        if (onMacroMapped)
+          onMacroMapped(-1);
+      } else {
+        int macroIndex = result - 2;
+        if (onMacroMapped)
+          onMacroMapped(macroIndex);
+      }
+    });
   }
 };

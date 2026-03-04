@@ -34,7 +34,7 @@ public:
   static std::shared_ptr<GraphNode>
   createNode(const std::string &type, MidiHandler &midiCtx,
              ClockManager &clockCtx,
-             std::array<std::atomic<float> *, 32> macros) {
+             std::array<std::atomic<float> *, 32> &macros) {
     if (type == "Midi In")
       return std::make_shared<MidiInNode>(midiCtx, macros);
     if (type == "Sort")

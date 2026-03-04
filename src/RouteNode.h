@@ -18,6 +18,10 @@ public:
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {{"Route", &macroRouteDest}};
+  }
+
   int routeDest = 0;
   int macroRouteDest = -1;
   std::array<std::atomic<float> *, 32> &macros;

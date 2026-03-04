@@ -2,53 +2,68 @@
 #include "MacroMappingMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+class CustomMacroButton : public juce::TextButton {
+public:
+  std::function<void()> onRightClick;
+
+  void mouseDown(const juce::MouseEvent &e) override {
+    if (e.mods.isPopupMenu()) {
+      if (onRightClick)
+        onRightClick();
+    } else {
+      juce::TextButton::mouseDown(e);
+    }
+  }
+};
+
 class RouteNodeEditor : public juce::Component, private juce::Timer {
 public:
   RouteNodeEditor(RouteNode &node, juce::AudioProcessorValueTreeState &)
       : routeNode(node) {
 
-    toggle.setButtonText(routeNode.routeDest == 0 ? "Out 0" : "Out 1");
-    toggle.setToggleState(routeNode.routeDest != 0, juce::dontSendNotification);
-    toggle.setClickingTogglesState(true);
-    toggle.onClick = [this]() {
-      routeNode.routeDest = toggle.getToggleState() ? 1 : 0;
-      toggle.setButtonText(routeNode.routeDest == 0 ? "Out 0" : "Out 1");
+    updateButtonAppearance();
+    addAndMakeVisible(button);
+
+    button.onClick = [this]() {
+      if (routeNode.macroRouteDest != -1)
+        return;
+      routeNode.routeDest = routeNode.routeDest == 0 ? 1 : 0;
+      updateButtonAppearance();
       if (routeNode.onNodeDirtied)
         routeNode.onNodeDirtied();
     };
-    addAndMakeVisible(toggle);
 
-    toggle.addMouseListener(this, true);
+    button.onRightClick = [&btn = button,
+                           &macroRef = routeNode.macroRouteDest]() {
+      MacroMappingMenu::showMenu(&btn, macroRef, [&macroRef](int macroIndex) {
+        macroRef = macroIndex;
+      });
+    };
 
-    if (routeNode.macroRouteDest != -1)
-      startTimerHz(10);
-
+    startTimerHz(30);
     setSize(160, 40);
   }
 
-  void mouseDown(const juce::MouseEvent &e) override {
-    if (e.mods.isRightButtonDown()) {
-      MacroMappingMenu::showMenu(&toggle, routeNode.macroRouteDest,
-                                 [this](int macroIndex) {
-                                   routeNode.macroRouteDest = macroIndex;
-                                   if (macroIndex != -1)
-                                     startTimerHz(10);
-                                   else
-                                     stopTimer();
-                                   repaint();
-                                   if (routeNode.onNodeDirtied)
-                                     routeNode.onNodeDirtied();
-                                 });
-    }
-  }
+  ~RouteNodeEditor() override { stopTimer(); }
 
   void timerCallback() override {
-    if (routeNode.macroRouteDest != -1 &&
+    bool isMapped = routeNode.macroRouteDest != -1;
+    bool currentVal;
+    if (isMapped &&
         routeNode.macros[(size_t)routeNode.macroRouteDest] != nullptr) {
-      bool val =
+      currentVal =
           routeNode.macros[(size_t)routeNode.macroRouteDest]->load() >= 0.5f;
-      toggle.setToggleState(val, juce::dontSendNotification);
-      toggle.setButtonText(val ? "Out 1" : "Out 0");
+    } else {
+      currentVal = routeNode.routeDest != 0;
+    }
+
+    if (currentVal != lastDisplayedVal || isMapped != wasMapped) {
+      lastDisplayedVal = currentVal;
+      wasMapped = isMapped;
+      updateButtonAppearance();
+      repaint();
+      if (isMapped && routeNode.onNodeDirtied)
+        routeNode.onNodeDirtied();
     }
   }
 
@@ -59,11 +74,27 @@ public:
     }
   }
 
-  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
+  void resized() override { button.setBounds(getLocalBounds().reduced(2)); }
 
 private:
+  void updateButtonAppearance() {
+    bool isOut1 =
+        (routeNode.macroRouteDest != -1 &&
+         routeNode.macros[(size_t)routeNode.macroRouteDest] != nullptr)
+            ? (routeNode.macros[(size_t)routeNode.macroRouteDest]->load() >=
+               0.5f)
+            : (routeNode.routeDest != 0);
+    lastDisplayedVal = isOut1;
+    button.setButtonText(isOut1 ? "Out 1" : "Out 0");
+    button.setColour(juce::TextButton::buttonColourId,
+                     isOut1 ? juce::Colour(0xff335566)
+                            : juce::Colour(0xff444444));
+  }
+
   RouteNode &routeNode;
-  juce::ToggleButton toggle;
+  CustomMacroButton button;
+  bool lastDisplayedVal = false;
+  bool wasMapped = false;
 };
 
 RouteNode::RouteNode(std::array<std::atomic<float> *, 32> &inMacros)
