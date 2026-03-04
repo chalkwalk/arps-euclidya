@@ -74,11 +74,17 @@ public:
             if (macroIndex == -1) {
               attachment.reset();
               slider.setTooltip("");
+              slider.removeColour(juce::Slider::rotarySliderFillColourId);
+              slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
             } else {
               attachment = std::make_unique<MacroAttachment>(
                   apvts, "macro_" + juce::String(macroIndex + 1), slider);
               slider.setTooltip("Mapped to Macro " +
                                 juce::String(macroIndex + 1));
+              slider.setColour(juce::Slider::rotarySliderFillColourId,
+                               juce::Colours::orange);
+              slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                               juce::Colours::orange.withAlpha(0.3f));
             }
           });
     };
@@ -88,6 +94,10 @@ public:
           apvts, "macro_" + juce::String(node.macroRepeatCount + 1), slider);
       slider.setTooltip("Mapped to Macro " +
                         juce::String(node.macroRepeatCount + 1));
+      slider.setColour(juce::Slider::rotarySliderFillColourId,
+                       juce::Colours::orange);
+      slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                       juce::Colours::orange.withAlpha(0.3f));
     }
 
     setSize(120, 100);

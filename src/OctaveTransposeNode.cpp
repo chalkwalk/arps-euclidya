@@ -23,17 +23,21 @@ public:
       label.setJustificationType(juce::Justification::centred);
       addAndMakeVisible(label);
 
-      slider.onValueChange = [&slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
+        if (octaveNode.onNodeDirtied)
+          octaveNode.onNodeDirtied();
       };
 
       auto updateSliderVisibility = [&slider](int macro) {
         if (macro == -1) {
-          slider.setAlpha(1.0f);
-          slider.setEnabled(true);
+          slider.removeColour(juce::Slider::rotarySliderFillColourId);
+          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
         } else {
-          slider.setAlpha(0.5f);
-          slider.setEnabled(false);
+          slider.setColour(juce::Slider::rotarySliderFillColourId,
+                           juce::Colours::orange);
+          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                           juce::Colours::orange.withAlpha(0.3f));
         }
       };
 
