@@ -210,4 +210,6 @@ __marimo__/
 *~
 .vimsupport/
 *.pyc
+build*/
 .cache/
+
