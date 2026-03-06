@@ -43,7 +43,30 @@ void GraphEngine::removeNode(GraphNode *node) {
   recalculate();
 }
 
+bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
+                                 GraphNode *ignoreNode) const {
+  for (const auto &node : nodes) {
+    if (node.get() == ignoreNode)
+      continue;
+
+    int curX = node->gridX;
+    int curY = node->gridY;
+    int curW = node->getGridWidth();
+    int curH = node->getGridHeight();
+
+    // Standard AABB intersection test (exclusive of edges)
+    bool overlapX = (gridX < curX + curW) && (gridX + gridW > curX);
+    bool overlapY = (gridY < curY + curH) && (gridY + gridH > curY);
+
+    if (overlapX && overlapY) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
+
                                         GraphNode *target, int inPort) {
   if (source == nullptr || target == nullptr)
     return false;

@@ -25,4 +25,6 @@ public:
   int selectSource = 0;
   int macroSelectSource = -1;
   std::array<std::atomic<float> *, 32> &macros;
+  int getGridWidth() const override { return 2; }
+  int getGridHeight() const override { return 1; }
 };

@@ -19,4 +19,6 @@ public:
   void loadNodeState(juce::XmlElement *xml) override;
 
   int baseOctave = 3;
+  int getGridWidth() const override { return 1; }
+  int getGridHeight() const override { return 1; }
 };

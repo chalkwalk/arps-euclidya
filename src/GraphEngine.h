@@ -30,6 +30,10 @@ public:
     return nodes;
   }
 
+  // Grid collision detection
+  bool isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
+                      GraphNode *ignoreNode = nullptr) const;
+
   std::function<void()> onGraphDirtied;
 
   // Check if adding a connection would create a cycle

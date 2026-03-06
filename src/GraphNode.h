@@ -20,7 +20,16 @@ public:
   virtual int getNumInputPorts() const { return 1; }
   virtual int getNumOutputPorts() const { return 1; }
 
-  // Canvas position (persistent)
+  // Grid footprint (integer grid cells)
+  virtual int getGridWidth() const { return 1; }
+  virtual int getGridHeight() const { return 1; }
+
+  // Canvas position (persistent grid coordinates)
+  int gridX = 0;
+  int gridY = 0;
+
+  // Legacy float coordinates (kept temporarily for runtime dragging during
+  // Phase 1-3 transition)
   float nodeX = 0.0f;
   float nodeY = 0.0f;
 
@@ -30,14 +39,26 @@ public:
   // Base-level save/load for position (called by GraphEngine)
   void saveBaseState(juce::XmlElement *xml) {
     if (xml) {
-      xml->setAttribute("nodeX", (double)nodeX);
-      xml->setAttribute("nodeY", (double)nodeY);
+      xml->setAttribute("gridX", gridX);
+      xml->setAttribute("gridY", gridY);
     }
   }
   void loadBaseState(juce::XmlElement *xml) {
     if (xml) {
-      nodeX = (float)xml->getDoubleAttribute("nodeX", 0.0);
-      nodeY = (float)xml->getDoubleAttribute("nodeY", 0.0);
+      if (xml->hasAttribute("gridX")) {
+        gridX = xml->getIntAttribute("gridX", 0);
+        gridY = xml->getIntAttribute("gridY", 0);
+      } else {
+        // Legacy float patch conversion: snap to nearest 100px grid
+        float x = (float)xml->getDoubleAttribute("nodeX", 0.0);
+        float y = (float)xml->getDoubleAttribute("nodeY", 0.0);
+        gridX = (int)std::round(x / 100.0f);
+        gridY = (int)std::round(y / 100.0f);
+      }
+
+      // Keep float sync for Phase 1-3 transitional logic
+      nodeX = (float)(gridX * 100);
+      nodeY = (float)(gridY * 100);
     }
   }
 

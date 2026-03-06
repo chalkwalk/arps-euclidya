@@ -12,4 +12,6 @@ public:
   int getNumOutputPorts() const override { return 1; }
 
   void process() override;
+  int getGridWidth() const override { return 1; }
+  int getGridHeight() const override { return 1; }
 };

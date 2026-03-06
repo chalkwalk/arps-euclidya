@@ -26,4 +26,6 @@ public:
 
 private:
   std::array<std::atomic<float> *, 32> &macros;
+  int getGridWidth() const override { return 4; }
+  int getGridHeight() const override { return 2; }
 };

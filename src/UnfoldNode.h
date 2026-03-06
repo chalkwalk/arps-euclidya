@@ -18,4 +18,6 @@ public:
   void loadNodeState(juce::XmlElement *xml) override;
 
   int ordering = 0; // 0: Ascending, 1: Descending
+  int getGridWidth() const override { return 1; }
+  int getGridHeight() const override { return 1; }
 };

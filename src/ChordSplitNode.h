@@ -24,4 +24,6 @@ public:
   void loadNodeState(juce::XmlElement *xml) override;
 
   int splitMode = 0; // 0 = Top (highest soloed), 1 = Bottom (lowest soloed)
+  int getGridWidth() const override { return 1; }
+  int getGridHeight() const override { return 1; }
 };

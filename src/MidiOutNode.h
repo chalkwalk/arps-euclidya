@@ -87,4 +87,6 @@ private:
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)
   std::vector<std::pair<int, int>> playingNotes;
+  int getGridWidth() const override { return 4; }
+  int getGridHeight() const override { return 2; }
 };

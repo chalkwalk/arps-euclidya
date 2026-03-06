@@ -87,8 +87,9 @@ void EuclideanArpEditor::timerCallback() {
   audioProcessor.updateMacroNames();
 
   for (int i = 0; i < 32; ++i) {
-    if (audioProcessor.macroParams[i] != nullptr) {
-      juce::String newName = audioProcessor.macroParams[i]->getName(100);
+    if (audioProcessor.macroParams[(size_t)i] != nullptr) {
+      juce::String newName =
+          audioProcessor.macroParams[(size_t)i]->getName(100);
       macroControls[i]->label.setText(newName, juce::dontSendNotification);
 
       bool mapped = !newName.startsWith("Macro ");
