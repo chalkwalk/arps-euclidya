@@ -1,5 +1,6 @@
 #include "NodeBlock.h"
 #include "GraphCanvas.h"
+#include "GraphEngine.h"
 
 NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                      juce::AudioProcessorValueTreeState &apvts,
@@ -30,21 +31,15 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
     addAndMakeVisible(customControls.get());
   }
 
-  // Calculate size based on port count and custom controls
-  int minPortHeight =
-      std::max(node->getNumInputPorts(), node->getNumOutputPorts()) *
-      PORT_SPACING;
-  int controlsHeight =
-      (customControls != nullptr) ? customControls->getHeight() : 40;
-  int bodyHeight = std::max(minPortHeight + 10, controlsHeight);
-  int totalHeight = HEADER_HEIGHT + bodyHeight + 10;
+  // Physical bounds derived exclusively from grid properties
+  int gridW = node->getGridWidth();
+  int gridH = node->getGridHeight();
 
-  int width =
-      (customControls != nullptr)
-          ? std::max(160, customControls->getWidth() + (PORT_MARGIN + 4) * 2)
-          : 160;
+  // Tram lines math: Width is W*100 - 10, Height is H*100 - 10
+  int width = (gridW * 100) - 10;
+  int height = (gridH * 100) - 10;
 
-  setSize(width, totalHeight);
+  setSize(width, height);
 }
 
 void NodeBlock::paint(juce::Graphics &g) {
@@ -151,7 +146,11 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
   // Otherwise, start dragging the node
   isDraggingNode = true;
   isDraggingCable = false;
-  dragger.startDraggingComponent(this, e);
+
+  // No longer using standard ComponentDragger since we do strict grid hopping
+  // But we store the starting point of the drag
+  dragStartGridX = targetNode->gridX;
+  dragStartGridY = targetNode->gridY;
 }
 
 void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
@@ -168,11 +167,43 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
   }
 
   if (isDraggingNode) {
-    dragger.dragComponent(this, e, nullptr);
-    targetNode->nodeX = (float)getX();
-    targetNode->nodeY = (float)getY();
-    if (onPositionChanged)
-      onPositionChanged();
+    // Determine the raw float destination based on the mouse stroke
+    auto desktopPos = e.getEventRelativeTo(&parentCanvas).getPosition();
+
+    // Abstract world coordinates mapped from the canvas
+    float worldX =
+        (float)desktopPos.x / parentCanvas.getZoomFactor() -
+        (parentCanvas.getBounds().getWidth() / parentCanvas.getZoomFactor() *
+         0); // Not needed, just use component distance
+
+    // Since dealing with camera transforms is complex here, let's just
+    // accumulate the total drag vector from the mouse down event
+    int deltaX = e.getDistanceFromDragStartX() / parentCanvas.getZoomFactor();
+    int deltaY = e.getDistanceFromDragStartY() / parentCanvas.getZoomFactor();
+
+    // Convert to grid slots: roughly 100px per slot
+    int gridDeltaX = (int)std::round((float)deltaX / 100.0f);
+    int gridDeltaY = (int)std::round((float)deltaY / 100.0f);
+
+    int newGridX = dragStartGridX + gridDeltaX;
+    int newGridY = dragStartGridY + gridDeltaY;
+
+    if (newGridX != targetNode->gridX || newGridY != targetNode->gridY) {
+      // Check collision
+      if (!parentCanvas.getEngine().isAreaOccupied(
+              newGridX, newGridY, targetNode->getGridWidth(),
+              targetNode->getGridHeight(), targetNode.get())) {
+        targetNode->gridX = newGridX;
+        targetNode->gridY = newGridY;
+
+        // Ensure legacy float sync keeps the block in the right spot physically
+        targetNode->nodeX = (float)(newGridX * 100);
+        targetNode->nodeY = (float)(newGridY * 100);
+
+        if (onPositionChanged)
+          onPositionChanged();
+      }
+    }
   }
 }
 
@@ -214,10 +245,11 @@ juce::Point<int> NodeBlock::getOutputPortCentre(int portIndex) const {
 
 int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
   int numIn = targetNode->getNumInputPorts();
+  auto localFloat = localPoint.toFloat();
   for (int i = 0; i < numIn; ++i) {
     auto rect = getInputPortRect(i);
-    auto centre = rect.getCentre();
-    if (localPoint.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
+    auto centre = rect.getCentre().toFloat();
+    if (localFloat.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
       return i;
   }
   return -1;
@@ -225,10 +257,11 @@ int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
 
 int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
   int numOut = targetNode->getNumOutputPorts();
+  auto localFloat = localPoint.toFloat();
   for (int i = 0; i < numOut; ++i) {
     auto rect = getOutputPortRect(i);
-    auto centre = rect.getCentre();
-    if (localPoint.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
+    auto centre = rect.getCentre().toFloat();
+    if (localFloat.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
       return i;
   }
   return -1;

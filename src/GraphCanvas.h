@@ -12,6 +12,9 @@ public:
               juce::CriticalSection &lock);
   ~GraphCanvas() override = default;
 
+  static constexpr int GRID_PITCH = 100;
+  static constexpr int GRID_MARGIN = 5;
+
   void paint(juce::Graphics &g) override;
   void paintOverChildren(juce::Graphics &g) override;
   void resized() override;
@@ -33,6 +36,8 @@ public:
 
   // Rebuild all NodeBlocks from the engine's node list
   void rebuild();
+
+  GraphEngine &getEngine() const { return graphEngine; }
 
   // Add a node and place it at a default position
   void addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node);

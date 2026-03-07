@@ -54,6 +54,9 @@ private:
   juce::TextButton deleteButton{"X"};
   std::unique_ptr<juce::Component> customControls;
 
+  int dragStartGridX = 0;
+  int dragStartGridY = 0;
+
   juce::ComponentDragger dragger;
   bool isDraggingNode = false;
   bool isDraggingCable = false;

@@ -126,7 +126,11 @@ void GraphCanvas::paint(juce::Graphics &g) {
 
   // Draw infinitely panning grid dots
   g.setColour(juce::Colour(0xff2a2a2a));
-  float scaledGrid = 20.0f * zoomFactor;
+
+  float scaledGrid = (float)GraphCanvas::GRID_PITCH * zoomFactor;
+  float scaledInner5 = 5.0f * zoomFactor;
+  float scaledInner95 = 95.0f * zoomFactor;
+
   float offsetX = std::fmod(panX, scaledGrid);
   if (offsetX > 0)
     offsetX -= scaledGrid;
@@ -135,9 +139,12 @@ void GraphCanvas::paint(juce::Graphics &g) {
     offsetY -= scaledGrid;
 
   for (float x = offsetX; x < getWidth(); x += scaledGrid) {
-    for (float y = offsetY; y < getHeight(); y += scaledGrid) {
-      g.fillRect(x, y, 1.0f, 1.0f);
-    }
+     g.fillRect(x + scaledInner5, 0.0f, 1.0f, (float)getHeight());
+     g.fillRect(x + scaledInner95, 0.0f, 1.0f, (float)getHeight());
+   }
+   for (float y = offsetY; y < getHeight(); y += scaledGrid) {
+     g.fillRect(0.0f, y + scaledInner5, (float)getWidth(), 1.0f);
+     g.fillRect(0.0f, y + scaledInner95, (float)getWidth(), 1.0f);
   }
 
   // Warning banner for large sequences
@@ -349,7 +356,8 @@ void GraphCanvas::mouseWheelMove(const juce::MouseEvent &e,
     return;
 
   // Semantic zoom natively mapping focal origin
-  float wheelAmount = wheel.deltaY != 0.0f ? wheel.deltaY : wheel.deltaX;
+  float wheelAmount =
+      std::abs(wheel.deltaY) > 0.0001f ? wheel.deltaY : wheel.deltaX;
   if (std::abs(wheelAmount) < 0.0001f)
     return;
 
