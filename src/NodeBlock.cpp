@@ -45,58 +45,62 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 void NodeBlock::paint(juce::Graphics &g) {
   auto bounds = getLocalBounds().toFloat();
 
-  // Node body: rounded rectangle
+  // Unified Node body: rounded rectangle (no distinct header bar anymore)
   g.setColour(juce::Colour(0xff121a24));
   g.fillRoundedRectangle(bounds, 6.0f);
-
-  // Header bar
-  auto headerBounds =
-      juce::Rectangle<float>(bounds.getX() + 1, bounds.getY() + 1,
-                             bounds.getWidth() - 2, (float)HEADER_HEIGHT - 1);
-  g.setColour(juce::Colour(0xff1d2a3a));
-  g.fillRoundedRectangle(headerBounds.getX(), headerBounds.getY(),
-                         headerBounds.getWidth(), headerBounds.getHeight(),
-                         5.0f);
 
   // Border (Neon tinted)
   g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
   g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.5f);
 
-  // Draw input ports
+  // Draw input ports (Half stadiums flush with left edge)
   int numIn = targetNode->getNumInputPorts();
   for (int i = 0; i < numIn; ++i) {
-    auto rect = getInputPortRect(i);
-    auto centre = rect.getCentre().toFloat();
+    auto rect = getInputPortRect(i).toFloat();
 
-    // Filled green circle
+    // Half-stadium path (rounded on the right, flat on the left)
+    juce::Path p;
+    p.addRoundedRectangle(rect.getX() - rect.getWidth(), rect.getY(),
+                          rect.getWidth() * 2.0f, rect.getHeight(),
+                          rect.getHeight() * 0.5f);
+
+    g.saveState();
+    g.reduceClipRegion(rect.toNearestInt()); // Clip to just the right half
+
     g.setColour(juce::Colour(0xff44cc44));
-    g.fillEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
-                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f);
+    g.fillPath(p);
     g.setColour(juce::Colour(0xff228822));
-    g.drawEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
-                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f, 1.5f);
+    g.strokePath(p, juce::PathStrokeType(1.5f));
+
+    g.restoreState();
   }
 
-  // Draw output ports
+  // Draw output ports (Half stadiums flush with right edge)
   int numOut = targetNode->getNumOutputPorts();
   for (int i = 0; i < numOut; ++i) {
-    auto rect = getOutputPortRect(i);
-    auto centre = rect.getCentre().toFloat();
+    auto rect = getOutputPortRect(i).toFloat();
 
-    // Filled blue circle
+    // Half-stadium path (rounded on the left, flat on the right)
+    juce::Path p;
+    p.addRoundedRectangle(rect.getX(), rect.getY(), rect.getWidth() * 2.0f,
+                          rect.getHeight(), rect.getHeight() * 0.5f);
+
+    g.saveState();
+    g.reduceClipRegion(rect.toNearestInt()); // Clip to just the left half
+
     g.setColour(juce::Colour(0xff4499ff));
-    g.fillEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
-                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f);
+    g.fillPath(p);
     g.setColour(juce::Colour(0xff2266aa));
-    g.drawEllipse(centre.x - PORT_RADIUS, centre.y - PORT_RADIUS,
-                  PORT_RADIUS * 2.0f, PORT_RADIUS * 2.0f, 1.5f);
+    g.strokePath(p, juce::PathStrokeType(1.5f));
+
+    g.restoreState();
   }
 }
 
 void NodeBlock::resized() {
   auto bounds = getLocalBounds();
 
-  // Header
+  // Floating Header Area (same spacing, just no background drawn)
   auto header = bounds.removeFromTop(HEADER_HEIGHT).reduced(PORT_MARGIN + 4, 2);
   deleteButton.setBounds(header.removeFromRight(24));
   header.removeFromRight(4);
@@ -247,15 +251,15 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
 
 juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
   int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
-  return juce::Rectangle<int>(PORT_MARGIN - PORT_RADIUS, y - PORT_RADIUS,
-                              PORT_RADIUS * 2, PORT_RADIUS * 2);
+  // Flush with the left edge. Width is RADIUS. Height is 2*RADIUS.
+  return juce::Rectangle<int>(0, y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2);
 }
 
 juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
   int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
-  return juce::Rectangle<int>(getWidth() - PORT_MARGIN - PORT_RADIUS,
-                              y - PORT_RADIUS, PORT_RADIUS * 2,
-                              PORT_RADIUS * 2);
+  // Flush with the right edge. Width is RADIUS. Height is 2*RADIUS.
+  return juce::Rectangle<int>(getWidth() - PORT_RADIUS, y - PORT_RADIUS,
+                              PORT_RADIUS, PORT_RADIUS * 2);
 }
 
 juce::Point<int> NodeBlock::getInputPortCentre(int portIndex) const {
