@@ -151,6 +151,10 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
   // But we store the starting point of the drag
   dragStartGridX = targetNode->gridX;
   dragStartGridY = targetNode->gridY;
+
+  parentCanvas.setGhostTarget(dragStartGridX, dragStartGridY,
+                              targetNode->getGridWidth(),
+                              targetNode->getGridHeight(), targetNode.get());
 }
 
 void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
@@ -188,21 +192,22 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     int newGridX = dragStartGridX + gridDeltaX;
     int newGridY = dragStartGridY + gridDeltaY;
 
-    if (newGridX != targetNode->gridX || newGridY != targetNode->gridY) {
-      // Check collision
-      if (!parentCanvas.getEngine().isAreaOccupied(
-              newGridX, newGridY, targetNode->getGridWidth(),
-              targetNode->getGridHeight(), targetNode.get())) {
-        targetNode->gridX = newGridX;
-        targetNode->gridY = newGridY;
+    if (newGridX != parentCanvas.getGhostX() ||
+        newGridY != parentCanvas.getGhostY()) {
+      // Set ghost target; parentCanvas handles the overlap check to tint it
+      // red/green
+      parentCanvas.setGhostTarget(
+          newGridX, newGridY, targetNode->getGridWidth(),
+          targetNode->getGridHeight(), targetNode.get());
 
-        // Ensure legacy float sync keeps the block in the right spot physically
-        targetNode->nodeX = (float)(newGridX * 100);
-        targetNode->nodeY = (float)(newGridY * 100);
+      // We ALSO move the floating physical coordinate of the node to follow the
+      // mouse linearly (10% scale up is handled by z-order logic in
+      // Canvas/paint)
+      targetNode->nodeX = dragStartGridX * 100.0f + deltaX;
+      targetNode->nodeY = dragStartGridY * 100.0f + deltaY;
 
-        if (onPositionChanged)
-          onPositionChanged();
-      }
+      if (onPositionChanged)
+        onPositionChanged();
     }
   }
 }
@@ -216,6 +221,26 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
     onPortDragEnd(canvasPos);
   }
+  if (isDraggingNode) {
+    // Snap to the ghost slot if it's valid, otherwise snap back to start
+    if (parentCanvas.isGhostValid()) {
+      targetNode->gridX = parentCanvas.getGhostX();
+      targetNode->gridY = parentCanvas.getGhostY();
+    } else {
+      targetNode->gridX = dragStartGridX;
+      targetNode->gridY = dragStartGridY;
+    }
+
+    // Lock the physical layout to the final grid slot
+    targetNode->nodeX = (float)(targetNode->gridX * 100);
+    targetNode->nodeY = (float)(targetNode->gridY * 100);
+
+    parentCanvas.clearGhostTarget();
+
+    if (onPositionChanged)
+      onPositionChanged();
+  }
+
   isDraggingCable = false;
   isDraggingNode = false;
 }

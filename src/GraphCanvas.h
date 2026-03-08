@@ -67,6 +67,14 @@ public:
   // Callback when the graph structure changes
   std::function<void()> onGraphChanged;
 
+  // Ghost Rendering API for Node Dragging Preview
+  void setGhostTarget(int gridX, int gridY, int gridW, int gridH,
+                      GraphNode *ignoreNode);
+  void clearGhostTarget();
+  int getGhostX() const { return ghostTargetX; }
+  int getGhostY() const { return ghostTargetY; }
+  bool isGhostValid() const { return ghostIsValid; }
+
   // Callback when a node type string is dropped from the library DragAndDrop
   std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
 
@@ -113,6 +121,14 @@ private:
 
   // Warning banner
   bool hasLargeSequenceWarning = false;
+
+  // Ghost target rendering state
+  bool showGhostTarget = false;
+  int ghostTargetX = 0;
+  int ghostTargetY = 0;
+  int ghostTargetW = 1;
+  int ghostTargetH = 1;
+  bool ghostIsValid = false;
 
   // Selected node for highlighting
   GraphNode *selectedNode = nullptr;

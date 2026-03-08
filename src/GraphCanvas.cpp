@@ -147,6 +147,33 @@ void GraphCanvas::paint(juce::Graphics &g) {
      g.fillRect(0.0f, y + scaledInner95, (float)getWidth(), 1.0f);
   }
 
+  // Draw node insertion "ghost" target
+  if (showGhostTarget) {
+    g.addTransform(getCameraTransform());
+
+    // Abstract world coordinates
+    float gx = (float)(ghostTargetX * GRID_PITCH);
+    float gy = (float)(ghostTargetY * GRID_PITCH);
+    float gw = (float)(ghostTargetW * GRID_PITCH) - 10.0f;
+    float gh = (float)(ghostTargetH * GRID_PITCH) - 10.0f;
+
+    juce::Rectangle<float> rect(gx, gy, gw, gh);
+
+    if (ghostIsValid) {
+      g.setColour(juce::Colour(0x4444ff44)); // translucent green
+      g.fillRoundedRectangle(rect, 6.0f);
+      g.setColour(juce::Colour(0x8844ff44));
+      g.drawRoundedRectangle(rect, 6.0f, 2.0f);
+    } else {
+      g.setColour(juce::Colour(0x44ff4444)); // translucent red
+      g.fillRoundedRectangle(rect, 6.0f);
+      g.setColour(juce::Colour(0x88ff4444));
+      g.drawRoundedRectangle(rect, 6.0f, 2.0f);
+    }
+
+    g.addTransform(getCameraTransform().inverted());
+  }
+
   // Warning banner for large sequences
   if (hasLargeSequenceWarning) {
     auto bannerArea = getLocalBounds().removeFromTop(28);
@@ -722,4 +749,23 @@ void GraphCanvas::selectNode(GraphNode *node) {
     selectedNode = node;
     repaint();
   }
+}
+
+void GraphCanvas::setGhostTarget(int gridX, int gridY, int gridW, int gridH,
+                                 GraphNode *ignoreNode) {
+  showGhostTarget = true;
+  ghostTargetX = gridX;
+  ghostTargetY = gridY;
+  ghostTargetW = gridW;
+  ghostTargetH = gridH;
+
+  const juce::ScopedLock sl(graphLock);
+  ghostIsValid =
+      !graphEngine.isAreaOccupied(gridX, gridY, gridW, gridH, ignoreNode);
+  repaint();
+}
+
+void GraphCanvas::clearGhostTarget() {
+  showGhostTarget = false;
+  repaint();
 }
