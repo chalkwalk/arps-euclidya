@@ -176,8 +176,7 @@ public:
     addAndMakeVisible(cycleLengthLabel);
     updateCycleLabel();
     startTimerHz(2); // Update 2x per second
-
-    setSize(300, 380);
+    setSize(390, 190);
   }
 
   ~MidiOutNodeEditor() override { stopTimer(); }
@@ -190,9 +189,9 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(8);
-    int knobRowHeight = 70;
-    int ctrlRowHeight = 28;
+    auto bounds = getLocalBounds().reduced(6);
+    int knobRowHeight = 65;
+    int ctrlRowHeight = 24;
     int margin = 4;
 
     auto setParamBounds = [](juce::Rectangle<int> &b, CustomMacroSlider &s,
@@ -203,62 +202,54 @@ public:
       s.setBounds(bCopy.withSizeKeepingCentre(size, size));
     };
 
-    // Row 1: Pattern knobs
+    // Row 1: All 6 Knobs
     auto r1 = bounds.removeFromTop(knobRowHeight);
-    int w3 = r1.getWidth() / 3;
-    auto b1 = r1.removeFromLeft(w3);
+    int w6 = r1.getWidth() / 6;
+    auto b1 = r1.removeFromLeft(w6);
     setParamBounds(b1, pSteps, lPSteps);
-    auto b2 = r1.removeFromLeft(w3);
+    auto b2 = r1.removeFromLeft(w6);
     setParamBounds(b2, pBeats, lPBeats);
-    auto b3 = r1;
+    auto b3 = r1.removeFromLeft(w6);
     setParamBounds(b3, pOffset, lPOffset);
-
-    bounds.removeFromTop(margin);
-
-    // Row 2: Rhythm knobs
-    auto r2 = bounds.removeFromTop(knobRowHeight);
-    auto b4 = r2.removeFromLeft(w3);
+    auto b4 = r1.removeFromLeft(w6);
     setParamBounds(b4, rSteps, lRSteps);
-    auto b5 = r2.removeFromLeft(w3);
+    auto b5 = r1.removeFromLeft(w6);
     setParamBounds(b5, rBeats, lRBeats);
-    auto b6 = r2;
+    auto b6 = r1;
     setParamBounds(b6, rOffset, lROffset);
 
-    bounds.removeFromTop(margin * 2);
+    bounds.removeFromTop(margin);
 
     auto arrangeLabeledControl = [](juce::Rectangle<int> &row, juce::Label &lbl,
                                     juce::Component &comp, int lblWidth) {
       lbl.setBounds(row.removeFromLeft(lblWidth));
-      comp.setBounds(row.reduced(2));
+      comp.setBounds(row.reduced(2, 1));
     };
 
-    // Row 3: Clock division + Triplet
+    // Row 2: Clock division + Triplet + Out Ch
+    auto r2 = bounds.removeFromTop(ctrlRowHeight);
+    int thirdW = r2.getWidth() / 3;
+    auto r2a = r2.removeFromLeft(thirdW);
+    arrangeLabeledControl(r2a, clockDivLabel, clockDivBox, 60);
+    auto r2b = r2.removeFromLeft(thirdW);
+    tripletToggle.setBounds(r2b.reduced(10, 0));
+    auto r2c = r2;
+    arrangeLabeledControl(r2c, outputChannelLabel, outputChannelBox, 45);
+
+    bounds.removeFromTop(margin);
+
+    // Row 3: Sync Mode + Resets
     auto r3 = bounds.removeFromTop(ctrlRowHeight);
-    arrangeLabeledControl(r3, clockDivLabel, clockDivBox, 70);
-    tripletToggle.setBounds(r3.removeFromRight(80));
+    auto r3a = r3.removeFromLeft(thirdW);
+    arrangeLabeledControl(r3a, syncModeLabel, syncModeToggle, 60);
+    auto r3b = r3.removeFromLeft(thirdW);
+    patternResetToggle.setBounds(r3b.reduced(10, 0));
+    auto r3c = r3;
+    rhythmResetToggle.setBounds(r3c.reduced(10, 0));
 
     bounds.removeFromTop(margin);
 
-    // Row 4: Sync Mode
-    auto r4 = bounds.removeFromTop(ctrlRowHeight);
-    arrangeLabeledControl(r4, syncModeLabel, syncModeToggle, 70);
-
-    bounds.removeFromTop(margin);
-
-    // Row 5: Resets
-    auto r5 = bounds.removeFromTop(ctrlRowHeight);
-    patternResetToggle.setBounds(r5.removeFromLeft(r5.getWidth() / 2));
-    rhythmResetToggle.setBounds(r5);
-
-    bounds.removeFromTop(margin);
-
-    // Row 6: Output Channel
-    auto r6 = bounds.removeFromTop(ctrlRowHeight);
-    arrangeLabeledControl(r6, outputChannelLabel, outputChannelBox, 70);
-
-    bounds.removeFromTop(margin * 2);
-
-    // Row 7: Cycle Info
+    // Row 4: Cycle Info
     cycleLengthLabel.setBounds(bounds.removeFromTop(ctrlRowHeight));
   }
 

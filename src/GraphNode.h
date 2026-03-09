@@ -57,8 +57,8 @@ public:
       }
 
       // Keep float sync for Phase 1-3 transitional logic
-      nodeX = (float)(gridX * 100);
-      nodeY = (float)(gridY * 100);
+      nodeX = (float)(gridX * 100) + 5.0f;
+      nodeY = (float)(gridY * 100) + 5.0f;
     }
   }
 

@@ -100,22 +100,26 @@ void GraphCanvas::updateTransforms() {
 }
 
 void GraphCanvas::addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node) {
-  float defaultX = 50.0f;
-  float defaultY = 50.0f;
+  int startGridX = 0;
+  int startGridY = 0;
 
   if (!nodeBlocks.isEmpty()) {
     auto *lastBlock = nodeBlocks.getLast();
-    defaultX = lastBlock->getNode()->nodeX;
-    defaultY = lastBlock->getNode()->nodeY + lastBlock->getHeight() + 30;
+    startGridX = lastBlock->getNode()->gridX;
+    startGridY =
+        lastBlock->getNode()->gridY + lastBlock->getNode()->getGridHeight();
   }
 
-  node->nodeX = defaultX;
-  node->nodeY = defaultY;
+  juce::ScopedLock l(graphLock);
+  auto nearest = graphEngine.findClosestFreeSpot(
+      startGridX, startGridY, node->getGridWidth(), node->getGridHeight());
+  node->gridX = nearest.x;
+  node->gridY = nearest.y;
 
-  {
-    const juce::ScopedLock sl(graphLock);
-    graphEngine.addNode(node);
-  }
+  node->nodeX = (float)(node->gridX * 100) + 5.0f;
+  node->nodeY = (float)(node->gridY * 100) + 5.0f;
+
+  graphEngine.addNode(node);
 
   rebuild();
 }
@@ -139,12 +143,12 @@ void GraphCanvas::paint(juce::Graphics &g) {
     offsetY -= scaledGrid;
 
   for (float x = offsetX; x < getWidth(); x += scaledGrid) {
-     g.fillRect(x + scaledInner5, 0.0f, 1.0f, (float)getHeight());
-     g.fillRect(x + scaledInner95, 0.0f, 1.0f, (float)getHeight());
-   }
-   for (float y = offsetY; y < getHeight(); y += scaledGrid) {
-     g.fillRect(0.0f, y + scaledInner5, (float)getWidth(), 1.0f);
-     g.fillRect(0.0f, y + scaledInner95, (float)getWidth(), 1.0f);
+    g.fillRect(x + scaledInner5, 0.0f, 1.0f, (float)getHeight());
+    g.fillRect(x + scaledInner95, 0.0f, 1.0f, (float)getHeight());
+  }
+  for (float y = offsetY; y < getHeight(); y += scaledGrid) {
+    g.fillRect(0.0f, y + scaledInner5, (float)getWidth(), 1.0f);
+    g.fillRect(0.0f, y + scaledInner95, (float)getWidth(), 1.0f);
   }
 
   // Draw node insertion "ghost" target
@@ -152,8 +156,8 @@ void GraphCanvas::paint(juce::Graphics &g) {
     g.addTransform(getCameraTransform());
 
     // Abstract world coordinates
-    float gx = (float)(ghostTargetX * GRID_PITCH);
-    float gy = (float)(ghostTargetY * GRID_PITCH);
+    float gx = (float)(ghostTargetX * GRID_PITCH) + 5.0f;
+    float gy = (float)(ghostTargetY * GRID_PITCH) + 5.0f;
     float gw = (float)(ghostTargetW * GRID_PITCH) - 10.0f;
     float gh = (float)(ghostTargetH * GRID_PITCH) - 10.0f;
 
@@ -717,8 +721,16 @@ void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
   float worldY = (float)screenPos.y;
   getCameraTransform().inverted().transformPoint(worldX, worldY);
 
-  node->nodeX = worldX;
-  node->nodeY = worldY;
+  int dropGridX = (int)std::round(worldX / 100.0f);
+  int dropGridY = (int)std::round(worldY / 100.0f);
+
+  auto nearest = graphEngine.findClosestFreeSpot(
+      dropGridX, dropGridY, node->getGridWidth(), node->getGridHeight());
+  node->gridX = nearest.x;
+  node->gridY = nearest.y;
+
+  node->nodeX = (float)(node->gridX * 100) + 5.0f;
+  node->nodeY = (float)(node->gridY * 100) + 5.0f;
 
   graphEngine.addNode(node);
 

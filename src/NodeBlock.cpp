@@ -176,17 +176,6 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
   }
 
   if (isDraggingNode) {
-    // Determine the raw float destination based on the mouse stroke
-    auto desktopPos = e.getEventRelativeTo(&parentCanvas).getPosition();
-
-    // Abstract world coordinates mapped from the canvas
-    // Deltas are already local to the component, meaning they are unscaled!
-    // We do NOT need to divide by zoomFactor again.
-    float cx =
-        (float)e.getDistanceFromDragStartX() / parentCanvas.getZoomFactor();
-    float cy =
-        (float)e.getDistanceFromDragStartY() / parentCanvas.getZoomFactor();
-
     // Actually, juce::MouseEvent::getDistanceFromDragStartX() is measured in
     // the component's local coordinates. When the component is scaled via
     // AffineTransform, its local coordinate system remains constant (e.g.,
@@ -248,8 +237,8 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     }
 
     // Lock the physical layout to the final grid slot
-    targetNode->nodeX = (float)(targetNode->gridX * 100);
-    targetNode->nodeY = (float)(targetNode->gridY * 100);
+    targetNode->nodeX = (float)(targetNode->gridX * 100) + 5.0f;
+    targetNode->nodeY = (float)(targetNode->gridY * 100) + 5.0f;
 
     parentCanvas.clearGhostTarget();
 
