@@ -34,6 +34,10 @@ public:
   bool isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
                       GraphNode *ignoreNode = nullptr) const;
 
+  juce::Point<int> findClosestFreeSpot(int startX, int startY, int gridW,
+                                       int gridH,
+                                       GraphNode *ignoreNode = nullptr) const;
+
   std::function<void()> onGraphDirtied;
 
   // Check if adding a connection would create a cycle

@@ -65,6 +65,36 @@ bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
   return false;
 }
 
+juce::Point<int> GraphEngine::findClosestFreeSpot(int startX, int startY,
+                                                  int gridW, int gridH,
+                                                  GraphNode *ignoreNode) const {
+  if (!isAreaOccupied(startX, startY, gridW, gridH, ignoreNode)) {
+    return {startX, startY};
+  }
+
+  // Expanding square ring search
+  for (int radius = 1; radius < 50;
+       ++radius) { // Arbitrary limit to prevent infinite loops
+    // Top and Bottom rows of the ring
+    for (int x = startX - radius; x <= startX + radius; ++x) {
+      if (!isAreaOccupied(x, startY - radius, gridW, gridH, ignoreNode))
+        return {x, startY - radius};
+      if (!isAreaOccupied(x, startY + radius, gridW, gridH, ignoreNode))
+        return {x, startY + radius};
+    }
+    // Left and Right columns of the ring (excluding corners already checked)
+    for (int y = startY - radius + 1; y < startY + radius; ++y) {
+      if (!isAreaOccupied(startX - radius, y, gridW, gridH, ignoreNode))
+        return {startX - radius, y};
+      if (!isAreaOccupied(startX + radius, y, gridW, gridH, ignoreNode))
+        return {startX + radius, y};
+    }
+  }
+
+  return {startX,
+          startY}; // Fallback (should be extremely rare to fill a 100x100 grid)
+}
+
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
                                         GraphNode *target, int inPort) {

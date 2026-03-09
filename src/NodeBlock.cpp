@@ -28,6 +28,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
   customControls = node->createEditorComponent(apvts);
   if (customControls != nullptr) {
+    customControls->setInterceptsMouseClicks(false, true);
     addAndMakeVisible(customControls.get());
   }
 
@@ -179,15 +180,20 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     auto desktopPos = e.getEventRelativeTo(&parentCanvas).getPosition();
 
     // Abstract world coordinates mapped from the canvas
-    float worldX =
-        (float)desktopPos.x / parentCanvas.getZoomFactor() -
-        (parentCanvas.getBounds().getWidth() / parentCanvas.getZoomFactor() *
-         0); // Not needed, just use component distance
+    // Deltas are already local to the component, meaning they are unscaled!
+    // We do NOT need to divide by zoomFactor again.
+    float cx =
+        (float)e.getDistanceFromDragStartX() / parentCanvas.getZoomFactor();
+    float cy =
+        (float)e.getDistanceFromDragStartY() / parentCanvas.getZoomFactor();
 
-    // Since dealing with camera transforms is complex here, let's just
-    // accumulate the total drag vector from the mouse down event
-    int deltaX = e.getDistanceFromDragStartX() / parentCanvas.getZoomFactor();
-    int deltaY = e.getDistanceFromDragStartY() / parentCanvas.getZoomFactor();
+    // Actually, juce::MouseEvent::getDistanceFromDragStartX() is measured in
+    // the component's local coordinates. When the component is scaled via
+    // AffineTransform, its local coordinate system remains constant (e.g.,
+    // width is always 190). So the distance drag is exactly how many abstract
+    // pixels we've moved.
+    int deltaX = e.getDistanceFromDragStartX();
+    int deltaY = e.getDistanceFromDragStartY();
 
     // Convert to grid slots: roughly 100px per slot
     int gridDeltaX = (int)std::round((float)deltaX / 100.0f);
@@ -203,16 +209,16 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
       parentCanvas.setGhostTarget(
           newGridX, newGridY, targetNode->getGridWidth(),
           targetNode->getGridHeight(), targetNode.get());
-
-      // We ALSO move the floating physical coordinate of the node to follow the
-      // mouse linearly (10% scale up is handled by z-order logic in
-      // Canvas/paint)
-      targetNode->nodeX = dragStartGridX * 100.0f + deltaX;
-      targetNode->nodeY = dragStartGridY * 100.0f + deltaY;
-
-      if (onPositionChanged)
-        onPositionChanged();
     }
+
+    // We ALWAYS move the floating physical coordinate of the node to follow the
+    // mouse linearly. This must be outside the if block so it updates
+    // continuously!
+    targetNode->nodeX = dragStartGridX * 100.0f + deltaX;
+    targetNode->nodeY = dragStartGridY * 100.0f + deltaY;
+
+    if (onPositionChanged)
+      onPositionChanged();
   }
 }
 
@@ -226,13 +232,19 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     onPortDragEnd(canvasPos);
   }
   if (isDraggingNode) {
-    // Snap to the ghost slot if it's valid, otherwise snap back to start
+    // Snap to the ghost slot if it's valid...
     if (parentCanvas.isGhostValid()) {
       targetNode->gridX = parentCanvas.getGhostX();
       targetNode->gridY = parentCanvas.getGhostY();
     } else {
-      targetNode->gridX = dragStartGridX;
-      targetNode->gridY = dragStartGridY;
+      // Otherwise, instead of just popping back to start, attempt to find the
+      // nearest valid spiral
+      auto nearest = parentCanvas.getEngine().findClosestFreeSpot(
+          parentCanvas.getGhostX(), parentCanvas.getGhostY(),
+          targetNode->getGridWidth(), targetNode->getGridHeight(),
+          targetNode.get());
+      targetNode->gridX = nearest.x;
+      targetNode->gridY = nearest.y;
     }
 
     // Lock the physical layout to the final grid slot
