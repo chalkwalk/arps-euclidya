@@ -1,4 +1,5 @@
 #include "GraphCanvas.h"
+#include "LayoutConstants.h"
 
 GraphCanvas::GraphCanvas(GraphEngine &engine,
                          juce::AudioProcessorValueTreeState &apvtsRef,
@@ -116,8 +117,10 @@ void GraphCanvas::addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node) {
   node->gridX = nearest.x;
   node->gridY = nearest.y;
 
-  node->nodeX = (float)(node->gridX * 100) + 5.0f;
-  node->nodeY = (float)(node->gridY * 100) + 5.0f;
+  node->nodeX =
+      (float)(node->gridX * Layout::GridPitch) + Layout::TramlineOffset;
+  node->nodeY =
+      (float)(node->gridY * Layout::GridPitch) + Layout::TramlineOffset;
 
   graphEngine.addNode(node);
 
@@ -131,9 +134,10 @@ void GraphCanvas::paint(juce::Graphics &g) {
   // Draw infinitely panning grid dots
   g.setColour(juce::Colour(0xff2a2a2a));
 
-  float scaledGrid = (float)GraphCanvas::GRID_PITCH * zoomFactor;
-  float scaledInner5 = 5.0f * zoomFactor;
-  float scaledInner95 = 95.0f * zoomFactor;
+  float scaledGrid = Layout::GridPitchFloat * zoomFactor;
+  float scaledInner5 = Layout::TramlineOffset * zoomFactor;
+  float scaledInner95 =
+      (Layout::GridPitchFloat - Layout::TramlineOffset) * zoomFactor;
 
   float offsetX = std::fmod(panX, scaledGrid);
   if (offsetX > 0)
@@ -156,10 +160,14 @@ void GraphCanvas::paint(juce::Graphics &g) {
     g.addTransform(getCameraTransform());
 
     // Abstract world coordinates
-    float gx = (float)(ghostTargetX * GRID_PITCH) + 5.0f;
-    float gy = (float)(ghostTargetY * GRID_PITCH) + 5.0f;
-    float gw = (float)(ghostTargetW * GRID_PITCH) - 10.0f;
-    float gh = (float)(ghostTargetH * GRID_PITCH) - 10.0f;
+    float gx =
+        (float)(ghostTargetX * Layout::GridPitch) + Layout::TramlineOffset;
+    float gy =
+        (float)(ghostTargetY * Layout::GridPitch) + Layout::TramlineOffset;
+    float gw =
+        (float)(ghostTargetW * Layout::GridPitch) - Layout::TramlineMargin;
+    float gh =
+        (float)(ghostTargetH * Layout::GridPitch) - Layout::TramlineMargin;
 
     juce::Rectangle<float> rect(gx, gy, gw, gh);
 
@@ -721,16 +729,18 @@ void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
   float worldY = (float)screenPos.y;
   getCameraTransform().inverted().transformPoint(worldX, worldY);
 
-  int dropGridX = (int)std::round(worldX / 100.0f);
-  int dropGridY = (int)std::round(worldY / 100.0f);
+  int dropGridX = (int)std::round(worldX / Layout::GridPitchFloat);
+  int dropGridY = (int)std::round(worldY / Layout::GridPitchFloat);
 
   auto nearest = graphEngine.findClosestFreeSpot(
       dropGridX, dropGridY, node->getGridWidth(), node->getGridHeight());
   node->gridX = nearest.x;
   node->gridY = nearest.y;
 
-  node->nodeX = (float)(node->gridX * 100) + 5.0f;
-  node->nodeY = (float)(node->gridY * 100) + 5.0f;
+  node->nodeX =
+      (float)(node->gridX * Layout::GridPitch) + Layout::TramlineOffset;
+  node->nodeY =
+      (float)(node->gridY * Layout::GridPitch) + Layout::TramlineOffset;
 
   graphEngine.addNode(node);
 

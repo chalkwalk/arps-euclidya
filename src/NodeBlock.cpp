@@ -36,9 +36,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
   int gridW = node->getGridWidth();
   int gridH = node->getGridHeight();
 
-  // Tram lines math: Width is W*100 - 10, Height is H*100 - 10
-  int width = (gridW * 100) - 10;
-  int height = (gridH * 100) - 10;
+  // Tram lines math
+  int width = (gridW * Layout::GridPitch) - Layout::TramlineMargin;
+  int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
 
   setSize(width, height);
 }
@@ -185,8 +185,8 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     int deltaY = e.getDistanceFromDragStartY();
 
     // Convert to grid slots: roughly 100px per slot
-    int gridDeltaX = (int)std::round((float)deltaX / 100.0f);
-    int gridDeltaY = (int)std::round((float)deltaY / 100.0f);
+    int gridDeltaX = (int)std::round((float)deltaX / Layout::GridPitchFloat);
+    int gridDeltaY = (int)std::round((float)deltaY / Layout::GridPitchFloat);
 
     int newGridX = dragStartGridX + gridDeltaX;
     int newGridY = dragStartGridY + gridDeltaY;
@@ -203,8 +203,10 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     // We ALWAYS move the floating physical coordinate of the node to follow the
     // mouse linearly. This must be outside the if block so it updates
     // continuously!
-    targetNode->nodeX = dragStartGridX * 100.0f + deltaX;
-    targetNode->nodeY = dragStartGridY * 100.0f + deltaY;
+    targetNode->nodeX = dragStartGridX * Layout::GridPitchFloat +
+                        Layout::TramlineOffset + deltaX;
+    targetNode->nodeY = dragStartGridY * Layout::GridPitchFloat +
+                        Layout::TramlineOffset + deltaY;
 
     if (onPositionChanged)
       onPositionChanged();
@@ -237,8 +239,10 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     }
 
     // Lock the physical layout to the final grid slot
-    targetNode->nodeX = (float)(targetNode->gridX * 100) + 5.0f;
-    targetNode->nodeY = (float)(targetNode->gridY * 100) + 5.0f;
+    targetNode->nodeX =
+        (float)(targetNode->gridX * Layout::GridPitch) + Layout::TramlineOffset;
+    targetNode->nodeY =
+        (float)(targetNode->gridY * Layout::GridPitch) + Layout::TramlineOffset;
 
     parentCanvas.clearGhostTarget();
 

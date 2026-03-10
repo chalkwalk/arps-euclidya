@@ -12,9 +12,6 @@ public:
               juce::CriticalSection &lock);
   ~GraphCanvas() override = default;
 
-  static constexpr int GRID_PITCH = 100;
-  static constexpr int GRID_MARGIN = 5;
-
   void paint(juce::Graphics &g) override;
   void paintOverChildren(juce::Graphics &g) override;
   void resized() override;

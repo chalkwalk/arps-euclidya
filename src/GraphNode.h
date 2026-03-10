@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DataModel.h"
+#include "LayoutConstants.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -52,13 +53,13 @@ public:
         // Legacy float patch conversion: snap to nearest 100px grid
         float x = (float)xml->getDoubleAttribute("nodeX", 0.0);
         float y = (float)xml->getDoubleAttribute("nodeY", 0.0);
-        gridX = (int)std::round(x / 100.0f);
-        gridY = (int)std::round(y / 100.0f);
+        gridX = (int)std::round(x / Layout::GridPitchFloat);
+        gridY = (int)std::round(y / Layout::GridPitchFloat);
       }
 
       // Keep float sync for Phase 1-3 transitional logic
-      nodeX = (float)(gridX * 100) + 5.0f;
-      nodeY = (float)(gridY * 100) + 5.0f;
+      nodeX = (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
+      nodeY = (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
     }
   }
 
