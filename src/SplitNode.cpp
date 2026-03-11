@@ -120,9 +120,16 @@ public:
   }
 
   void resized() override {
-    auto b = getLocalBounds();
-    modeBox.setBounds(b.removeFromTop(28).reduced(2));
-    percentSlider.setBounds(b.reduced(2));
+    auto bounds = getLocalBounds().reduced(10);
+
+    // Mode box in top half
+    modeBox.setBounds(bounds.removeFromTop(30).reduced(2));
+
+    // Percentage slider in bottom half (if visible)
+    if (percentSlider.isVisible()) {
+      bounds.removeFromTop(10); // spacing
+      percentSlider.setBounds(bounds.removeFromTop(30).reduced(2));
+    }
   }
 
 private:

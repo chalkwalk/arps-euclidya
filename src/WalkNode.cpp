@@ -145,20 +145,18 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds();
-    int w = getWidth() / 3;
+    auto bounds = getLocalBounds().reduced(10);
+    auto topHalf = bounds.removeFromTop(bounds.getHeight() / 2);
 
-    auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
-    auto bCopy1 = b1;
-    lengthLabel.setBounds(bCopy1.removeFromBottom(20));
-    int size1 = std::min(bCopy1.getWidth(), bCopy1.getHeight());
-    lengthSlider.setBounds(bCopy1.withSizeKeepingCentre(size1, size1));
+    // Length slider in top half
+    lengthLabel.setBounds(topHalf.removeFromTop(20));
+    int size1 = std::min(topHalf.getWidth(), topHalf.getHeight());
+    lengthSlider.setBounds(topHalf.withSizeKeepingCentre(size1, size1));
 
-    auto b2 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
-    auto bCopy2 = b2;
-    skewLabel.setBounds(bCopy2.removeFromBottom(20));
-    int size2 = std::min(bCopy2.getWidth(), bCopy2.getHeight());
-    skewSlider.setBounds(bCopy2.withSizeKeepingCentre(size2, size2));
+    // Skew slider in bottom half
+    skewLabel.setBounds(bounds.removeFromTop(20));
+    int size2 = std::min(bounds.getWidth(), bounds.getHeight());
+    skewSlider.setBounds(bounds.withSizeKeepingCentre(size2, size2));
   }
 
 private:

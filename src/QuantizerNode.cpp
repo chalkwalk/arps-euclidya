@@ -82,22 +82,17 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(20);
+    auto bounds = getLocalBounds().reduced(10);
+    int h = bounds.getHeight() / 3;
+    int labelWidth = 60;
 
-    int h = 30;
-    int labelWidth = 50;
-
-    auto row1 = bounds.removeFromTop(h);
+    auto row1 = bounds.removeFromTop(h).reduced(2);
     tonalityCombo.setBounds(row1.withTrimmedLeft(labelWidth));
 
-    bounds.removeFromTop(10);
-
-    auto row2 = bounds.removeFromTop(h);
+    auto row2 = bounds.removeFromTop(h).reduced(2);
     rootCombo.setBounds(row2.withTrimmedLeft(labelWidth));
 
-    bounds.removeFromTop(10);
-
-    auto row3 = bounds.removeFromTop(h);
+    auto row3 = bounds.removeFromTop(h).reduced(2);
     modeToggle.setBounds(row3.withTrimmedLeft(labelWidth));
   }
 

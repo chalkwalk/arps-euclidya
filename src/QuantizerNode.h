@@ -21,5 +21,5 @@ public:
   int rootNote = 0;
   int mode = 0;
   int getGridWidth() const override { return 2; }
-  int getGridHeight() const override { return 1; }
+  int getGridHeight() const override { return 2; }
 };

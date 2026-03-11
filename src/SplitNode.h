@@ -25,6 +25,6 @@ public:
 
   int splitMode = 0;     // 0=first/last, 1=odd/even, 2=percentage
   int splitPercent = 50; // Used in percentage mode (1-99)
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
+  int getGridWidth() const override { return 2; }
+  int getGridHeight() const override { return 2; }
 };

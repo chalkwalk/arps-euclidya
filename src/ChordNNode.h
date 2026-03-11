@@ -28,5 +28,5 @@ private:
   std::array<std::atomic<float> *, 32> &macros;
   friend class ChordNNodeEditor;
   int getGridWidth() const override { return 2; }
-  int getGridHeight() const override { return 1; }
+  int getGridHeight() const override { return 2; }
 };

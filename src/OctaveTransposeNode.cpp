@@ -77,14 +77,12 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds();
-    int w = getWidth() / 3;
-    auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
+    auto bounds = getLocalBounds().reduced(4);
+    octavesLabel.setBounds(bounds.removeFromTop(20));
 
-    auto bCopy = b1;
-    octavesLabel.setBounds(bCopy.removeFromBottom(20));
-    int size = std::min(bCopy.getWidth(), bCopy.getHeight());
-    octavesSlider.setBounds(bCopy.withSizeKeepingCentre(size, size));
+    // Maximize slider size in the remaining area
+    int size = std::min(bounds.getWidth(), bounds.getHeight());
+    octavesSlider.setBounds(bounds.withSizeKeepingCentre(size, size));
   }
 
 private:

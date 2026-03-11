@@ -76,14 +76,10 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds();
-    int w = getWidth() / 3;
-    auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
-
-    auto bCopy = b1;
-    nValueLabel.setBounds(bCopy.removeFromBottom(20));
-    int size = std::min(bCopy.getWidth(), bCopy.getHeight());
-    nValueSlider.setBounds(bCopy.withSizeKeepingCentre(size, size));
+    auto bounds = getLocalBounds().reduced(10);
+    nValueLabel.setBounds(bounds.removeFromTop(20));
+    int size = std::min(bounds.getWidth(), bounds.getHeight());
+    nValueSlider.setBounds(bounds.withSizeKeepingCentre(size, size));
   }
 
 private:

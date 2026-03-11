@@ -88,17 +88,14 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds();
-    int w = getWidth() / 3;
+    auto bounds = getLocalBounds().reduced(10);
+    auto sliderArea = bounds.removeFromTop(bounds.getHeight() * 0.7f);
 
-    auto b1 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
-    auto bCopy1 = b1;
-    octavesLabel.setBounds(bCopy1.removeFromBottom(20));
-    int size1 = std::min(bCopy1.getWidth(), bCopy1.getHeight());
-    octavesSlider.setBounds(bCopy1.withSizeKeepingCentre(size1, size1));
+    octavesLabel.setBounds(sliderArea.removeFromTop(20));
+    int size = std::min(sliderArea.getWidth(), sliderArea.getHeight());
+    octavesSlider.setBounds(sliderArea.withSizeKeepingCentre(size, size));
 
-    auto b2 = bounds.removeFromLeft(w).removeFromTop(getHeight() / 2);
-    uniqueToggle.setBounds(b2.reduced(10));
+    uniqueToggle.setBounds(bounds.reduced(5));
   }
 
 private:

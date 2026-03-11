@@ -15,7 +15,12 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
   addAndMakeVisible(titleLabel);
 
   deleteButton.setColour(juce::TextButton::buttonColourId,
-                         juce::Colour(0xff882222));
+                         juce::Colours::transparentBlack);
+  deleteButton.setColour(juce::TextButton::buttonOnColourId,
+                         juce::Colours::transparentBlack);
+  deleteButton.setColour(juce::TextButton::textColourOffId,
+                         juce::Colours::white);
+  deleteButton.setColour(juce::TextButton::textColourOnId, juce::Colours::red);
   addAndMakeVisible(deleteButton);
   deleteButton.onClick = [this] {
     // Defer deletion: rebuild() destroys nodeBlocks (including this NodeBlock)
@@ -101,11 +106,15 @@ void NodeBlock::paint(juce::Graphics &g) {
 void NodeBlock::resized() {
   auto bounds = getLocalBounds();
 
-  // Floating Header Area (same spacing, just no background drawn)
-  auto header = bounds.removeFromTop(HEADER_HEIGHT).reduced(PORT_MARGIN + 4, 2);
-  deleteButton.setBounds(header.removeFromRight(24));
-  header.removeFromRight(4);
-  titleLabel.setBounds(header);
+  // Floating Header Area
+  auto header = bounds.removeFromTop(HEADER_HEIGHT);
+
+  // Right aligned delete button (small white cross, no frame)
+  // Positioned flush to the right boundary of the node
+  deleteButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
+
+  // Title takes the rest, moved further left with minimal padding
+  titleLabel.setBounds(header.withTrimmedLeft(6));
 
   // Body: custom controls
   if (customControls != nullptr) {
