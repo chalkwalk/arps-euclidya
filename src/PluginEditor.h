@@ -6,6 +6,7 @@
 #include "PluginProcessor.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_opengl/juce_opengl.h>
 
 class EuclideanArpEditor : public juce::AudioProcessorEditor,
                            public juce::DragAndDropContainer,
@@ -108,6 +109,8 @@ private:
 
   LatchingKeyboardComponent midiKeyboard;
   juce::TextButton clearNotesButton;
+
+  juce::OpenGLContext openGLContext;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpEditor)
 };

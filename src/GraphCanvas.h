@@ -92,7 +92,7 @@ private:
   NodeBlock *findBlockForNode(GraphNode *node) const;
   void drawCable(juce::Graphics &g, juce::Point<int> start,
                  juce::Point<int> end, bool highlighted = false,
-                 bool warning = false, bool selected = false);
+                 bool warning = false, bool isForeground = false);
   void updateCanvasSize();
 
   // Cable tooltip state

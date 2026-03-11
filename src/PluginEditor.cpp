@@ -71,6 +71,8 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
 
   graphCanvas->rebuild();
 
+  openGLContext.attachTo(*this);
+
   setSize(900, 700);
   setResizable(true, true);
   setResizeLimits(600, 400, 1920, 1200);
@@ -78,6 +80,7 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
 }
 
 EuclideanArpEditor::~EuclideanArpEditor() {
+  openGLContext.detach();
   stopTimer();
   juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
 }

@@ -213,10 +213,10 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 
   g.addTransform(getCameraTransform());
 
-  // Draw all existing cables ON TOP of nodes
   const juce::ScopedLock sl(graphLock);
   auto &nodes = graphEngine.getNodes();
 
+  // 1. First Pass: Draw all background (unselected) cables
   for (auto &node : nodes) {
     auto *sourceBlock = findBlockForNode(node.get());
     if (sourceBlock == nullptr)
@@ -228,27 +228,59 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
         if (targetBlock == nullptr)
           continue;
 
-        auto start = sourceBlock->getOutputPortCentre(outPort);
-        auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
-
-        // Determine cable highlight: bright if connected to selected node, dim
-        // otherwise
         bool isSelected =
             (selectedNode != nullptr) &&
             (node.get() == selectedNode || conn.targetNode == selectedNode);
 
-        // Check if this cable carries a large sequence
+        if (isSelected)
+          continue; // Skip for now, draw in second pass
+
+        auto start = sourceBlock->getOutputPortCentre(outPort);
+        auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
+
         bool isLarge = false;
         auto &outSeq = node->getOutputSequence(outPort);
         if (outSeq.size() > 10000)
           isLarge = true;
 
-        drawCable(g, start, end, false, isLarge, isSelected);
+        drawCable(g, start, end, false, isLarge, false);
       }
     }
   }
 
-  // Draw the in-progress cable drag
+  // 2. Second Pass: Draw selected/foreground cables
+  for (auto &node : nodes) {
+    auto *sourceBlock = findBlockForNode(node.get());
+    if (sourceBlock == nullptr)
+      continue;
+
+    for (const auto &[outPort, connVec] : node->getConnections()) {
+      for (const auto &conn : connVec) {
+        auto *targetBlock = findBlockForNode(conn.targetNode);
+        if (targetBlock == nullptr)
+          continue;
+
+        bool isSelected =
+            (selectedNode != nullptr) &&
+            (node.get() == selectedNode || conn.targetNode == selectedNode);
+
+        if (!isSelected)
+          continue; // Already drawn in first pass
+
+        auto start = sourceBlock->getOutputPortCentre(outPort);
+        auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
+
+        bool isLarge = false;
+        auto &outSeq = node->getOutputSequence(outPort);
+        if (outSeq.size() > 10000)
+          isLarge = true;
+
+        drawCable(g, start, end, false, isLarge, true);
+      }
+    }
+  }
+
+  // 3. Third Pass: Draw the in-progress cable drag
   if (isDraggingCable && cableDragSourceBlock != nullptr) {
     juce::Point<int> start;
     if (cableDragFromOutput) {
@@ -261,7 +293,7 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     getCameraTransform().inverted().transformPoint(ex, ey);
     drawCable(g, start,
               juce::Point<int>(juce::roundToInt(ex), juce::roundToInt(ey)),
-              true);
+              true, false, true);
   }
 
   g.restoreState(); // Pop the camera transform to draw tooltips in screen space
@@ -286,7 +318,7 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 
 void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
                             juce::Point<int> end, bool highlighted,
-                            bool warning, bool selected) {
+                            bool warning, bool isForeground) {
   juce::Path path;
   path.startNewSubPath(start.toFloat());
 
@@ -294,22 +326,49 @@ void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
   path.cubicTo(start.x + dx, (float)start.y, end.x - dx, (float)end.y,
                (float)end.x, (float)end.y);
 
+  // 1. Drop Shadow (Subtle dark offset)
+  auto shadowPath = path;
+  shadowPath.applyTransform(juce::AffineTransform::translation(1.0f, 1.5f));
+  g.setColour(juce::Colours::black.withAlpha(0.4f));
+  g.strokePath(shadowPath, juce::PathStrokeType(2.5f));
+
+  // 2. Base Cable Color and Glow
+  juce::Colour baseColor;
   if (highlighted) {
-    g.setColour(juce::Colour(0xffeeee44));
-    g.strokePath(path, juce::PathStrokeType(3.5f));
+    baseColor = juce::Colour(0xffeeee44);
   } else if (warning) {
-    g.setColour(juce::Colour(0xffff6633));
-    g.strokePath(path, juce::PathStrokeType(3.0f));
-  } else if (selected) {
-    g.setColour(juce::Colour(0xffdddddd)); // Bright white
-    g.strokePath(path, juce::PathStrokeType(3.0f));
+    baseColor = juce::Colour(0xffff6633);
+  } else if (isForeground) {
+    baseColor = juce::Colour(0xffdddddd); // Bright white
   } else {
     // Dimmed cable when a node is selected but this cable isn't connected to it
-    juce::Colour dimColor = (selectedNode != nullptr)
-                                ? juce::Colour(0xff555555)
-                                : juce::Colour(0xffdddddd);
-    g.setColour(dimColor);
-    g.strokePath(path, juce::PathStrokeType(2.0f));
+    baseColor = (selectedNode != nullptr) ? juce::Colour(0xff555555)
+                                          : juce::Colour(0xffdddddd);
+  }
+
+  // Multi-stroke Bloom
+  if (isForeground || highlighted || (selectedNode == nullptr && !warning)) {
+    // Large outer glow
+    g.setColour(baseColor.withAlpha(0.15f));
+    g.strokePath(path, juce::PathStrokeType(8.0f));
+
+    // Medium glow
+    g.setColour(baseColor.withAlpha(0.3f));
+    g.strokePath(path, juce::PathStrokeType(5.0f));
+  }
+
+  // 3. Main Cable Stroke
+  g.setColour(baseColor);
+  float strokeThickness = (isForeground || highlighted) ? 3.0f : 2.0f;
+  if (highlighted)
+    strokeThickness = 3.5f;
+
+  g.strokePath(path, juce::PathStrokeType(strokeThickness));
+
+  // 4. Center Shine (if highlighted or foreground)
+  if (isForeground || highlighted) {
+    g.setColour(juce::Colours::white.withAlpha(0.5f));
+    g.strokePath(path, juce::PathStrokeType(1.0f));
   }
 }
 
