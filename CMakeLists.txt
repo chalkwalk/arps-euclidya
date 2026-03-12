@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.22)
 
 # Set the project name
-project(EuclideanArp VERSION 0.1.0)
+project(ArpsEuclidya VERSION 0.1.0)
 
 # Configure JUCE
 add_subdirectory(JUCE)

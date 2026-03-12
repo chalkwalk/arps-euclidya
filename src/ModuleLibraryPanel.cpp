@@ -1,4 +1,5 @@
 #include "ModuleLibraryPanel.h"
+#include "ArpsLookAndFeel.h"
 #include "NodeFactory.h"
 
 ModuleLibraryPanel::ModuleLibraryPanel() {
@@ -41,7 +42,7 @@ void ModuleLibraryPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
     return;
 
   if (rowIsSelected)
-    g.fillAll(findColour(juce::ListBox::backgroundColourId).brighter(0.1f));
+    g.fillAll(ArpsLookAndFeel::getBackgroundCharcoal());
 
   g.setColour(juce::Colours::white);
   g.setFont(14.0f);

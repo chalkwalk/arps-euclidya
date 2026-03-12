@@ -6,7 +6,7 @@
 #include "ReverseNode.h"
 #include "SortNode.h"
 
-EuclideanArpProcessor::EuclideanArpProcessor()
+ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     : AudioProcessor(BusesProperties()), // No audio channels for MIDI effect
       apvts(*this, nullptr, "Parameters", createParameterLayout()) {
 
@@ -33,13 +33,13 @@ EuclideanArpProcessor::EuclideanArpProcessor()
       std::make_shared<MidiOutNode>(midiHandler, clockManager, macros));
 }
 
-EuclideanArpProcessor::~EuclideanArpProcessor() {
+ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
   for (int i = 0; i < 32; ++i) {
     apvts.removeParameterListener("macro_" + juce::String(i + 1), this);
   }
 }
 
-void EuclideanArpProcessor::logMidiEvent(int type, int channel, int d1,
+void ArpsEuclidyaProcessor::logMidiEvent(int type, int channel, int d1,
                                          float d2) {
   if (midiLogFifo.getFreeSpace() > 0) {
     int start1, size1, start2, size2;
@@ -52,7 +52,7 @@ void EuclideanArpProcessor::logMidiEvent(int type, int channel, int d1,
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout
-EuclideanArpProcessor::createParameterLayout() {
+ArpsEuclidyaProcessor::createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
   for (int i = 1; i <= 32; ++i) {
@@ -62,45 +62,45 @@ EuclideanArpProcessor::createParameterLayout() {
   return layout;
 }
 
-const juce::String EuclideanArpProcessor::getName() const {
-  return JucePlugin_Name;
+const juce::String ArpsEuclidyaProcessor::getName() const {
+  return "Arps Euclidya";
 }
 
-bool EuclideanArpProcessor::acceptsMidi() const { return true; }
+bool ArpsEuclidyaProcessor::acceptsMidi() const { return true; }
 
-bool EuclideanArpProcessor::producesMidi() const { return true; }
+bool ArpsEuclidyaProcessor::producesMidi() const { return true; }
 
-bool EuclideanArpProcessor::isMidiEffect() const { return true; }
+bool ArpsEuclidyaProcessor::isMidiEffect() const { return true; }
 
-double EuclideanArpProcessor::getTailLengthSeconds() const { return 0.0; }
+double ArpsEuclidyaProcessor::getTailLengthSeconds() const { return 0.0; }
 
-int EuclideanArpProcessor::getNumPrograms() { return 1; }
+int ArpsEuclidyaProcessor::getNumPrograms() { return 1; }
 
-int EuclideanArpProcessor::getCurrentProgram() { return 0; }
+int ArpsEuclidyaProcessor::getCurrentProgram() { return 0; }
 
-void EuclideanArpProcessor::setCurrentProgram(int index) {
+void ArpsEuclidyaProcessor::setCurrentProgram(int index) {
   juce::ignoreUnused(index);
 }
 
-const juce::String EuclideanArpProcessor::getProgramName(int index) {
+const juce::String ArpsEuclidyaProcessor::getProgramName(int index) {
   juce::ignoreUnused(index);
   return {};
 }
 
-void EuclideanArpProcessor::changeProgramName(int index,
+void ArpsEuclidyaProcessor::changeProgramName(int index,
                                               const juce::String &newName) {
-  juce::ignoreUnused(index);
-  juce::ignoreUnused(newName);
+  juce::ignoreUnused(index, newName);
 }
 
-void EuclideanArpProcessor::prepareToPlay(double sampleRate,
+//==============================================================================
+void ArpsEuclidyaProcessor::prepareToPlay(double sampleRate,
                                           int samplesPerBlock) {
   juce::ignoreUnused(sampleRate, samplesPerBlock);
 }
 
-void EuclideanArpProcessor::releaseResources() {}
+void ArpsEuclidyaProcessor::releaseResources() {}
 
-bool EuclideanArpProcessor::isBusesLayoutSupported(
+bool ArpsEuclidyaProcessor::isBusesLayoutSupported(
     const BusesLayout &layouts) const {
   // MIDI effect without audio in/out
   if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::disabled() ||
@@ -110,7 +110,7 @@ bool EuclideanArpProcessor::isBusesLayoutSupported(
   return true;
 }
 
-void EuclideanArpProcessor::processBlock(juce::AudioBuffer<float> &buffer,
+void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                          juce::MidiBuffer &midiMessages) {
   // Ensure no audio passes through
   buffer.clear();
@@ -172,14 +172,15 @@ void EuclideanArpProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   }
 }
 
-bool EuclideanArpProcessor::hasEditor() const { return true; }
+bool ArpsEuclidyaProcessor::hasEditor() const { return true; }
 
-juce::AudioProcessorEditor *EuclideanArpProcessor::createEditor() {
-  return new EuclideanArpEditor(*this);
+juce::AudioProcessorEditor *ArpsEuclidyaProcessor::createEditor() {
+  return new ArpsEuclidyaEditor(*this);
 }
 
-void EuclideanArpProcessor::getStateInformation(juce::MemoryBlock &destData) {
-  juce::XmlElement xmlRoot("EuclideanArpState");
+//==============================================================================
+void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
+  juce::XmlElement xmlRoot("ArpsEuclidyaState");
 
   // Save APVTS Macros
   auto state = apvts.copyState();
@@ -199,12 +200,12 @@ void EuclideanArpProcessor::getStateInformation(juce::MemoryBlock &destData) {
   copyXmlToBinary(xmlRoot, destData);
 }
 
-void EuclideanArpProcessor::setStateInformation(const void *data,
+void ArpsEuclidyaProcessor::setStateInformation(const void *data,
                                                 int sizeInBytes) {
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
 
-  if (xmlState != nullptr && xmlState->hasTagName("EuclideanArpState")) {
+  if (xmlState != nullptr && xmlState->hasTagName("ArpsEuclidyaState")) {
     // Restore APVTS Macros
     auto *apvtsWrapper = xmlState->getChildByName("APVTS");
     if (apvtsWrapper != nullptr && apvtsWrapper->getNumChildElements() > 0) {
@@ -224,23 +225,23 @@ void EuclideanArpProcessor::setStateInformation(const void *data,
   }
 }
 
-EuclideanArpEditor *EuclideanArpProcessor::getEditor() {
-  return dynamic_cast<EuclideanArpEditor *>(getActiveEditor());
+ArpsEuclidyaEditor *ArpsEuclidyaProcessor::getEditor() {
+  return dynamic_cast<ArpsEuclidyaEditor *>(getActiveEditor());
 }
 
-void EuclideanArpProcessor::addNode(std::shared_ptr<GraphNode> node) {
+void ArpsEuclidyaProcessor::addNode(std::shared_ptr<GraphNode> node) {
   const juce::ScopedLock sl(graphLock);
   graphEngine.addNode(node);
   updateMacroNames();
 }
 
-void EuclideanArpProcessor::removeNode(GraphNode *node) {
+void ArpsEuclidyaProcessor::removeNode(GraphNode *node) {
   const juce::ScopedLock sl(graphLock);
   graphEngine.removeNode(node);
   updateMacroNames();
 }
 
-void EuclideanArpProcessor::updateMacroNames() {
+void ArpsEuclidyaProcessor::updateMacroNames() {
   // Count how many parameters map to each macro index (0-31)
   std::array<int, 32> mappingCount = {};
   std::array<juce::String, 32> mappingNames;
@@ -274,7 +275,7 @@ void EuclideanArpProcessor::updateMacroNames() {
   }
 }
 
-void EuclideanArpProcessor::parameterChanged(const juce::String &parameterID,
+void ArpsEuclidyaProcessor::parameterChanged(const juce::String &parameterID,
                                              float newValue) {
   juce::ignoreUnused(parameterID, newValue);
   const juce::ScopedLock sl(graphLock);
@@ -283,5 +284,5 @@ void EuclideanArpProcessor::parameterChanged(const juce::String &parameterID,
 
 // This creates new instances of the plugin
 juce::AudioProcessor *JUCE_CALLTYPE createPluginFilter() {
-  return new EuclideanArpProcessor();
+  return new ArpsEuclidyaProcessor();
 }

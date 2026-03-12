@@ -1,4 +1,5 @@
 #include "NodeBlock.h"
+#include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
 
@@ -52,7 +53,7 @@ void NodeBlock::paint(juce::Graphics &g) {
   auto bounds = getLocalBounds().toFloat();
 
   // Unified Node body: rounded rectangle (no distinct header bar anymore)
-  g.setColour(juce::Colour(0xff121a24));
+  g.setColour(ArpsLookAndFeel::getForegroundSlate());
   g.fillRoundedRectangle(bounds, 6.0f);
 
   // Border (Neon tinted)

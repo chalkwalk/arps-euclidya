@@ -1,16 +1,16 @@
-#include "EuclideanLookAndFeel.h"
+#include "ArpsLookAndFeel.h"
 
-const juce::Colour EuclideanLookAndFeel::getNeonColor() {
+const juce::Colour ArpsLookAndFeel::getNeonColor() {
   return juce::Colour(0xff0df0e3); // Teal
 }
-const juce::Colour EuclideanLookAndFeel::getBackgroundCharcoal() {
+const juce::Colour ArpsLookAndFeel::getBackgroundCharcoal() {
   return juce::Colour(0xff0b1016);
 }
-const juce::Colour EuclideanLookAndFeel::getForegroundSlate() {
+const juce::Colour ArpsLookAndFeel::getForegroundSlate() {
   return juce::Colour(0xff121a24);
 }
 
-EuclideanLookAndFeel::EuclideanLookAndFeel() {
+ArpsLookAndFeel::ArpsLookAndFeel() {
   // Setup global color scheme defaults
   setColour(juce::Slider::rotarySliderFillColourId, getNeonColor());
   setColour(juce::Slider::rotarySliderOutlineColourId,
@@ -38,19 +38,16 @@ EuclideanLookAndFeel::EuclideanLookAndFeel() {
   setColour(juce::ListBox::backgroundColourId, getBackgroundCharcoal());
 }
 
-void EuclideanLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
-                                            int width, int height,
-                                            float sliderPos,
-                                            const float rotaryStartAngle,
-                                            const float rotaryEndAngle,
-                                            juce::Slider &slider) {
+void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
+                                       int width, int height, float sliderPos,
+                                       const float rotaryStartAngle,
+                                       const float rotaryEndAngle,
+                                       juce::Slider &slider) {
   auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
   auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f - 2.0f;
   auto centreX = bounds.getCentreX();
   auto centreY = bounds.getCentreY();
-  auto rx = centreX - radius;
-  auto ry = centreY - radius;
-  auto rw = radius * 2.0f;
+
   auto angle =
       rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EuclideanLookAndFeel.h"
+#include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "ModuleLibraryPanel.h"
 #include "PluginProcessor.h"
@@ -8,12 +8,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
 
-class EuclideanArpEditor : public juce::AudioProcessorEditor,
+class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
                            public juce::DragAndDropContainer,
                            private juce::Timer {
 public:
-  EuclideanArpEditor(EuclideanArpProcessor &);
-  ~EuclideanArpEditor() override;
+  ArpsEuclidyaEditor(ArpsEuclidyaProcessor &);
+  ~ArpsEuclidyaEditor() override;
 
   void paint(juce::Graphics &g) override;
   void resized() override;
@@ -22,7 +22,7 @@ public:
 private:
   void addNodeFromLibrary(const juce::String &nodeType);
 
-  EuclideanArpProcessor &audioProcessor;
+  ArpsEuclidyaProcessor &audioProcessor;
 
   // Library panel
   ModuleLibraryPanel libraryPanel;
@@ -79,7 +79,7 @@ private:
   juce::OwnedArray<juce::AudioProcessorValueTreeState::SliderAttachment>
       macroAttachments;
 
-  EuclideanLookAndFeel customLookAndFeel;
+  ArpsLookAndFeel lookAndFeel;
 
   class LatchingKeyboardComponent : public juce::MidiKeyboardComponent {
   public:
@@ -112,5 +112,5 @@ private:
 
   juce::OpenGLContext openGLContext;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpEditor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArpsEuclidyaEditor)
 };

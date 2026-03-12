@@ -13,18 +13,21 @@ struct MidiLogEvent {
 };
 
 // Forward declaration of the editor class
-class EuclideanArpEditor;
+class ArpsEuclidyaEditor;
 
 #include "ClockManager.h"
 #include "GraphEngine.h"
 #include "MidiHandler.h"
 
-class EuclideanArpProcessor
+/**
+ */
+class ArpsEuclidyaProcessor
     : public juce::AudioProcessor,
       public juce::AudioProcessorValueTreeState::Listener {
 public:
-  EuclideanArpProcessor();
-  ~EuclideanArpProcessor() override;
+  //==============================================================================
+  ArpsEuclidyaProcessor();
+  ~ArpsEuclidyaProcessor() override;
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
   void releaseResources() override;
@@ -53,7 +56,7 @@ public:
   void parameterChanged(const juce::String &parameterID,
                         float newValue) override;
 
-  class EuclideanArpEditor *getEditor();
+  class ArpsEuclidyaEditor *getEditor();
 
   juce::AudioProcessorValueTreeState apvts;
   juce::MidiKeyboardState keyboardState;
@@ -83,5 +86,5 @@ public:
 private:
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EuclideanArpProcessor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArpsEuclidyaProcessor)
 };

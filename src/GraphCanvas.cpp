@@ -1,4 +1,5 @@
 #include "GraphCanvas.h"
+#include "ArpsLookAndFeel.h"
 #include "LayoutConstants.h"
 
 GraphCanvas::GraphCanvas(GraphEngine &engine,
@@ -129,7 +130,7 @@ void GraphCanvas::addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node) {
 
 void GraphCanvas::paint(juce::Graphics &g) {
   // Background
-  g.fillAll(juce::Colour(0xff1a1a1a));
+  g.fillAll(ArpsLookAndFeel::getBackgroundCharcoal());
 
   // Draw infinitely panning grid dots
   g.setColour(juce::Colour(0xff2a2a2a));
@@ -353,7 +354,7 @@ void GraphCanvas::drawCable(juce::Graphics &g, juce::Point<int> start,
     g.strokePath(path, juce::PathStrokeType(8.0f));
 
     // Medium glow
-    g.setColour(baseColor.withAlpha(0.3f));
+    g.setColour(ArpsLookAndFeel::getNeonColor().withAlpha(0.2f));
     g.strokePath(path, juce::PathStrokeType(5.0f));
   }
 

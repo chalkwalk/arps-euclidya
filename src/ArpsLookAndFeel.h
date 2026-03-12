@@ -2,9 +2,9 @@
 
 #include <JuceHeader.h>
 
-class EuclideanLookAndFeel : public juce::LookAndFeel_V4 {
+class ArpsLookAndFeel : public juce::LookAndFeel_V4 {
 public:
-  EuclideanLookAndFeel();
+  ArpsLookAndFeel();
 
   void drawRotarySlider(juce::Graphics &g, int x, int y, int width, int height,
                         float sliderPos, const float rotaryStartAngle,

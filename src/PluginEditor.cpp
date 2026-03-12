@@ -2,13 +2,13 @@
 #include "MacroParameter.h"
 #include "NodeFactory.h"
 
-EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
+ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     : AudioProcessorEditor(p), audioProcessor(p),
       midiKeyboard(p.keyboardState,
                    juce::MidiKeyboardComponent::horizontalKeyboard) {
 
   // Apply custom Neon styling entirely
-  juce::LookAndFeel::setDefaultLookAndFeel(&customLookAndFeel);
+  juce::LookAndFeel::setDefaultLookAndFeel(&lookAndFeel);
 
   // Setup Macros
   addAndMakeVisible(macroBar);
@@ -57,7 +57,7 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   addAndMakeVisible(midiKeyboard);
   midiKeyboard.setMidiChannel(1);
   midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId,
-                         customLookAndFeel.getNeonColor());
+                         lookAndFeel.getNeonColor());
   midiKeyboard.setKeyPressBaseOctave(-1); // Disable computer keyboard input
   midiKeyboard.setWantsKeyboardFocus(false);
 
@@ -79,13 +79,13 @@ EuclideanArpEditor::EuclideanArpEditor(EuclideanArpProcessor &p)
   startTimerHz(30);
 }
 
-EuclideanArpEditor::~EuclideanArpEditor() {
+ArpsEuclidyaEditor::~ArpsEuclidyaEditor() {
   openGLContext.detach();
   stopTimer();
   juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
 }
 
-void EuclideanArpEditor::timerCallback() {
+void ArpsEuclidyaEditor::timerCallback() {
   // Periodically refresh macro display names to reflect any mapping changes
   audioProcessor.updateMacroNames();
 
@@ -107,7 +107,7 @@ void EuclideanArpEditor::timerCallback() {
   graphCanvas->checkForLargeSequences();
 }
 
-void EuclideanArpEditor::paint(juce::Graphics &g) {
+void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
   g.fillAll(juce::Colour(0xff111111));
   g.setColour(juce::Colour(0xff222222));
   if (isSidebarExpanded)
@@ -115,7 +115,7 @@ void EuclideanArpEditor::paint(juce::Graphics &g) {
   g.fillRect(macroBar.getBounds());
 }
 
-void EuclideanArpEditor::resized() {
+void ArpsEuclidyaEditor::resized() {
   auto bounds = getLocalBounds();
 
   // Macro bar at the top
@@ -155,7 +155,7 @@ void EuclideanArpEditor::resized() {
   }
 }
 
-void EuclideanArpEditor::addNodeFromLibrary(const juce::String &nodeType) {
+void ArpsEuclidyaEditor::addNodeFromLibrary(const juce::String &nodeType) {
   auto newNode = NodeFactory::createNode(
       nodeType.toStdString(), audioProcessor.midiHandler,
       audioProcessor.clockManager, audioProcessor.macros);

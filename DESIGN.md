@@ -1,8 +1,8 @@
-# MPE Euclidean Arpeggiator - Design Document
+# Arps Euclidya - Design Document
 
 ## 1. Overview
 
-The **MPE Euclidean Arpeggiator** is a modular, di-graph based MIDI effect designed for expressive performance. It decouples melodic sequence generation from rhythmic triggering, utilizing Euclidean algorithms to create complex, evolving patterns while maintaining full MPE (MIDI Polyphonic Expression) support.
+The **Arps Euclidya** is a modular, di-graph based MIDI effect designed for expressive performance. It decouples melodic sequence generation from rhythmic triggering, utilizing Euclidean algorithms to create complex, evolving patterns while maintaining full MPE (MIDI Polyphonic Expression) support.
 
 ## 2. Core Architecture: The Modular Di-Graph
 
@@ -96,7 +96,7 @@ This dual-layer approach allows for complex syncopation and polymetric behavior 
 
 ## 6. Functional Look & Feel
 
-The final vision for the Euclidean Arpeggiator is a premium, high-tech modular environment inspired by Bitwig's "The Grid."
+The final vision for Arps Euclidya is a premium, high-tech modular environment inspired by Bitwig's "The Grid."
 
 ### 6.1 Visual Language: "Neon Slate"
 
