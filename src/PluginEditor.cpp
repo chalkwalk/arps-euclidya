@@ -71,11 +71,11 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
 
   graphCanvas->rebuild();
 
-  openGLContext.attachTo(*this);
-
-  setSize(900, 700);
   setResizable(true, true);
   setResizeLimits(600, 400, 1920, 1200);
+  setSize(900, 700);
+
+  openGLContext.attachTo(*this);
   startTimerHz(30);
 }
 
