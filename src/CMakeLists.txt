@@ -1,3 +1,8 @@
+set(plugin_formats Standalone VST3)
+if(APPLE)
+    list(APPEND plugin_formats AU)
+endif()
+
 juce_add_plugin(ArpsEuclidya
     COMPANY_NAME "ChalkWalkMusic"
     IS_SYNTH TRUE
@@ -8,7 +13,10 @@ juce_add_plugin(ArpsEuclidya
     VERSION "0.1.0"
     JUCER_VERSION "7.0.5"
     PRODUCT_NAME "Arps Euclidya"
-    FORMATS Standalone VST3)
+    BUNDLE_ID "com.ChalkWalkMusic.ArpsEuclidya"
+    COPYRIGHT "Copyright (c) 2026 ChalkWalkMusic"
+    MICROPHONE_PERMISSION_ENABLED FALSE
+    FORMATS ${plugin_formats})
 
 juce_generate_juce_header(ArpsEuclidya)
 

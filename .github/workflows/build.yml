@@ -1,0 +1,74 @@
+name: Build Arps Euclidya
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+      with:
+        submodules: recursive
+
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxcursor-dev libxinerama-dev libxrandr-dev libxrender-dev libfreetype6-dev libfontconfig1-dev libcurl4-openssl-dev libgl1-mesa-dev libglu1-mesa-dev ninja-build
+
+    - name: Configure CMake (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF
+
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF
+
+    - name: Build
+      run: cmake --build build --config Release -j 4
+
+    - name: Upload Artifacts (Linux)
+      if: runner.os == 'Linux'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Arps-Euclidya-Linux
+        path: |
+          build/src/ArpsEuclidya_artefacts/Release/VST3/*.vst3
+          build/src/ArpsEuclidya_artefacts/Release/CLAP/*.clap
+          build/src/ArpsEuclidya_artefacts/Release/Standalone/*
+
+    - name: Upload Artifacts (MacOS)
+      if: runner.os == 'macOS'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Arps-Euclidya-MacOS
+        path: |
+          build/src/ArpsEuclidya_artefacts/Release/VST3/*.vst3
+          build/src/ArpsEuclidya_artefacts/Release/AU/*.component
+          build/src/ArpsEuclidya_artefacts/Release/CLAP/*.clap
+          build/src/ArpsEuclidya_artefacts/Release/Standalone/*.app
+
+    - name: Upload Artifacts (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v7
+      with:
+        name: Arps-Euclidya-Windows
+        path: |
+          build/src/ArpsEuclidya_artefacts/Release/VST3/*.vst3
+          build/src/ArpsEuclidya_artefacts/Release/CLAP/*.clap
+          build/src/ArpsEuclidya_artefacts/Release/Standalone/*.exe
