@@ -8,15 +8,21 @@ public:
                     juce::AudioProcessorValueTreeState &apvts)
       : midiOutNode(node) {
     // Setup simple UI for Pattern and Rhythm
-    auto setupSlider = [this, &apvts](
-                           CustomMacroSlider &slider, juce::Label &label,
-                           int &nodeValueRef, int &nodeMacroRef,
-                           std::unique_ptr<MacroAttachment> &attachment,
-                           const juce::String &text, int minVal, int maxVal) {
+    auto setupSlider = [this,
+                        &apvts](CustomMacroSlider &slider, juce::Label &label,
+                                int &nodeValueRef, int &nodeMacroRef,
+                                std::unique_ptr<MacroAttachment> &attachment,
+                                const juce::String &text, int minVal,
+                                int maxVal, bool isBipolar = false) {
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
       slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
       slider.setRange(minVal, maxVal, 1);
-      slider.setValue(nodeValueRef);
+
+      if (isBipolar) {
+        slider.getProperties().set("bipolar", true);
+      }
+
+      slider.setValue(nodeValueRef, juce::dontSendNotification);
       addAndMakeVisible(slider);
 
       label.setText(text, juce::dontSendNotification);
@@ -25,6 +31,9 @@ public:
 
       slider.onValueChange = [this, &slider, &nodeValueRef]() {
         nodeValueRef = (int)slider.getValue();
+        midiOutNode.clampParameters();
+        updateSliderRanges();
+        updateCycleLabel();
         if (midiOutNode.onNodeDirtied)
           midiOutNode.onNodeDirtied();
       };
@@ -74,14 +83,16 @@ public:
     setupSlider(pBeats, lPBeats, midiOutNode.pBeats, midiOutNode.macroPBeats,
                 aPBeats, "P Beats", 1, 32);
     setupSlider(pOffset, lPOffset, midiOutNode.pOffset,
-                midiOutNode.macroPOffset, aPOffset, "P Offset", 0, 32);
+                midiOutNode.macroPOffset, aPOffset, "P Offset", -16, 16, true);
 
     setupSlider(rSteps, lRSteps, midiOutNode.rSteps, midiOutNode.macroRSteps,
                 aRSteps, "R Steps", 1, 32);
     setupSlider(rBeats, lRBeats, midiOutNode.rBeats, midiOutNode.macroRBeats,
                 aRBeats, "R Beats", 1, 32);
     setupSlider(rOffset, lROffset, midiOutNode.rOffset,
-                midiOutNode.macroROffset, aROffset, "R Offset", 0, 32);
+                midiOutNode.macroROffset, aROffset, "R Offset", -16, 16, true);
+
+    updateSliderRanges();
 
     // --- Clock Division ---
     const char *divNames[] = {"4/1", "2/1", "1/1",  "1/2",
@@ -181,7 +192,28 @@ public:
 
   ~MidiOutNodeEditor() override { stopTimer(); }
 
-  void timerCallback() override { updateCycleLabel(); }
+  void timerCallback() override {
+    updateCycleLabel();
+    updateSliderRanges();
+  }
+
+  void updateSliderRanges() {
+    // Pattern
+    pBeats.setRange(1, std::max(1, midiOutNode.pSteps), 1);
+    pBeats.setValue(midiOutNode.pBeats, juce::dontSendNotification);
+
+    int halfP = (midiOutNode.pSteps + 1) / 2;
+    pOffset.setRange(-halfP, halfP, 1);
+    pOffset.setValue(midiOutNode.pOffset, juce::dontSendNotification);
+
+    // Rhythm
+    rBeats.setRange(1, std::max(1, midiOutNode.rSteps), 1);
+    rBeats.setValue(midiOutNode.rBeats, juce::dontSendNotification);
+
+    int halfR = (midiOutNode.rSteps + 1) / 2;
+    rOffset.setRange(-halfR, halfR, 1);
+    rOffset.setValue(midiOutNode.rOffset, juce::dontSendNotification);
+  }
 
   void updateCycleLabel() {
     cycleLengthLabel.setText("Cycle: " + midiOutNode.getCycleLengthInfo(),

@@ -46,6 +46,16 @@ constexpr int NUM_DIVISIONS = 8;
 
 } // namespace
 
+void MidiOutNode::clampParameters() {
+  pSteps = std::max(1, pSteps);
+  pBeats = std::clamp(pBeats, 1, pSteps);
+  pOffset = std::clamp(pOffset, -(pSteps + 1) / 2, (pSteps + 1) / 2);
+
+  rSteps = std::max(1, rSteps);
+  rBeats = std::clamp(rBeats, 1, rSteps);
+  rOffset = std::clamp(rOffset, -(rSteps + 1) / 2, (rSteps + 1) / 2);
+}
+
 void MidiOutNode::process() {
   auto it = inputSequences.find(0);
   if (it != inputSequences.end()) {
@@ -157,18 +167,27 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     const auto &sequence = it->second;
 
     // --- 1. RHYTHM LAYER (Beat vs Rest) ---
+    clampParameters();
     int actualRSteps =
         macroRSteps != -1 && macros[macroRSteps] != nullptr
             ? 1 + (int)std::round(macros[macroRSteps]->load() * 31.0f)
             : rSteps;
-    int actualRBeats =
-        macroRBeats != -1 && macros[macroRBeats] != nullptr
-            ? 1 + (int)std::round(macros[macroRBeats]->load() * 31.0f)
-            : rBeats;
+
+    // Bounds for Rhythm Beats: [1, actualRSteps]
+    int actualRBeats = macroRBeats != -1 && macros[macroRBeats] != nullptr
+                           ? 1 + (int)std::round(macros[macroRBeats]->load() *
+                                                 (float)(actualRSteps - 1))
+                           : rBeats;
+    actualRBeats = std::clamp(actualRBeats, 1, actualRSteps);
+
+    // Bounds for Rhythm Offset: Bipolar [-actualRSteps/2, actualRSteps/2]
+    int halfR = (actualRSteps + 1) / 2;
     int actualROffset =
         macroROffset != -1 && macros[macroROffset] != nullptr
-            ? (int)std::round(macros[macroROffset]->load() * 32.0f)
+            ? (int)std::round((macros[macroROffset]->load() - 0.5f) *
+                              (float)actualRSteps)
             : rOffset;
+    actualROffset = std::clamp(actualROffset, -halfR, halfR);
 
     std::vector<bool> rhythmPattern = EuclideanMath::generatePattern(
         actualRSteps, actualRBeats, actualROffset);
@@ -192,14 +211,22 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
         macroPSteps != -1 && macros[macroPSteps] != nullptr
             ? 1 + (int)std::round(macros[macroPSteps]->load() * 31.0f)
             : pSteps;
-    int actualPBeats =
-        macroPBeats != -1 && macros[macroPBeats] != nullptr
-            ? 1 + (int)std::round(macros[macroPBeats]->load() * 31.0f)
-            : pBeats;
+
+    // Bounds for Pattern Beats: [1, actualPSteps]
+    int actualPBeats = macroPBeats != -1 && macros[macroPBeats] != nullptr
+                           ? 1 + (int)std::round(macros[macroPBeats]->load() *
+                                                 (float)(actualPSteps - 1))
+                           : pBeats;
+    actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
+
+    // Bounds for Pattern Offset: Bipolar [-actualPSteps/2, actualPSteps/2]
+    int halfP = (actualPSteps + 1) / 2;
     int actualPOffset =
         macroPOffset != -1 && macros[macroPOffset] != nullptr
-            ? (int)std::round(macros[macroPOffset]->load() * 32.0f)
+            ? (int)std::round((macros[macroPOffset]->load() - 0.5f) *
+                              (float)actualPSteps)
             : pOffset;
+    actualPOffset = std::clamp(actualPOffset, -halfP, halfP);
 
     std::vector<bool> pattern = EuclideanMath::generatePattern(
         actualPSteps, actualPBeats, actualPOffset);
@@ -254,10 +281,13 @@ juce::String MidiOutNode::getCycleLengthInfo() const {
       macroPSteps != -1 && macros[(size_t)macroPSteps] != nullptr
           ? 1 + (int)std::round(macros[(size_t)macroPSteps]->load() * 31.0f)
           : pSteps;
+
   int actualPBeats =
       macroPBeats != -1 && macros[(size_t)macroPBeats] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroPBeats]->load() * 31.0f)
+          ? 1 + (int)std::round(macros[(size_t)macroPBeats]->load() *
+                                (float)(actualPSteps - 1))
           : pBeats;
+  actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
 
   // Resolve actual rhythm params
   int actualRSteps =

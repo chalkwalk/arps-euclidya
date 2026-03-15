@@ -33,6 +33,10 @@ public:
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
+  void clampParameters();
+
+  std::function<void()> onParameterChanged;
+
   std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
     return {
         {"Pattern Steps", &macroPSteps},   {"Pattern Beats", &macroPBeats},
@@ -41,11 +45,11 @@ public:
   }
 
   int pSteps = 16;
-  int pBeats = 4;
-  int pOffset = 16;
-  int rSteps = 16;
-  int rBeats = 16;
-  int rOffset = 16;
+  int pBeats = 11;
+  int pOffset = 0;
+  int rSteps = 8;
+  int rBeats = 7;
+  int rOffset = 0;
 
   int macroPSteps = -1;
   int macroPBeats = -1;
