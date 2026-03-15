@@ -5,7 +5,7 @@
 > [!WARNING]
 > **Beta Software**: Arps Euclidya is currently in active development. Features may change, and you may encounter bugs. Please report issues and backup your projects!
 
-![Arps Euclidya Screenshot](screenshots/arps_euclidya_bitwig_screenshot.png)
+[![Watch the demo](screenshots/arps_euclidya_bitwig_screenshot.png)](https://youtu.be/zL0USwwGseI)
 
 ## Why Arps Euclidya?
 
