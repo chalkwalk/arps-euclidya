@@ -1,3 +1,4 @@
+#include "EuclideanVisualizer.h"
 #include "MacroMappingMenu.h"
 #include "MidiOutNode.h"
 #include "SharedMacroUI.h"
@@ -15,7 +16,7 @@ public:
                                 const juce::String &text, int minVal,
                                 int maxVal, bool isBipolar = false) {
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
       slider.setRange(minVal, maxVal, 1);
 
       if (isBipolar) {
@@ -25,12 +26,16 @@ public:
       slider.setValue(nodeValueRef, juce::dontSendNotification);
       addAndMakeVisible(slider);
 
-      label.setText(text, juce::dontSendNotification);
+      label.setText(text + ": " + juce::String(nodeValueRef),
+                    juce::dontSendNotification);
       label.setJustificationType(juce::Justification::centred);
+      label.setFont(juce::Font(13.0f, juce::Font::bold));
       addAndMakeVisible(label);
 
-      slider.onValueChange = [this, &slider, &nodeValueRef]() {
+      slider.onValueChange = [this, &slider, &label, &nodeValueRef, text]() {
         nodeValueRef = (int)slider.getValue();
+        label.setText(text + ": " + juce::String(nodeValueRef),
+                      juce::dontSendNotification);
         midiOutNode.clampParameters();
         updateSliderRanges();
         updateCycleLabel();
@@ -179,6 +184,21 @@ public:
     outputChannelLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(outputChannelLabel);
 
+    // --- Visualization ---
+    addAndMakeVisible(visualizer);
+
+    patternTitle.setText("PATTERN", juce::dontSendNotification);
+    patternTitle.setJustificationType(juce::Justification::centred);
+    patternTitle.setFont(juce::Font(14.0f, juce::Font::bold));
+    patternTitle.setColour(juce::Label::textColourId, juce::Colours::magenta);
+    addAndMakeVisible(patternTitle);
+
+    rhythmTitle.setText("RHYTHM", juce::dontSendNotification);
+    rhythmTitle.setJustificationType(juce::Justification::centred);
+    rhythmTitle.setFont(juce::Font(14.0f, juce::Font::bold));
+    rhythmTitle.setColour(juce::Label::textColourId, juce::Colours::cyan);
+    addAndMakeVisible(rhythmTitle);
+
     // --- Cycle Length Display ---
     cycleLengthLabel.setJustificationType(juce::Justification::centredLeft);
     cycleLengthLabel.setFont(juce::Font(12.0f));
@@ -186,8 +206,8 @@ public:
                                juce::Colours::lightgrey);
     addAndMakeVisible(cycleLengthLabel);
     updateCycleLabel();
-    startTimerHz(2); // Update 2x per second
-    setSize(390, 190);
+    startTimerHz(30); // Higher rate for smooth playhead
+    setSize(500, 320);
   }
 
   ~MidiOutNodeEditor() override { stopTimer(); }
@@ -195,24 +215,38 @@ public:
   void timerCallback() override {
     updateCycleLabel();
     updateSliderRanges();
+    visualizer.update(midiOutNode.getPattern(), midiOutNode.getPatternIndex(),
+                      midiOutNode.getRhythm(), midiOutNode.getRhythmIndex());
   }
 
   void updateSliderRanges() {
     // Pattern
     pBeats.setRange(1, std::max(1, midiOutNode.pSteps), 1);
     pBeats.setValue(midiOutNode.pBeats, juce::dontSendNotification);
+    lPSteps.setText("P Steps: " + juce::String(midiOutNode.pSteps),
+                    juce::dontSendNotification);
+    lPBeats.setText("P Beats: " + juce::String(midiOutNode.pBeats),
+                    juce::dontSendNotification);
 
     int halfP = (midiOutNode.pSteps + 1) / 2;
     pOffset.setRange(-halfP, halfP, 1);
     pOffset.setValue(midiOutNode.pOffset, juce::dontSendNotification);
+    lPOffset.setText("P Offset: " + juce::String(midiOutNode.pOffset),
+                     juce::dontSendNotification);
 
     // Rhythm
     rBeats.setRange(1, std::max(1, midiOutNode.rSteps), 1);
     rBeats.setValue(midiOutNode.rBeats, juce::dontSendNotification);
+    lRSteps.setText("R Steps: " + juce::String(midiOutNode.rSteps),
+                    juce::dontSendNotification);
+    lRBeats.setText("R Beats: " + juce::String(midiOutNode.rBeats),
+                    juce::dontSendNotification);
 
     int halfR = (midiOutNode.rSteps + 1) / 2;
     rOffset.setRange(-halfR, halfR, 1);
     rOffset.setValue(midiOutNode.rOffset, juce::dontSendNotification);
+    lROffset.setText("R Offset: " + juce::String(midiOutNode.rOffset),
+                     juce::dontSendNotification);
   }
 
   void updateCycleLabel() {
@@ -221,68 +255,73 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(6);
-    int knobRowHeight = 65;
+    auto bounds = getLocalBounds().reduced(8);
+
+    // Bottom area for Sync/Out controls and Cycle Info
+    auto bottomArea = bounds.removeFromBottom(85);
+    auto cycleBounds = bottomArea.removeFromBottom(20);
+    cycleLengthLabel.setBounds(cycleBounds);
+
     int ctrlRowHeight = 24;
-    int margin = 4;
+    auto row2 = bottomArea.removeFromBottom(ctrlRowHeight);
+    auto row1 = bottomArea.removeFromTop(ctrlRowHeight);
 
-    auto setParamBounds = [](juce::Rectangle<int> &b, CustomMacroSlider &s,
-                             juce::Label &l) {
-      auto bCopy = b;
-      l.setBounds(bCopy.removeFromTop(16));
-      int size = std::min(bCopy.getWidth(), bCopy.getHeight());
-      s.setBounds(bCopy.withSizeKeepingCentre(size, size));
-    };
+    int thirdW = row1.getWidth() / 3;
 
-    // Row 1: All 6 Knobs
-    auto r1 = bounds.removeFromTop(knobRowHeight);
-    int w6 = r1.getWidth() / 6;
-    auto b1 = r1.removeFromLeft(w6);
-    setParamBounds(b1, pSteps, lPSteps);
-    auto b2 = r1.removeFromLeft(w6);
-    setParamBounds(b2, pBeats, lPBeats);
-    auto b3 = r1.removeFromLeft(w6);
-    setParamBounds(b3, pOffset, lPOffset);
-    auto b4 = r1.removeFromLeft(w6);
-    setParamBounds(b4, rSteps, lRSteps);
-    auto b5 = r1.removeFromLeft(w6);
-    setParamBounds(b5, rBeats, lRBeats);
-    auto b6 = r1;
-    setParamBounds(b6, rOffset, lROffset);
-
-    bounds.removeFromTop(margin);
-
-    auto arrangeLabeledControl = [](juce::Rectangle<int> &row, juce::Label &lbl,
+    auto arrangeLabeledControl = [](juce::Rectangle<int> row, juce::Label &lbl,
                                     juce::Component &comp, int lblWidth) {
       lbl.setBounds(row.removeFromLeft(lblWidth));
       comp.setBounds(row.reduced(2, 1));
     };
 
-    // Row 2: Clock division + Triplet + Out Ch
-    auto r2 = bounds.removeFromTop(ctrlRowHeight);
-    int thirdW = r2.getWidth() / 3;
-    auto r2a = r2.removeFromLeft(thirdW);
-    arrangeLabeledControl(r2a, clockDivLabel, clockDivBox, 60);
-    auto r2b = r2.removeFromLeft(thirdW);
-    tripletToggle.setBounds(r2b.reduced(10, 0));
-    auto r2c = r2;
-    arrangeLabeledControl(r2c, outputChannelLabel, outputChannelBox, 45);
+    // Row 1: Clock Div, Triplet, Output Channel
+    auto r1a = row1.removeFromLeft(thirdW);
+    arrangeLabeledControl(r1a, clockDivLabel, clockDivBox, 60);
+    auto r1b = row1.removeFromLeft(thirdW);
+    tripletToggle.setBounds(r1b.reduced(10, 0));
+    auto r1c = row1;
+    arrangeLabeledControl(r1c, outputChannelLabel, outputChannelBox, 45);
 
-    bounds.removeFromTop(margin);
+    // Row 2: Sync Mode, Resets
+    auto r2a = row2.removeFromLeft(thirdW);
+    arrangeLabeledControl(r2a, syncModeLabel, syncModeToggle, 60);
+    auto r2b = row2.removeFromLeft(thirdW);
+    patternResetToggle.setBounds(r2b.reduced(4, 0));
+    auto r2c = row2;
+    rhythmResetToggle.setBounds(r2c.reduced(4, 0));
 
-    // Row 3: Sync Mode + Resets
-    auto r3 = bounds.removeFromTop(ctrlRowHeight);
-    auto r3a = r3.removeFromLeft(thirdW);
-    arrangeLabeledControl(r3a, syncModeLabel, syncModeToggle, 60);
-    auto r3b = r3.removeFromLeft(thirdW);
-    patternResetToggle.setBounds(r3b.reduced(10, 0));
-    auto r3c = r3;
-    rhythmResetToggle.setBounds(r3c.reduced(10, 0));
+    // Main Columns: Pattern (Left), Visualizer (Center), Rhythm (Right)
+    bounds.removeFromBottom(10);      // Spacing
+    int colW = bounds.getWidth() / 4; // 1:2:1 ratio
 
-    bounds.removeFromTop(margin);
+    auto leftCol = bounds.removeFromLeft(colW);
+    auto rightCol = bounds.removeFromRight(colW);
+    visualizer.setBounds(bounds);
 
-    // Row 4: Cycle Info
-    cycleLengthLabel.setBounds(bounds.removeFromTop(ctrlRowHeight));
+    auto setColumnBounds = [](juce::Rectangle<int> col, juce::Label &title,
+                              CustomMacroSlider &s1, juce::Label &l1,
+                              CustomMacroSlider &s2, juce::Label &l2,
+                              CustomMacroSlider &s3, juce::Label &l3) {
+      title.setBounds(col.removeFromTop(20));
+      int kh = col.getHeight() / 3;
+
+      auto b1 = col.removeFromTop(kh);
+      l1.setBounds(b1.removeFromBottom(14));
+      s1.setBounds(b1.reduced(2));
+
+      auto b2 = col.removeFromTop(kh);
+      l2.setBounds(b2.removeFromBottom(14));
+      s2.setBounds(b2.reduced(2));
+
+      auto b3 = col;
+      l3.setBounds(b3.removeFromBottom(14));
+      s3.setBounds(b3.reduced(2));
+    };
+
+    setColumnBounds(leftCol, patternTitle, pSteps, lPSteps, pBeats, lPBeats,
+                    pOffset, lPOffset);
+    setColumnBounds(rightCol, rhythmTitle, rSteps, lRSteps, rBeats, lRBeats,
+                    rOffset, lROffset);
   }
 
 private:
@@ -310,6 +349,10 @@ private:
   // Output Channel
   juce::ComboBox outputChannelBox;
   juce::Label outputChannelLabel;
+
+  // Visualization
+  EuclideanVisualizer visualizer;
+  juce::Label patternTitle, rhythmTitle;
 
   // Cycle length display
   juce::Label cycleLengthLabel;

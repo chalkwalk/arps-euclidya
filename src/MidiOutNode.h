@@ -30,6 +30,12 @@ public:
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
+  int getPatternIndex() const { return visualPatternIndex; }
+  int getRhythmIndex() const { return visualRhythmIndex; }
+
+  std::vector<bool> getPattern() const;
+  std::vector<bool> getRhythm() const;
+
   std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
 
@@ -74,6 +80,8 @@ private:
   int sequenceIndex = 0;
   int patternIndex = 0;
   int rhythmIndex = 0;
+  int visualPatternIndex = 0;
+  int visualRhythmIndex = 0;
 
   NoteSequence previousSequence;
 
@@ -92,5 +100,5 @@ private:
   // noteNumber)
   std::vector<std::pair<int, int>> playingNotes;
   int getGridWidth() const override { return 4; }
-  int getGridHeight() const override { return 2; }
+  int getGridHeight() const override { return 3; }
 };

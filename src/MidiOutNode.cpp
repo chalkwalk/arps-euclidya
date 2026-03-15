@@ -90,9 +90,11 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (patternResetOnRelease) {
       sequenceIndex = 0;
       patternIndex = 0;
+      visualPatternIndex = 0;
     }
     if (rhythmResetOnRelease) {
       rhythmIndex = 0;
+      visualRhythmIndex = 0;
     }
     if (transportSyncMode == 1) {
       keySyncArmed = true;
@@ -200,6 +202,7 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     }
 
     bool isRhythmBeat = rhythmPattern[rhythmIndex];
+    visualRhythmIndex = rhythmIndex;
     rhythmIndex = (int)((rhythmIndex + 1) % rhythmPattern.size());
 
     if (!isRhythmBeat) {
@@ -248,6 +251,7 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (pattern[patternIndex]) {
       const auto &step = sequence[sequenceIndex];
 
+      visualPatternIndex = patternIndex;
       patternIndex = (int)((patternIndex + 1) % pattern.size());
       sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
 
@@ -390,4 +394,46 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     triplet = xml->getIntAttribute("triplet", 0) != 0;
     outputChannel = xml->getIntAttribute("outputChannel", 1);
   }
+}
+
+std::vector<bool> MidiOutNode::getPattern() const {
+  int actualPSteps =
+      macroPSteps != -1 && macros[(size_t)macroPSteps] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroPSteps]->load() * 31.0f)
+          : pSteps;
+  int actualPBeats =
+      macroPBeats != -1 && macros[(size_t)macroPBeats] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroPBeats]->load() *
+                                (float)(actualPSteps - 1))
+          : pBeats;
+  int actualPOffset =
+      macroPOffset != -1 && macros[(size_t)macroPOffset] != nullptr
+          ? (int)std::round((macros[(size_t)macroPOffset]->load() - 0.5f) *
+                            (float)actualPSteps)
+          : pOffset;
+
+  return EuclideanMath::generatePattern(
+      std::max(1, actualPSteps), std::clamp(actualPBeats, 1, actualPSteps),
+      actualPOffset);
+}
+
+std::vector<bool> MidiOutNode::getRhythm() const {
+  int actualRSteps =
+      macroRSteps != -1 && macros[(size_t)macroRSteps] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroRSteps]->load() * 31.0f)
+          : rSteps;
+  int actualRBeats =
+      macroRBeats != -1 && macros[(size_t)macroRBeats] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroRBeats]->load() *
+                                (float)(actualRSteps - 1))
+          : rBeats;
+  int actualROffset =
+      macroROffset != -1 && macros[(size_t)macroROffset] != nullptr
+          ? (int)std::round((macros[(size_t)macroROffset]->load() - 0.5f) *
+                            (float)actualRSteps)
+          : rOffset;
+
+  return EuclideanMath::generatePattern(
+      std::max(1, actualRSteps), std::clamp(actualRBeats, 1, actualRSteps),
+      actualROffset);
 }
