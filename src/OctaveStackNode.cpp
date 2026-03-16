@@ -17,7 +17,7 @@ public:
       slider.setRange(min, max, 1);
       slider.setValue(nodeValueRef, juce::dontSendNotification);
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
       addAndMakeVisible(slider);
 
       label.setText(labelText, juce::dontSendNotification);
@@ -72,7 +72,7 @@ public:
     };
 
     setupSlider(octavesSlider, octavesLabel, octaveNode.octaves,
-                octaveNode.macroOctaves, octavesAttachment, "Octaves", 1, 4);
+                octaveNode.macroOctaves, octavesAttachment, "OCT STACK", 1, 4);
 
     uniqueToggle.setButtonText("Unique Only");
     uniqueToggle.setToggleState(octaveNode.uniqueOnly,
@@ -84,18 +84,14 @@ public:
     };
     addAndMakeVisible(uniqueToggle);
 
-    setSize(400, 150);
+    setSize(100, 100);
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(10);
-    auto sliderArea = bounds.removeFromTop(bounds.getHeight() * 0.7f);
-
-    octavesLabel.setBounds(sliderArea.removeFromTop(20));
-    int size = std::min(sliderArea.getWidth(), sliderArea.getHeight());
-    octavesSlider.setBounds(sliderArea.withSizeKeepingCentre(size, size));
-
-    uniqueToggle.setBounds(bounds.reduced(5));
+    auto b = getLocalBounds().reduced(2);
+    octavesLabel.setBounds(b.removeFromTop(16));
+    uniqueToggle.setBounds(b.removeFromBottom(18));
+    octavesSlider.setBounds(b);
   }
 
 private:

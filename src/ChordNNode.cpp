@@ -15,7 +15,7 @@ public:
       slider.setRange(min, max, 1);
       slider.setValue(nodeValueRef, juce::dontSendNotification);
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
       addAndMakeVisible(slider);
 
       label.setText(labelText, juce::dontSendNotification);
@@ -70,16 +70,15 @@ public:
     };
 
     setupSlider(nValueSlider, nValueLabel, chordNNode.nValue,
-                chordNNode.macroNValue, nValueAttachment, "N Value", 1, 16);
+                chordNNode.macroNValue, nValueAttachment, "CHORD N", 1, 16);
 
-    setSize(400, 150);
+    setSize(100, 100);
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(10);
-    nValueLabel.setBounds(bounds.removeFromTop(20));
-    int size = std::min(bounds.getWidth(), bounds.getHeight());
-    nValueSlider.setBounds(bounds.withSizeKeepingCentre(size, size));
+    auto bounds = getLocalBounds().reduced(2);
+    nValueLabel.setBounds(bounds.removeFromTop(16));
+    nValueSlider.setBounds(bounds);
   }
 
 private:

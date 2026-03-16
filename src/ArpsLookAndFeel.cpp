@@ -43,7 +43,8 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                                        const float rotaryStartAngle,
                                        const float rotaryEndAngle,
                                        juce::Slider &slider) {
-  auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
+  auto bounds =
+      juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
   auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f - 2.0f;
   auto centreX = bounds.getCentreX();
   auto centreY = bounds.getCentreY();
@@ -51,27 +52,52 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   auto angle =
       rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-  // Draw background track
+  // --- Background Glow ---
+  g.setGradientFill(
+      juce::ColourGradient(getNeonColor().withAlpha(0.05f), centreX, centreY,
+                           juce::Colours::transparentBlack, centreX + radius,
+                           centreY + radius, true));
+  g.fillEllipse(bounds);
+
+  // --- Background Track ---
   juce::Path backgroundArc;
   backgroundArc.addCentredArc(centreX, centreY, radius, radius, 0.0f,
                               rotaryStartAngle, rotaryEndAngle, true);
   g.setColour(slider.findColour(juce::Slider::rotarySliderOutlineColourId));
+
+  float trackWidth = radius * 0.4f; // Scale track width by radius (1/4)
   g.strokePath(backgroundArc,
-               juce::PathStrokeType(4.0f, juce::PathStrokeType::curved,
+               juce::PathStrokeType(trackWidth, juce::PathStrokeType::curved,
                                     juce::PathStrokeType::rounded));
 
-  // Draw active filled arc
+  // --- Active Filled Arc (with Neon Glow) ---
   juce::Path filledArc;
   filledArc.addCentredArc(centreX, centreY, radius, radius, 0.0f,
                           rotaryStartAngle, angle, true);
-  g.setColour(slider.findColour(juce::Slider::rotarySliderFillColourId));
+
+  // Outer glow for the filled arc
+  g.setColour(getNeonColor().withAlpha(0.2f));
+  g.strokePath(filledArc, juce::PathStrokeType(trackWidth * 1.5f,
+                                               juce::PathStrokeType::curved,
+                                               juce::PathStrokeType::rounded));
+
+  g.setColour(getNeonColor());
   g.strokePath(filledArc,
-               juce::PathStrokeType(4.0f, juce::PathStrokeType::curved,
+               juce::PathStrokeType(trackWidth, juce::PathStrokeType::curved,
                                     juce::PathStrokeType::rounded));
 
-  // Draw an indicator dot instead of a full pointer line
+  // --- Center Value ---
+  auto valueText = slider.getTextFromValue(slider.getValue());
+  g.setColour(juce::Colours::white);
+  g.setFont(juce::FontOptions(radius * 0.9f).withStyle("Bold"));
+  g.drawText(valueText, bounds.translated(0, 1.0f),
+             juce::Justification::centred, false);
+
+  // --- Indicator Dot ---
   juce::Point<float> thumbPoint(
       centreX + radius * std::cos(angle - juce::MathConstants<float>::halfPi),
       centreY + radius * std::sin(angle - juce::MathConstants<float>::halfPi));
-  g.fillEllipse(thumbPoint.x - 2.5f, thumbPoint.y - 2.5f, 5.0f, 5.0f);
+
+  g.setColour(juce::Colours::white);
+  g.fillEllipse(thumbPoint.x - 3.0f, thumbPoint.y - 3.0f, 6.0f, 6.0f);
 }

@@ -51,7 +51,7 @@ public:
       : multiplyNode(node) {
 
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+    slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     slider.setRange(1, 16, 1);
     slider.setValue(node.repeatCount);
     slider.onValueChange = [this]() {
@@ -61,7 +61,7 @@ public:
     };
     addAndMakeVisible(slider);
 
-    label.setText("Repeat N", juce::dontSendNotification);
+    label.setText("MULTIPLY", juce::dontSendNotification);
     label.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(label);
 
@@ -100,14 +100,13 @@ public:
                        juce::Colours::orange.withAlpha(0.3f));
     }
 
-    setSize(120, 100);
+    setSize(100, 100);
   }
 
   void resized() override {
-    auto b = getLocalBounds();
-    label.setBounds(b.removeFromBottom(20));
-    int size = std::min(b.getWidth(), b.getHeight());
-    slider.setBounds(b.withSizeKeepingCentre(size, size));
+    auto b = getLocalBounds().reduced(2);
+    label.setBounds(b.removeFromTop(16));
+    slider.setBounds(b);
   }
 
 private:

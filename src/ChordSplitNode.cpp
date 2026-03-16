@@ -23,13 +23,14 @@ void ChordSplitNode::process() {
     if (step.size() == 1) {
       // Single note: it goes to one output, the other gets a rest
       if (splitMode == 0) {
-        // Top mode: the single note IS the highest, so it goes to out1
-        out0.push_back({});
-        out1.push_back(step);
-      } else {
-        // Bottom mode: the single note IS the lowest, so it goes to out0
+        // Top mode: the single note IS the highest, so it goes to out0 (Top)
         out0.push_back(step);
         out1.push_back({});
+      } else {
+        // Bottom mode: the single note IS the lowest, so it goes to out1
+        // (Bottom)
+        out0.push_back({});
+        out1.push_back(step);
       }
       continue;
     }
@@ -42,17 +43,17 @@ void ChordSplitNode::process() {
               });
 
     if (splitMode == 0) {
-      // Top mode: highest note → out1, rest → out0
+      // Top mode: highest note → out0 (Top), rest → out1 (Bottom)
       std::vector<HeldNote> lower(sorted.begin(), sorted.end() - 1);
       std::vector<HeldNote> higher = {sorted.back()};
-      out0.push_back(lower.empty() ? std::vector<HeldNote>{} : lower);
-      out1.push_back(higher);
+      out0.push_back(higher);
+      out1.push_back(lower.empty() ? std::vector<HeldNote>{} : lower);
     } else {
-      // Bottom mode: lowest note → out0, rest → out1
+      // Bottom mode: lowest note → out1 (Bottom), rest → out0 (Top)
       std::vector<HeldNote> lowest = {sorted.front()};
       std::vector<HeldNote> upper(sorted.begin() + 1, sorted.end());
-      out0.push_back(lowest);
-      out1.push_back(upper.empty() ? std::vector<HeldNote>{} : upper);
+      out0.push_back(upper.empty() ? std::vector<HeldNote>{} : upper);
+      out1.push_back(lowest);
     }
   }
 
@@ -76,12 +77,12 @@ void ChordSplitNode::loadNodeState(juce::XmlElement *xml) {
 class ChordSplitNodeEditor : public juce::Component {
 public:
   ChordSplitNodeEditor(ChordSplitNode &node) : chordSplitNode(node) {
-    toggle.setButtonText(node.splitMode == 0 ? "Top" : "Bottom");
+    toggle.setButtonText(node.splitMode == 0 ? "TOP" : "BOTTOM");
     toggle.setToggleState(node.splitMode != 0, juce::dontSendNotification);
     toggle.setClickingTogglesState(true);
     toggle.onClick = [this]() {
       chordSplitNode.splitMode = toggle.getToggleState() ? 1 : 0;
-      toggle.setButtonText(chordSplitNode.splitMode == 0 ? "Top" : "Bottom");
+      toggle.setButtonText(chordSplitNode.splitMode == 0 ? "TOP" : "BOTTOM");
       if (chordSplitNode.onNodeDirtied)
         chordSplitNode.onNodeDirtied();
     };

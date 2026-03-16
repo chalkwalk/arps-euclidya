@@ -16,7 +16,7 @@ public:
       slider.setRange(min, max, 1);
       slider.setValue(nodeValueRef, juce::dontSendNotification);
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
       addAndMakeVisible(slider);
 
       label.setText(labelText, juce::dontSendNotification);
@@ -71,19 +71,16 @@ public:
     };
 
     setupSlider(semitonesSlider, semitonesLabel, transposeNode.semitones,
-                transposeNode.macroSemitones, semitonesAttachment, "Semitones",
+                transposeNode.macroSemitones, semitonesAttachment, "TRANSPOSE",
                 -24, 24);
 
-    setSize(400, 150);
+    setSize(100, 100);
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(4);
-    semitonesLabel.setBounds(bounds.removeFromTop(20));
-
-    // Maximize slider size in the remaining area
-    int size = std::min(bounds.getWidth(), bounds.getHeight());
-    semitonesSlider.setBounds(bounds.withSizeKeepingCentre(size, size));
+    auto bounds = getLocalBounds().reduced(2);
+    semitonesLabel.setBounds(bounds.removeFromTop(16));
+    semitonesSlider.setBounds(bounds);
   }
 
 private:
