@@ -27,10 +27,16 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
   // Create default graph (Midi In -> Sort -> Midi Out)
   auto inNode = std::make_shared<MidiInNode>(midiHandler, macros);
   auto sortNode = std::make_shared<SortNode>();
+  auto outNode =
+      std::make_shared<MidiOutNode>(midiHandler, clockManager, macros);
+
+  inNode->onMappingChanged = [this]() { updateMacroNames(); };
+  sortNode->onMappingChanged = [this]() { updateMacroNames(); };
+  outNode->onMappingChanged = [this]() { updateMacroNames(); };
+
   graphEngine.addNode(inNode);
   graphEngine.addNode(sortNode);
-  graphEngine.addNode(
-      std::make_shared<MidiOutNode>(midiHandler, clockManager, macros));
+  graphEngine.addNode(outNode);
 }
 
 ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
@@ -220,6 +226,9 @@ void ArpsEuclidyaProcessor::setStateInformation(const void *data,
     if (graphXml != nullptr) {
       const juce::ScopedLock sl(graphLock);
       graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
+      for (auto &node : graphEngine.getNodes()) {
+        node->onMappingChanged = [this]() { updateMacroNames(); };
+      }
       updateMacroNames();
     }
   }
@@ -231,6 +240,7 @@ ArpsEuclidyaEditor *ArpsEuclidyaProcessor::getEditor() {
 
 void ArpsEuclidyaProcessor::addNode(std::shared_ptr<GraphNode> node) {
   const juce::ScopedLock sl(graphLock);
+  node->onMappingChanged = [this]() { updateMacroNames(); };
   graphEngine.addNode(node);
   updateMacroNames();
 }
@@ -273,6 +283,7 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
       macroParams[i]->setMappingName("MULTIPLE");
     }
   }
+  macrosDirty = true;
 }
 
 void ArpsEuclidyaProcessor::parameterChanged(const juce::String &parameterID,

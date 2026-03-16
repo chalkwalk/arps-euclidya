@@ -38,11 +38,14 @@ public:
     // Right-click: macro mapping menu
     // Mirror the rotary slider pattern: capture only specific member refs,
     // NEVER capture [this]. Let the timer handle UI updates.
-    button.onRightClick = [&btn = button,
+    button.onRightClick = [this, &btn = button,
                            &macroRef = switchNode.macroSwitch]() {
-      MacroMappingMenu::showMenu(&btn, macroRef, [&macroRef](int macroIndex) {
-        macroRef = macroIndex;
-      });
+      MacroMappingMenu::showMenu(&btn, macroRef,
+                                 [this, &macroRef](int macroIndex) {
+                                   macroRef = macroIndex;
+                                   if (switchNode.onMappingChanged)
+                                     switchNode.onMappingChanged();
+                                 });
     };
 
     startTimerHz(30);

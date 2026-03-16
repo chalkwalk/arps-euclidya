@@ -33,11 +33,14 @@ public:
         routeNode.onNodeDirtied();
     };
 
-    button.onRightClick = [&btn = button,
+    button.onRightClick = [this, &btn = button,
                            &macroRef = routeNode.macroRouteDest]() {
-      MacroMappingMenu::showMenu(&btn, macroRef, [&macroRef](int macroIndex) {
-        macroRef = macroIndex;
-      });
+      MacroMappingMenu::showMenu(&btn, macroRef,
+                                 [this, &macroRef](int macroIndex) {
+                                   macroRef = macroIndex;
+                                   if (routeNode.onMappingChanged)
+                                     routeNode.onMappingChanged();
+                                 });
     };
 
     startTimerHz(30);

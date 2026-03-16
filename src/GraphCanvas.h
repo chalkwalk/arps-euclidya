@@ -75,6 +75,9 @@ public:
   // Callback when a node type string is dropped from the library DragAndDrop
   std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
 
+  // Refresh the cached cable paths
+  void refreshCableCache();
+
 private:
   GraphEngine &graphEngine;
   juce::AudioProcessorValueTreeState &apvts;
@@ -90,9 +93,8 @@ private:
   juce::Point<int> cableDragEnd;
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
-  void drawCable(juce::Graphics &g, juce::Point<int> start,
-                 juce::Point<int> end, bool highlighted = false,
-                 bool warning = false, bool isForeground = false);
+  void drawCable(juce::Graphics &g, const juce::Path &path, bool isDragging,
+                 bool isHighlighted, bool isOutputPortConnected);
   void updateCanvasSize();
 
   // Cable tooltip state
@@ -129,6 +131,17 @@ private:
 
   // Selected node for highlighting
   GraphNode *selectedNode = nullptr;
+
+  struct CachedCable {
+    GraphNode *sourceNode;
+    int sourcePort;
+    GraphNode *targetNode;
+    int targetPort;
+    juce::Path path;
+    bool isLarge = false;
+    bool isSelected = false;
+  };
+  std::vector<CachedCable> cachedCables;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphCanvas)
 };

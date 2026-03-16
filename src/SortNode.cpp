@@ -14,7 +14,7 @@ void SortNode::process() {
       float sum = 0.0f;
       for (const auto &n : chord)
         sum += n.noteNumber;
-      return sum / chord.size();
+      return sum / (float)chord.size();
     };
 
     std::stable_sort(steps.begin(), steps.end(),

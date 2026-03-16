@@ -43,11 +43,11 @@ public:
 
       updateSliderVisibility(nodeMacroRef);
 
-      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
                              updateSliderVisibility]() {
         MacroMappingMenu::showMenu(
             &slider, nodeMacroRef,
-            [&nodeMacroRef, &attachment, &apvts, &slider,
+            [this, &nodeMacroRef, &attachment, &apvts, &slider,
              updateSliderVisibility](int macroIndex) {
               nodeMacroRef = macroIndex;
               if (macroIndex == -1) {
@@ -60,6 +60,8 @@ public:
                                   juce::String(macroIndex + 1));
               }
               updateSliderVisibility(macroIndex);
+              if (walkNode.onMappingChanged)
+                walkNode.onMappingChanged();
             });
       };
 
@@ -106,11 +108,11 @@ public:
 
       updateSliderVisibility(nodeMacroRef);
 
-      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
                              updateSliderVisibility]() {
         MacroMappingMenu::showMenu(
             &slider, nodeMacroRef,
-            [&nodeMacroRef, &attachment, &apvts, &slider,
+            [this, &nodeMacroRef, &attachment, &apvts, &slider,
              updateSliderVisibility](int macroIndex) {
               nodeMacroRef = macroIndex;
               if (macroIndex == -1) {
@@ -123,6 +125,8 @@ public:
                                   juce::String(macroIndex + 1));
               }
               updateSliderVisibility(macroIndex);
+              if (walkNode.onMappingChanged)
+                walkNode.onMappingChanged();
             });
       };
 
@@ -200,13 +204,14 @@ void WalkNode::loadNodeState(juce::XmlElement *xml) {
 
 void WalkNode::process() {
   int actualLength =
-      macroWalkLength != -1 && macros[macroWalkLength] != nullptr
-          ? 1 + (int)std::round(macros[macroWalkLength]->load() * 63.0f)
+      macroWalkLength != -1 && macros[(size_t)macroWalkLength] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroWalkLength]->load() * 63.0f)
           : walkLength;
 
-  float actualSkew = macroWalkSkew != -1 && macros[macroWalkSkew] != nullptr
-                         ? (macros[macroWalkSkew]->load() * 2.0f) - 1.0f
-                         : walkSkew;
+  float actualSkew =
+      macroWalkSkew != -1 && macros[(size_t)macroWalkSkew] != nullptr
+          ? (macros[(size_t)macroWalkSkew]->load() * 2.0f) - 1.0f
+          : walkSkew;
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualLength <= 0) {
@@ -220,7 +225,7 @@ void WalkNode::process() {
       float sum = 0.0f;
       for (const auto &n : chord)
         sum += n.noteNumber;
-      return sum / chord.size();
+      return sum / (float)chord.size();
     };
 
     std::stable_sort(steps.begin(), steps.end(),
@@ -231,14 +236,14 @@ void WalkNode::process() {
 
     // Generate a seed based on the sorted steps and length parameter so it's
     // stable
-    size_t seed = steps.size() + actualLength;
+    size_t seed = steps.size() + (size_t)actualLength;
     for (const auto &step : steps) {
       for (const auto &n : step) {
-        seed ^= n.noteNumber + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        seed ^= (size_t)n.noteNumber + 0x9e3779b9 + (seed << 6) + (seed >> 2);
       }
     }
 
-    std::mt19937 gen(seed);
+    std::mt19937 gen((unsigned int)seed);
     std::uniform_real_distribution<float> dis(0.0f, 1.0f);
 
     actualSkew = std::max(-1.0f, std::min(1.0f, actualSkew));
@@ -258,16 +263,16 @@ void WalkNode::process() {
     NoteSequence generatedSeq;
 
     if (steps.size() > 0) {
-      int currentIdx = steps.size() / 2;
+      int currentIdx = (int)steps.size() / 2;
 
       for (int i = 0; i < actualLength; ++i) {
-        generatedSeq.push_back(steps[currentIdx]);
+        generatedSeq.push_back(steps[(size_t)currentIdx]);
 
         float r = dis(gen);
         if (r < pv) {
-          currentIdx = (currentIdx - 1 + steps.size()) % steps.size();
+          currentIdx = (currentIdx - 1 + (int)steps.size()) % (int)steps.size();
         } else if (r >= pv + pc) {
-          currentIdx = (currentIdx + 1) % steps.size();
+          currentIdx = (currentIdx + 1) % (int)steps.size();
         }
       }
     }

@@ -86,6 +86,8 @@ public:
               slider.setColour(juce::Slider::rotarySliderOutlineColourId,
                                juce::Colours::orange.withAlpha(0.3f));
             }
+            if (multiplyNode.onMappingChanged)
+              multiplyNode.onMappingChanged();
           });
     };
 

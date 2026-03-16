@@ -79,6 +79,7 @@ public:
   }
 
   std::function<void()> onNodeDirtied;
+  std::function<void()> onMappingChanged;
 
   void setInputSequence(int inputPort, const NoteSequence &sequence);
   void clearInputSequence(int inputPort);

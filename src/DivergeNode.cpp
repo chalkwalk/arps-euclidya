@@ -14,7 +14,7 @@ void DivergeNode::process() {
       float sum = 0.0f;
       for (const auto &n : chord)
         sum += n.noteNumber;
-      return sum / chord.size();
+      return sum / (float)chord.size();
     };
 
     std::stable_sort(steps.begin(), steps.end(),
@@ -28,11 +28,11 @@ void DivergeNode::process() {
     int e = (int)steps.size() / 2;
 
     while (s >= 0 || e < (int)steps.size()) {
-      if (s >= 0 && !steps[s].empty()) {
-        sortedSeq.push_back(steps[s]);
+      if (s >= 0 && !steps[(size_t)s].empty()) {
+        sortedSeq.push_back(steps[(size_t)s]);
       }
-      if (s != e && e < (int)steps.size() && !steps[e].empty()) {
-        sortedSeq.push_back(steps[e]);
+      if (s != e && e < (int)steps.size() && !steps[(size_t)e].empty()) {
+        sortedSeq.push_back(steps[(size_t)e]);
       }
       s--;
       e++;

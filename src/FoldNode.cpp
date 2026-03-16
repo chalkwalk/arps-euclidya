@@ -42,11 +42,11 @@ public:
 
       updateSliderVisibility(nodeMacroRef);
 
-      slider.onRightClick = [&slider, &nodeMacroRef, &attachment, &apvts,
+      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
                              updateSliderVisibility]() {
         MacroMappingMenu::showMenu(
             &slider, nodeMacroRef,
-            [&nodeMacroRef, &attachment, &apvts, &slider,
+            [this, &nodeMacroRef, &attachment, &apvts, &slider,
              updateSliderVisibility](int macroIndex) {
               nodeMacroRef = macroIndex;
               if (macroIndex == -1) {
@@ -59,6 +59,8 @@ public:
                                   juce::String(macroIndex + 1));
               }
               updateSliderVisibility(macroIndex);
+              if (foldNode.onMappingChanged)
+                foldNode.onMappingChanged();
             });
       };
 

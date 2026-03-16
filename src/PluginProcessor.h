@@ -76,6 +76,8 @@ public:
   GraphEngine graphEngine;
   juce::CriticalSection graphLock;
 
+  std::atomic<bool> macrosDirty{true};
+
   // Graph Editor methods
   void addNode(std::shared_ptr<GraphNode> node);
   void removeNode(GraphNode *node);

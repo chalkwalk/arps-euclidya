@@ -86,19 +86,18 @@ ArpsEuclidyaEditor::~ArpsEuclidyaEditor() {
 }
 
 void ArpsEuclidyaEditor::timerCallback() {
-  // Periodically refresh macro display names to reflect any mapping changes
-  audioProcessor.updateMacroNames();
+  if (audioProcessor.macrosDirty.exchange(false)) {
+    for (int i = 0; i < 32; ++i) {
+      if (audioProcessor.macroParams[(size_t)i] != nullptr) {
+        juce::String newName =
+            audioProcessor.macroParams[(size_t)i]->getName(100);
+        macroControls[i]->label.setText(newName, juce::dontSendNotification);
 
-  for (int i = 0; i < 32; ++i) {
-    if (audioProcessor.macroParams[(size_t)i] != nullptr) {
-      juce::String newName =
-          audioProcessor.macroParams[(size_t)i]->getName(100);
-      macroControls[i]->label.setText(newName, juce::dontSendNotification);
-
-      bool mapped = !newName.startsWith("Macro ");
-      if (macroControls[i]->isMapped != mapped) {
-        macroControls[i]->isMapped = mapped;
-        macroControls[i]->repaint();
+        bool mapped = !newName.startsWith("Macro ");
+        if (macroControls[i]->isMapped != mapped) {
+          macroControls[i]->isMapped = mapped;
+          macroControls[i]->repaint();
+        }
       }
     }
   }

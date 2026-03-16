@@ -33,11 +33,14 @@ public:
         selectNode.onNodeDirtied();
     };
 
-    button.onRightClick = [&btn = button,
+    button.onRightClick = [this, &btn = button,
                            &macroRef = selectNode.macroSelectSource]() {
-      MacroMappingMenu::showMenu(&btn, macroRef, [&macroRef](int macroIndex) {
-        macroRef = macroIndex;
-      });
+      MacroMappingMenu::showMenu(&btn, macroRef,
+                                 [this, &macroRef](int macroIndex) {
+                                   macroRef = macroIndex;
+                                   if (selectNode.onMappingChanged)
+                                     selectNode.onMappingChanged();
+                                 });
     };
 
     startTimerHz(30);

@@ -40,6 +40,8 @@ public:
                   apvts, "macro_" + juce::String(macroIndex + 1), lengthSlider);
               lengthSlider.setTooltip("Mapped to Macro " +
                                       juce::String(macroIndex + 1));
+              if (node.onMappingChanged)
+                node.onMappingChanged();
             }
           });
     };
@@ -204,8 +206,7 @@ private:
 };
 
 // Wrap ScrollBar::Listener properly
-class SequenceNodeEditorWrapper : public SequenceNodeEditor,
-                                  public juce::ScrollBar::Listener {};
+class SequenceNodeEditorWrapper : public SequenceNodeEditor {};
 
 SequenceNode::SequenceNode(std::array<std::atomic<float> *, 32> &m)
     : macros(m) {}
