@@ -5,6 +5,7 @@
 #include "ChordSplitNode.h"
 #include "ConcatenateNode.h"
 #include "ConvergeNode.h"
+#include "DiagnosticNode.h"
 #include "DivergeNode.h"
 #include "FoldNode.h"
 #include "GraphNode.h"
@@ -45,6 +46,8 @@ public:
       return std::make_shared<ConvergeNode>();
     if (type == "Diverge")
       return std::make_shared<DivergeNode>();
+    if (type == "Diagnostic")
+      return std::make_shared<DiagnosticNode>();
     if (type == "ChordN")
       return std::make_shared<ChordNNode>(macros);
     if (type == "Walk")
@@ -89,18 +92,12 @@ public:
   }
 
   static std::vector<std::string> getAvailableNodeTypes() {
-    return {"Midi In",     "Sort",
-            "Reverse",     "Converge",
-            "Diverge",     "ChordN",
-            "Walk",        "Octave Stack",
-            "Transpose",   "Octave Transpose",
-            "Fold",        "Unfold",
-            "Quantizer",   "All Notes",
-            "Split",       "Concatenate",
-            "Chord Split", "Multiply",
-            "Zip",         "Unzip",
-            "Route",       "Select",
-            "Switch",      "Sequence",
-            "Midi Out"};
+    return {"Midi In",      "Sort",        "Reverse",          "Converge",
+            "Diverge",      "Diagnostic",  "ChordN",           "Walk",
+            "Octave Stack", "Transpose",   "Octave Transpose", "Fold",
+            "Unfold",       "Quantizer",   "All Notes",        "Split",
+            "Concatenate",  "Chord Split", "Multiply",         "Zip",
+            "Unzip",        "Route",       "Select",           "Switch",
+            "Sequence",     "Midi Out"};
   }
 };

@@ -40,6 +40,8 @@ target_sources(ArpsEuclidya
         ChordNNode.cpp
         OctaveStackNode.cpp
         MultiplyNode.cpp
+        ChordSplitNode.cpp
+        DiagnosticNode.cpp
         ConvergeNode.cpp
         DivergeNode.cpp
         WalkNode.cpp
