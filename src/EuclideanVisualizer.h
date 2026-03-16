@@ -9,11 +9,17 @@ public:
 
   void update(const std::vector<bool> &pattern, int patternIdx,
               const std::vector<bool> &rhythm, int rhythmIdx) {
-    currentPattern = pattern;
-    currentPatternIdx = patternIdx;
-    currentRhythm = rhythm;
-    currentRhythmIdx = rhythmIdx;
-    repaint();
+    if (pattern != currentPattern || rhythm != currentRhythm) {
+      currentPattern = pattern;
+      currentRhythm = rhythm;
+      pathsDirty = true;
+    }
+
+    if (patternIdx != currentPatternIdx || rhythmIdx != currentRhythmIdx) {
+      currentPatternIdx = patternIdx;
+      currentRhythmIdx = rhythmIdx;
+      repaint();
+    }
   }
 
   void paint(juce::Graphics &g) override {
@@ -21,61 +27,86 @@ public:
     auto center = bounds.getCentre();
     float radius = std::min(bounds.getWidth(), bounds.getHeight()) * 0.5f;
 
-    // Draw Rhythm Ring (Outer)
-    drawRing(g, center, radius, 10.0f, currentRhythm, juce::Colours::cyan);
+    if (pathsDirty) {
+      rebuildPaths(center, radius);
+      pathsDirty = false;
+    }
 
-    // Draw Pattern Ring (Inner)
-    drawRing(g, center, radius - 16.0f, 6.0f, currentPattern,
-             juce::Colours::magenta);
+    // --- Draw Rings (Cached) ---
+    // Outer Rhythm
+    g.setColour(juce::Colours::cyan.withAlpha(0.05f));
+    g.strokePath(rhythmRestPath,
+                 juce::PathStrokeType(10.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
 
-    // Draw Playheads on top for clarity
+    g.setColour(juce::Colours::cyan.withAlpha(0.2f));
+    g.strokePath(rhythmBeatPath,
+                 juce::PathStrokeType(13.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+    g.setColour(juce::Colours::cyan.withAlpha(0.6f));
+    g.strokePath(rhythmBeatPath,
+                 juce::PathStrokeType(10.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+
+    // Inner Pattern
+    g.setColour(juce::Colours::magenta.withAlpha(0.05f));
+    g.strokePath(patternRestPath,
+                 juce::PathStrokeType(6.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+
+    g.setColour(juce::Colours::magenta.withAlpha(0.2f));
+    g.strokePath(patternBeatPath,
+                 juce::PathStrokeType(9.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+    g.setColour(juce::Colours::magenta.withAlpha(0.6f));
+    g.strokePath(patternBeatPath,
+                 juce::PathStrokeType(6.0f, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
+
+    // --- Draw Playheads (Instantaneous) ---
     drawPlayhead(g, center, radius, 10.0f, (int)currentRhythm.size(),
-                 currentRhythmIdx, juce::Colours::cyan);
+                 currentRhythmIdx);
     drawPlayhead(g, center, radius - 16.0f, 6.0f, (int)currentPattern.size(),
-                 currentPatternIdx, juce::Colours::magenta);
+                 currentPatternIdx);
   }
 
 private:
-  void drawRing(juce::Graphics &g, juce::Point<float> center, float radius,
-                float thickness, const std::vector<bool> &pattern,
-                juce::Colour baseColor) {
+  void rebuildPaths(juce::Point<float> center, float radius) {
+    rhythmBeatPath.clear();
+    rhythmRestPath.clear();
+    patternBeatPath.clear();
+    patternRestPath.clear();
+
+    buildRingPaths(center, radius, currentRhythm, rhythmBeatPath,
+                   rhythmRestPath);
+    buildRingPaths(center, radius - 16.0f, currentPattern, patternBeatPath,
+                   patternRestPath);
+  }
+
+  void buildRingPaths(juce::Point<float> center, float radius,
+                      const std::vector<bool> &pattern, juce::Path &beatPath,
+                      juce::Path &restPath) {
     if (pattern.empty())
       return;
 
     int numSteps = (int)pattern.size();
     float angleStep = juce::MathConstants<float>::twoPi / (float)numSteps;
-    float gap = std::max(
-        0.015f, 0.12f / (float)numSteps); // Dynamic gap to avoid overlaps
+    float gap = std::max(0.015f, 0.12f / (float)numSteps);
     float startAngle = -juce::MathConstants<float>::halfPi;
 
     for (int i = 0; i < numSteps; ++i) {
       float angle = startAngle + (float)i * angleStep;
-
-      juce::Path p;
-      p.addCentredArc(center.x, center.y, radius, radius, 0.0f, angle + gap,
-                      angle + angleStep - gap, true);
-
-      bool isBeat = pattern[i];
-      auto color = baseColor.withAlpha(isBeat ? 0.6f : 0.05f);
-
-      if (isBeat) {
-        // Outer glow for beat
-        g.setColour(baseColor.withAlpha(0.2f));
-        g.strokePath(p, juce::PathStrokeType(thickness + 3.0f,
-                                             juce::PathStrokeType::curved,
-                                             juce::PathStrokeType::rounded));
-      }
-
-      g.setColour(color);
-      g.strokePath(p,
-                   juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
-                                        juce::PathStrokeType::rounded));
+      if (pattern[(size_t)i])
+        beatPath.addCentredArc(center.x, center.y, radius, radius, 0.0f,
+                               angle + gap, angle + angleStep - gap, true);
+      else
+        restPath.addCentredArc(center.x, center.y, radius, radius, 0.0f,
+                               angle + gap, angle + angleStep - gap, true);
     }
   }
 
   void drawPlayhead(juce::Graphics &g, juce::Point<float> center, float radius,
-                    float thickness, int numSteps, int activeIdx,
-                    juce::Colour baseColor) {
+                    float thickness, int numSteps, int activeIdx) {
     if (numSteps <= 0 || activeIdx < 0)
       return;
 
@@ -88,21 +119,22 @@ private:
     p.addCentredArc(center.x, center.y, radius, radius, 0.0f, angle + gap,
                     angle + angleStep - gap, true);
 
-    // Bright white indicator for playhead
-    g.setColour(juce::Colours::white);
-    g.strokePath(p,
-                 juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
-                                      juce::PathStrokeType::rounded));
-
-    // Bright glow
     g.setColour(juce::Colours::white.withAlpha(0.4f));
     g.strokePath(p, juce::PathStrokeType(thickness + 2.0f,
                                          juce::PathStrokeType::curved,
                                          juce::PathStrokeType::rounded));
+    g.setColour(juce::Colours::white);
+    g.strokePath(p,
+                 juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
+                                      juce::PathStrokeType::rounded));
   }
 
   std::vector<bool> currentPattern;
   int currentPatternIdx = -1;
   std::vector<bool> currentRhythm;
   int currentRhythmIdx = -1;
+
+  bool pathsDirty = true;
+  juce::Path rhythmBeatPath, rhythmRestPath;
+  juce::Path patternBeatPath, patternRestPath;
 };

@@ -244,18 +244,16 @@ void GraphEngine::recalculate() {
   auto sorted = topologicalSort();
 
   for (GraphNode *node : sorted) {
-    // Copy outputs of upstream nodes to this node's inputs
-    for (const auto &upstreamNodePtr : nodes) {
-      for (const auto &[outPort, connVec] : upstreamNodePtr->getConnections()) {
-        for (const auto &conn : connVec) {
-          if (conn.targetNode == node) {
-            node->setInputSequence(conn.targetInputPort,
-                                   upstreamNodePtr->getOutputSequence(outPort));
-          }
-        }
+    // 1. Process this node with current inputs
+    node->process();
+
+    // 2. Propagate its outputs forward to targets
+    for (const auto &[outPort, connVec] : node->getConnections()) {
+      const auto &outSeq = node->getOutputSequence(outPort);
+      for (const auto &conn : connVec) {
+        conn.targetNode->setInputSequence(conn.targetInputPort, outSeq);
       }
     }
-    node->process();
   }
 }
 

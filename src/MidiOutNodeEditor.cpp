@@ -201,8 +201,25 @@ public:
   ~MidiOutNodeEditor() override { stopTimer(); }
 
   void timerCallback() override {
-    updateCycleLabel();
-    updateSliderRanges();
+    bool paramsChanged = false;
+    if (midiOutNode.pSteps != lastPSteps || midiOutNode.pBeats != lastPBeats ||
+        midiOutNode.pOffset != lastPOffset ||
+        midiOutNode.rSteps != lastRSteps || midiOutNode.rBeats != lastRBeats ||
+        midiOutNode.rOffset != lastROffset) {
+      paramsChanged = true;
+      lastPSteps = midiOutNode.pSteps;
+      lastPBeats = midiOutNode.pBeats;
+      lastPOffset = midiOutNode.pOffset;
+      lastRSteps = midiOutNode.rSteps;
+      lastRBeats = midiOutNode.rBeats;
+      lastROffset = midiOutNode.rOffset;
+    }
+
+    if (paramsChanged) {
+      updateCycleLabel();
+      updateSliderRanges();
+    }
+
     visualizer.update(midiOutNode.getPattern(), midiOutNode.getPatternIndex(),
                       midiOutNode.getRhythm(), midiOutNode.getRhythmIndex());
   }
@@ -382,6 +399,10 @@ private:
 
   // Cycle length display
   juce::Label cycleLengthLabel;
+
+  // Cache for lazy updates
+  int lastPSteps = -1, lastPBeats = -1, lastPOffset = -999;
+  int lastRSteps = -1, lastRBeats = -1, lastROffset = -999;
 };
 
 std::unique_ptr<juce::Component>

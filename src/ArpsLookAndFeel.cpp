@@ -52,11 +52,8 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   auto angle =
       rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-  // --- Background Glow ---
-  g.setGradientFill(
-      juce::ColourGradient(getNeonColor().withAlpha(0.05f), centreX, centreY,
-                           juce::Colours::transparentBlack, centreX + radius,
-                           centreY + radius, true));
+  // --- Background (Simple fill instead of gradient for performance) ---
+  g.setColour(juce::Colours::black.withAlpha(0.1f));
   g.fillEllipse(bounds);
 
   // --- Background Track ---
