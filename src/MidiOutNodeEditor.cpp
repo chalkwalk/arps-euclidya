@@ -28,7 +28,7 @@ public:
 
       label.setText(text, juce::dontSendNotification);
       label.setJustificationType(juce::Justification::centred);
-      label.setFont(juce::Font(12.0f, juce::Font::bold));
+      label.setFont(juce::Font(11.0f));
       addAndMakeVisible(label);
 
       slider.onValueChange = [this, &slider, &nodeValueRef]() {
@@ -111,8 +111,6 @@ public:
     };
     addAndMakeVisible(clockDivBox);
 
-    addAndMakeVisible(clockDivBox);
-
     tripletToggle.setButtonText("Triplet");
     tripletToggle.setToggleState(midiOutNode.triplet,
                                  juce::dontSendNotification);
@@ -136,8 +134,6 @@ public:
       if (midiOutNode.onNodeDirtied)
         midiOutNode.onNodeDirtied();
     };
-    addAndMakeVisible(syncModeToggle);
-
     addAndMakeVisible(syncModeToggle);
 
     patternResetToggle.setButtonText("Reset Pattern");
@@ -173,32 +169,30 @@ public:
     };
     addAndMakeVisible(outputChannelBox);
 
-    addAndMakeVisible(outputChannelBox);
-
     // --- Visualization ---
     addAndMakeVisible(visualizer);
 
     patternTitle.setText("PATTERN", juce::dontSendNotification);
     patternTitle.setJustificationType(juce::Justification::centred);
-    patternTitle.setFont(juce::Font(14.0f, juce::Font::bold));
+    patternTitle.setFont(juce::Font(13.0f, juce::Font::bold));
     patternTitle.setColour(juce::Label::textColourId, juce::Colours::magenta);
     addAndMakeVisible(patternTitle);
 
     rhythmTitle.setText("RHYTHM", juce::dontSendNotification);
     rhythmTitle.setJustificationType(juce::Justification::centred);
-    rhythmTitle.setFont(juce::Font(14.0f, juce::Font::bold));
+    rhythmTitle.setFont(juce::Font(13.0f, juce::Font::bold));
     rhythmTitle.setColour(juce::Label::textColourId, juce::Colours::cyan);
     addAndMakeVisible(rhythmTitle);
 
     // --- Cycle Length Display ---
     cycleLengthLabel.setJustificationType(juce::Justification::centredLeft);
-    cycleLengthLabel.setFont(juce::Font(12.0f));
+    cycleLengthLabel.setFont(juce::Font(11.0f));
     cycleLengthLabel.setColour(juce::Label::textColourId,
                                juce::Colours::lightgrey);
     addAndMakeVisible(cycleLengthLabel);
     updateCycleLabel();
     startTimerHz(30); // Higher rate for smooth playhead
-    setSize(500, 320);
+    setSize(390, 290);
   }
 
   ~MidiOutNodeEditor() override { stopTimer(); }
@@ -240,67 +234,110 @@ public:
   }
 
   void resized() override {
-    auto bounds = getLocalBounds().reduced(8);
+    auto bounds = getLocalBounds();
+    auto titleArea = bounds.removeFromTop(20);
+    // Title bar layout
+    int thirdW = titleArea.getWidth() / 3;
+    patternTitle.setBounds(titleArea.removeFromLeft(thirdW));
+    rhythmTitle.setBounds(titleArea.removeFromRight(thirdW));
 
-    // Bottom area for Sync/Out controls and Cycle Info
-    auto bottomArea = bounds.removeFromBottom(85);
-    auto cycleBounds = bottomArea.removeFromBottom(20);
-    cycleLengthLabel.setBounds(cycleBounds);
+    // The proportionate grid (78x54 units)
+    const int numCols = 78;
+    const int numRows = 54;
+    const float unitW = (float)bounds.getWidth() / numCols;
+    const float unitH = (float)bounds.getHeight() / numRows;
 
-    int ctrlRowHeight = 24;
-    auto row2 = bottomArea.removeFromBottom(ctrlRowHeight);
-    auto row1 = bottomArea.removeFromTop(ctrlRowHeight);
+    juce::Grid grid;
+    for (int i = 0; i < numCols; ++i)
+      grid.templateColumns.add(juce::Grid::Px(unitW));
+    for (int i = 0; i < numRows; ++i)
+      grid.templateRows.add(juce::Grid::Px(unitH));
 
-    int thirdW = row1.getWidth() / 3;
+    // --- Grid Ranges (Units) ---
+    // Total: 78x54
+    // Rows: 1-41 (Body), 41-46 (Ctrl1), 46-51 (Ctrl2), 51-54 (Footer)
+    int rowBodyS = 1, rowBodyE = 41;
+    int rowCtrl1S = 41, rowCtrl1E = 46;
+    int rowCtrl2S = 46, rowCtrl2E = 51;
+    int rowFooterS = 51, rowFooterE = 55;
 
-    // Row 1: Clock Div, Triplet, Output Channel
-    auto r1a = row1.removeFromLeft(thirdW);
-    clockDivBox.setBounds(r1a.reduced(4, 2));
-    auto r1b = row1.removeFromLeft(thirdW);
-    tripletToggle.setBounds(r1b.reduced(10, 0));
-    auto r1c = row1;
-    outputChannelBox.setBounds(r1c.reduced(4, 2));
+    // Columns (Overlapping for larger rotaries):
+    // Left Knobs: 1-35 (175px approx)
+    // Visualizer: 21-58 (Centered)
+    // Right Knobs: 44-78 (175px approx)
+    int colLeftS = 1, colLeftE = 22;
+    int colVisS = 18, colVisE = 55;
+    int colRightS = 51, colRightE = 75;
 
-    // Row 2: Sync Mode, Resets
-    auto r2a = row2.removeFromLeft(thirdW);
-    syncModeToggle.setBounds(r2a.reduced(4, 2));
-    auto r2b = row2.removeFromLeft(thirdW);
-    patternResetToggle.setBounds(r2b.reduced(4, 0));
-    auto r2c = row2;
-    rhythmResetToggle.setBounds(r2c.reduced(4, 0));
+    // --- Visualizer ---
+    grid.items.add(juce::GridItem(visualizer)
+                       .withArea(rowBodyS, colVisS, rowBodyE, colVisE));
 
-    // Main Columns: Pattern (Left), Visualizer (Center), Rhythm (Right)
-    bounds.removeFromBottom(10);      // Spacing
-    int colW = bounds.getWidth() / 4; // 1:2:1 ratio
-
-    auto leftCol = bounds.removeFromLeft(colW);
-    auto rightCol = bounds.removeFromRight(colW);
-    visualizer.setBounds(bounds);
-
-    auto setColumnBounds = [](juce::Rectangle<int> col, juce::Label &title,
-                              CustomMacroSlider &s1, juce::Label &l1,
-                              CustomMacroSlider &s2, juce::Label &l2,
-                              CustomMacroSlider &s3, juce::Label &l3) {
-      title.setBounds(col.removeFromTop(20));
-      int kh = col.getHeight() / 3;
-
-      auto b1 = col.removeFromTop(kh);
-      l1.setBounds(b1.removeFromTop(16));
-      s1.setBounds(b1);
-
-      auto b2 = col.removeFromTop(kh);
-      l2.setBounds(b2.removeFromTop(16));
-      s2.setBounds(b2);
-
-      auto b3 = col;
-      l3.setBounds(b3.removeFromTop(16));
-      s3.setBounds(b3);
+    // --- Bottom Controls ---
+    auto placeB = [&](juce::Component &c, int rowS, int rowE, int colS,
+                      int colE) {
+      grid.items.add(juce::GridItem(c)
+                         .withArea(rowS, colS, rowE, colE)
+                         .withMargin(juce::GridItem::Margin(2)));
     };
 
-    setColumnBounds(leftCol, patternTitle, pSteps, lPSteps, pBeats, lPBeats,
-                    pOffset, lPOffset);
-    setColumnBounds(rightCol, rhythmTitle, rSteps, lRSteps, rBeats, lRBeats,
-                    rOffset, lROffset);
+    placeB(clockDivBox, rowCtrl1S, rowCtrl1E, 1, 26);
+    placeB(tripletToggle, rowCtrl1S, rowCtrl1E, 27, 52);
+    placeB(outputChannelBox, rowCtrl1S, rowCtrl1E, 53, 78);
+
+    placeB(syncModeToggle, rowCtrl2S, rowCtrl2E, 1, 26);
+    placeB(patternResetToggle, rowCtrl2S, rowCtrl2E, 27, 52);
+    placeB(rhythmResetToggle, rowCtrl2S, rowCtrl2E, 53, 78);
+
+    // --- Footer ---
+    grid.items.add(juce::GridItem(cycleLengthLabel)
+                       .withArea(rowFooterS, 1, rowFooterE, numCols + 1));
+
+    // --- Knobs ---
+    int knobHeightUnits = (rowBodyE - rowBodyS) / 3;
+
+    auto placeK = [&](juce::Component &l, juce::Component &s, int rowIdx,
+                      int colS, int colE, bool shiftRight) {
+      int rS = rowBodyS + (rowIdx * knobHeightUnits);
+      int rE = rS + knobHeightUnits;
+
+      // Label (2 units = 10px approx)
+      juce::GridItem li(l);
+      li.row.start = rS;
+      li.row.end = rS + 2;
+      li.column.start = colS;
+      li.column.end = colE;
+      if (shiftRight)
+        li.margin.left = 26.0f; // Shift center by 13px
+      else
+        li.margin.right = 26.0f;
+      li.justifySelf = juce::GridItem::JustifySelf::center;
+      grid.items.add(li);
+
+      // Slider
+      juce::GridItem si(s);
+      si.row.start = rS + 2;
+      si.row.end = rE;
+      si.column.start = colS;
+      si.column.end = colE;
+      if (shiftRight)
+        si.margin.left = 26.0f;
+      else
+        si.margin.right = 26.0f;
+      si.justifySelf = juce::GridItem::JustifySelf::center;
+      si.alignSelf = juce::GridItem::AlignSelf::center;
+      grid.items.add(si);
+    };
+
+    placeK(lPSteps, pSteps, 0, colLeftS, colLeftE, true);
+    placeK(lPBeats, pBeats, 1, colLeftS, colLeftE, false);
+    placeK(lPOffset, pOffset, 2, colLeftS, colLeftE, true);
+
+    placeK(lRSteps, rSteps, 0, colRightS, colRightE, false);
+    placeK(lRBeats, rBeats, 1, colRightS, colRightE, true);
+    placeK(lROffset, rOffset, 2, colRightS, colRightE, false);
+
+    grid.performLayout(bounds);
   }
 
 private:
