@@ -96,6 +96,76 @@ public:
     setupSlider(rOffset, lROffset, midiOutNode.rOffset,
                 midiOutNode.macroROffset, aROffset, "R Offset", -16, 16, true);
 
+    auto setupFloatSliderSpecial =
+        [this, &apvts](CustomMacroSlider &slider, juce::Label &label,
+                       float &nodeValueRef, int &nodeMacroRef,
+                       std::unique_ptr<MacroAttachment> &attachment,
+                       const juce::String &text) {
+          slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+          slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+          slider.setRange(0.0, 1.0, 0.01);
+          slider.setValue(nodeValueRef, juce::dontSendNotification);
+          addAndMakeVisible(slider);
+
+          label.setText(text, juce::dontSendNotification);
+          label.setJustificationType(juce::Justification::centred);
+          label.setFont(juce::Font(10.0f));
+          addAndMakeVisible(label);
+
+          slider.onValueChange = [this, &slider, &nodeValueRef]() {
+            nodeValueRef = (float)slider.getValue();
+            if (midiOutNode.onNodeDirtied)
+              midiOutNode.onNodeDirtied();
+          };
+
+          auto updateSliderVisibility = [&slider](int macro) {
+            if (macro == -1) {
+              slider.removeColour(juce::Slider::rotarySliderFillColourId);
+              slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
+            } else {
+              slider.setColour(juce::Slider::rotarySliderFillColourId,
+                               juce::Colours::orange);
+              slider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                               juce::Colours::orange.withAlpha(0.3f));
+            }
+          };
+
+          slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment,
+                                 &apvts, updateSliderVisibility]() {
+            MacroMappingMenu::showMenu(
+                &slider, nodeMacroRef,
+                [this, &nodeMacroRef, &attachment, &apvts, &slider,
+                 updateSliderVisibility](int macroIndex) {
+                  nodeMacroRef = macroIndex;
+                  if (macroIndex == -1) {
+                    attachment.reset();
+                    slider.setTooltip("");
+                  } else {
+                    attachment = std::make_unique<MacroAttachment>(
+                        apvts, "macro_" + juce::String(macroIndex + 1), slider);
+                    slider.setTooltip("Mapped to Macro " +
+                                      juce::String(macroIndex + 1));
+                  }
+                  updateSliderVisibility(macroIndex);
+                  if (midiOutNode.onMappingChanged)
+                    midiOutNode.onMappingChanged();
+                });
+          };
+
+          if (nodeMacroRef != -1) {
+            attachment = std::make_unique<MacroAttachment>(
+                apvts, "macro_" + juce::String(nodeMacroRef + 1), slider);
+          }
+          updateSliderVisibility(nodeMacroRef);
+        };
+
+    setupFloatSliderSpecial(pressMod, lPressMod, midiOutNode.pressureToVelocity,
+                            midiOutNode.macroPressureToVelocity, aPressMod,
+                            "Press -> Vel");
+    setupFloatSliderSpecial(timbMod, lTimbMod, midiOutNode.timbreToVelocity,
+                            midiOutNode.macroTimbreToVelocity, aTimbMod,
+                            "Timb -> Vel");
+
     updateSliderRanges();
 
     // --- Clock Division ---
@@ -197,7 +267,7 @@ public:
     addAndMakeVisible(cycleLengthLabel);
     updateCycleLabel();
     startTimerHz(30); // Higher rate for smooth playhead
-    setSize(390, 290);
+    setSize(390, 340);
   }
 
   ~MidiOutNodeEditor() override { stopTimer(); }
@@ -220,6 +290,15 @@ public:
     if (paramsChanged) {
       updateCycleLabel();
       updateSliderRanges();
+    }
+
+    // Lazy check for MPE mods
+    if (midiOutNode.pressureToVelocity != lastPressMod ||
+        midiOutNode.timbreToVelocity != lastTimbMod) {
+      lastPressMod = midiOutNode.pressureToVelocity;
+      lastTimbMod = midiOutNode.timbreToVelocity;
+      pressMod.setValue(lastPressMod, juce::dontSendNotification);
+      timbMod.setValue(lastTimbMod, juce::dontSendNotification);
     }
 
     visualizer.update(midiOutNode.getPattern(), midiOutNode.getPatternIndex(),
@@ -272,7 +351,7 @@ public:
 
     // The proportionate grid (78x54 units)
     const int numCols = 78;
-    const int numRows = 54;
+    const int numRows = 58;
     const float unitW = (float)bounds.getWidth() / numCols;
     const float unitH = (float)bounds.getHeight() / numRows;
 
@@ -283,13 +362,14 @@ public:
       grid.templateRows.add(juce::Grid::Px(unitH));
 
     // --- Grid Ranges (Units) ---
-    // Total: 78x54
-    // Rows: 1-41 (Body), 41-46 (Ctrl1), 46-51 (Ctrl2), 51-54 (Footer)
-    int rowBodyS = 1, rowBodyE = 41;
-    int rowCtrl1S = 41, rowCtrl1E = 46;
-    int rowCtrl2S = 46, rowCtrl2E = 51;
-    int rowFooterS = 51, rowFooterE = 55;
-
+    // Total: 78x58
+    // Rows: 1-40 (Body), 41-47 (Ctrl1), 48-54 (Ctrl2), 55-58 (Footer)
+    int rowBodyS = 1, rowBodyE = 40;
+    int rowCtrl1S = 41, rowCtrl1E = 47;
+    int rowCtrl2S = 48, rowCtrl2E = 54;
+    int rowFooterS = 55, rowFooterE = 58;
+    int rowMidE = (rowBodyE + rowFooterE - 1) / 2;
+    int rowMidS = (rowBodyE + rowFooterE + 1) / 2;
     // Columns (Overlapping for larger rotaries):
     // Left Knobs: 1-35 (175px approx)
     // Visualizer: 21-58 (Centered)
@@ -302,11 +382,33 @@ public:
     grid.items.add(juce::GridItem(visualizer)
                        .withArea(rowBodyS, colVisS, rowBodyE, colVisE));
 
-    // --- Bottom Controls ---
+    // --- MPE Knobs (Stacked on the far left) ---
+    int mpeColS = 1, mpeColE = 14;
+
+    auto placeMpeK = [&](juce::Component &l, juce::Component &s, int rowS,
+                         int rowE) {
+      grid.items.add(juce::GridItem(l)
+                         .withArea(rowS, mpeColS, rowS + 2, mpeColE)
+                         .withMargin(juce::GridItem::Margin(0, 2, 0, 2)));
+      grid.items.add(juce::GridItem(s)
+                         .withArea(rowS + 1, mpeColS, rowE + 2, mpeColE)
+                         .withMargin(juce::GridItem::Margin(0, 2, 0, 2)));
+    };
+
+    placeMpeK(lPressMod, pressMod, rowCtrl1S, rowMidE);
+    placeMpeK(lTimbMod, timbMod, rowMidS + 1, rowFooterE);
+
+    // --- Bottom Controls (Shifted right of MPE) ---
+    int ctrlColS = 18; // Margin after MPE column
     auto placeB = [&](juce::Component &c, int rowS, int rowE, int colS,
                       int colE) {
+      // Re-map column ranges from 1-78 to 18-78
+      float colRatio = (float)(numCols - ctrlColS) / numCols;
+      int mappedColS = ctrlColS + (int)((colS - 1) * colRatio);
+      int mappedColE = ctrlColS + (int)((colE - 1) * colRatio);
+
       grid.items.add(juce::GridItem(c)
-                         .withArea(rowS, colS, rowE, colE)
+                         .withArea(rowS, mappedColS, rowE, mappedColE)
                          .withMargin(juce::GridItem::Margin(2)));
     };
 
@@ -319,8 +421,9 @@ public:
     placeB(rhythmResetToggle, rowCtrl2S, rowCtrl2E, 53, 78);
 
     // --- Footer ---
-    grid.items.add(juce::GridItem(cycleLengthLabel)
-                       .withArea(rowFooterS, 1, rowFooterE, numCols + 1));
+    grid.items.add(
+        juce::GridItem(cycleLengthLabel)
+            .withArea(rowFooterS, ctrlColS, rowFooterE, numCols + 1));
 
     // --- Knobs ---
     int knobHeightUnits = (rowBodyE - rowBodyS) / 3;
@@ -402,9 +505,15 @@ private:
   // Cycle length display
   juce::Label cycleLengthLabel;
 
+  // MPE Modulation
+  CustomMacroSlider pressMod, timbMod;
+  juce::Label lPressMod, lTimbMod;
+  std::unique_ptr<MacroAttachment> aPressMod, aTimbMod;
+
   // Cache for lazy updates
   int lastPSteps = -1, lastPBeats = -1, lastPOffset = -999;
   int lastRSteps = -1, lastRBeats = -1, lastROffset = -999;
+  float lastPressMod = -1.0f, lastTimbMod = -1.0f;
 };
 
 std::unique_ptr<juce::Component>

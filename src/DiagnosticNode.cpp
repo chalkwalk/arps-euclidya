@@ -44,6 +44,10 @@ public:
       g.setColour(juce::Colours::white);
       for (size_t i = 0; i < step.size(); ++i) {
         text << getNoteName(step[i].noteNumber);
+        if (step[i].sourceNoteNumber != -1) {
+          text << " (Src: " << step[i].sourceChannel << "."
+               << getNoteName(step[i].sourceNoteNumber) << ")";
+        }
         if (i < step.size() - 1)
           text << ", ";
       }

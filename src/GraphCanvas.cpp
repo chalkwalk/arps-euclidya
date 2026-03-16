@@ -85,8 +85,8 @@ void GraphCanvas::rebuild() {
   vScroll.toFront(false);
   zoomFitButton.toFront(false);
 
-  refreshCableCache();
   updateTransforms();
+  refreshCableCache();
   repaint();
 }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <vector>
 struct HeldNote {
   int noteNumber = 0;
@@ -9,6 +8,10 @@ struct HeldNote {
   float mpeX = 0.0f; // Pitch Bend
   float mpeY = 0.0f; // CC74 / Timbre
   float mpeZ = 0.0f; // Pressure
+
+  // Canonical source tracking
+  int sourceNoteNumber = -1;
+  int sourceChannel = -1;
 
   bool operator==(const HeldNote &other) const {
     return noteNumber == other.noteNumber && channel == other.channel;

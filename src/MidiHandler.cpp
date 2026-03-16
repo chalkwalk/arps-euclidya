@@ -35,6 +35,10 @@ std::vector<HeldNote> MidiHandler::getHeldNotes(int channelFilter) const {
       n.mpeX = mpeNote.pitchbend.asSignedFloat();
       n.mpeY = mpeNote.timbre.asUnsignedFloat();
       n.mpeZ = mpeNote.pressure.asUnsignedFloat();
+
+      n.sourceNoteNumber = mpeNote.initialNote;
+      n.sourceChannel = mpeNote.midiChannel;
+
       notes.push_back(n);
     }
   }

@@ -294,6 +294,8 @@ void SequenceNode::process() {
         hn.noteNumber = n;
         hn.channel = 1;
         hn.velocity = 100;
+        hn.sourceNoteNumber = n; // For manual steps, the note is its own source
+        hn.sourceChannel = 1;
         stepNotes.push_back(hn);
       }
     }

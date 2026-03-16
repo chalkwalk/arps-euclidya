@@ -1,4 +1,5 @@
 #include "MidiOutNode.h"
+#include "EuclideanMath.h"
 
 MidiOutNode::MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
                          std::array<std::atomic<float> *, 32> macrosArray)
@@ -274,10 +275,32 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       }
 
       for (const HeldNote &noteTrigger : step) {
-        float currentPressure =
-            midiHandler.getMpeZ(noteTrigger.channel, noteTrigger.noteNumber);
+        float currentPressure = 0.0f;
+        float currentTimbre = 0.0f;
+
+        if (noteTrigger.sourceNoteNumber != -1) {
+          currentPressure = midiHandler.getMpeZ(noteTrigger.sourceChannel,
+                                                noteTrigger.sourceNoteNumber);
+          currentTimbre = midiHandler.getMpeY(noteTrigger.sourceChannel,
+                                              noteTrigger.sourceNoteNumber);
+        }
+
+        float actualPressMod =
+            macroPressureToVelocity != -1 &&
+                    macros[(size_t)macroPressureToVelocity] != nullptr
+                ? macros[(size_t)macroPressureToVelocity]->load()
+                : pressureToVelocity;
+
+        float actualTimbMod =
+            macroTimbreToVelocity != -1 &&
+                    macros[(size_t)macroTimbreToVelocity] != nullptr
+                ? macros[(size_t)macroTimbreToVelocity]->load()
+                : timbreToVelocity;
+
         float finalVelocity = std::clamp(
-            noteTrigger.velocity + (currentPressure * 0.5f), 0.0f, 1.0f);
+            noteTrigger.velocity + (currentPressure * actualPressMod) +
+                (currentTimbre * actualTimbMod),
+            0.0f, 1.0f);
 
         outputBuffer.addEvent(juce::MidiMessage::noteOn(outputChannel,
                                                         noteTrigger.noteNumber,
@@ -385,6 +408,11 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
     xml->setAttribute("triplet", triplet ? 1 : 0);
     xml->setAttribute("outputChannel", outputChannel);
+
+    xml->setAttribute("pressureToVelocity", pressureToVelocity);
+    xml->setAttribute("timbreToVelocity", timbreToVelocity);
+    xml->setAttribute("macroPressureToVelocity", macroPressureToVelocity);
+    xml->setAttribute("macroTimbreToVelocity", macroTimbreToVelocity);
   }
 }
 
@@ -418,6 +446,12 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     clockDivisionIndex = xml->getIntAttribute("clockDivisionIndex", 5);
     triplet = xml->getIntAttribute("triplet", 0) != 0;
     outputChannel = xml->getIntAttribute("outputChannel", 1);
+
+    pressureToVelocity = xml->getDoubleAttribute("pressureToVelocity", 0.0);
+    timbreToVelocity = xml->getDoubleAttribute("timbreToVelocity", 0.0);
+    macroPressureToVelocity =
+        xml->getIntAttribute("macroPressureToVelocity", -1);
+    macroTimbreToVelocity = xml->getIntAttribute("macroTimbreToVelocity", -1);
   }
 }
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ClockManager.h"
-#include "EuclideanMath.h"
 #include "GraphNode.h"
 #include "MidiHandler.h"
 #include <array>
@@ -50,10 +49,14 @@ public:
   std::function<void()> onParameterChanged;
 
   std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {
-        {"Pattern Steps", &macroPSteps},   {"Pattern Beats", &macroPBeats},
-        {"Pattern Offset", &macroPOffset}, {"Rhythm Steps", &macroRSteps},
-        {"Rhythm Beats", &macroRBeats},    {"Rhythm Offset", &macroROffset}};
+    return {{"Pattern Steps", &macroPSteps},
+            {"Pattern Beats", &macroPBeats},
+            {"Pattern Offset", &macroPOffset},
+            {"Rhythm Steps", &macroRSteps},
+            {"Rhythm Beats", &macroRBeats},
+            {"Rhythm Offset", &macroROffset},
+            {"Press -> Vel", &macroPressureToVelocity},
+            {"Timb -> Vel", &macroTimbreToVelocity}};
   }
 
   int pSteps = 16;
@@ -70,6 +73,9 @@ public:
   int macroRBeats = -1;
   int macroROffset = -1;
 
+  int macroPressureToVelocity = -1;
+  int macroTimbreToVelocity = -1;
+
   // Sync & Reset Controls
   SyncMode syncMode = SyncMode::Synchronized;
   int transportSyncMode = 0;         // DEPRECATED - replaced by syncMode
@@ -78,6 +84,9 @@ public:
   int clockDivisionIndex = 5;        // Index into division table (default: 1/8)
   bool triplet = false;              // Triplet modifier
   int outputChannel = 1;             // Output MIDI channel (1-16)
+
+  float pressureToVelocity = 0.0f;
+  float timbreToVelocity = 0.0f;
 
 private:
   MidiHandler &midiHandler;
