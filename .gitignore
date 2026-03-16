@@ -211,5 +211,5 @@ __marimo__/
 .vimsupport/
 *.pyc
 build*/
+build*txt
 .cache/
-
