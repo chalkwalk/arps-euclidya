@@ -27,6 +27,12 @@ public:
   // beats, and bars
   juce::String getCycleLengthInfo() const;
 
+  enum class SyncMode {
+    Gestural = 0,     // Starts on key, relative phase
+    Synchronized = 1, // Interaction snapped to grid, incremental phase
+    Deterministic = 2 // Position bound to absolute DAW playhead
+  };
+
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
@@ -64,8 +70,9 @@ public:
   int macroRBeats = -1;
   int macroROffset = -1;
 
-  // Step 13: Sync & Reset Controls
-  int transportSyncMode = 0;         // 0 = Clock Sync, 1 = Key Sync
+  // Sync & Reset Controls
+  SyncMode syncMode = SyncMode::Synchronized;
+  int transportSyncMode = 0;         // DEPRECATED - replaced by syncMode
   bool patternResetOnRelease = true; // Reset sequence + pattern on all-keys-up
   bool rhythmResetOnRelease = true;  // Reset rhythm on all-keys-up
   int clockDivisionIndex = 5;        // Index into division table (default: 1/8)
@@ -85,16 +92,15 @@ private:
 
   NoteSequence previousSequence;
 
-  // Step 13: Key Sync state
-  bool wasHoldingNotes = false;      // Detect transition to no notes
-  bool keySyncArmed = true;          // Waiting for first key press
-  bool keySyncImmediateTick = false; // Fire immediately on first keypress
-  double keySyncStartPpq = 0.0;      // PPQ anchor for key-sync ticks
-  double keySyncInternalPhase = 0.0; // Internal phase anchor for free-run
+  // Timing state
+  bool wasHoldingNotes = false; // Detect transition to no notes
+  bool syncArmed = true;   // Waiting for first key press or transport start
+  bool forceTick = false;  // Fire immediately on next call
+  double anchorPpq = 0.0;  // Phase anchor for relative modes
+  bool wasPlaying = false; // Detect transport start/stop
 
   // Per-node tick tracking
   double lastTickPpq = -1.0;
-  double lastTickPhase = -1.0;
 
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)

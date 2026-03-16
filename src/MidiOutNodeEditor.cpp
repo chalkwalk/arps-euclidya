@@ -122,19 +122,22 @@ public:
     addAndMakeVisible(tripletToggle);
 
     // --- Sync & Reset controls ---
-    syncModeToggle.setButtonText(
-        midiOutNode.transportSyncMode == 0 ? "Clock Sync" : "Key Sync");
-    syncModeToggle.setToggleState(midiOutNode.transportSyncMode != 0,
-                                  juce::dontSendNotification);
-    syncModeToggle.setClickingTogglesState(true);
-    syncModeToggle.onClick = [this]() {
-      midiOutNode.transportSyncMode = syncModeToggle.getToggleState() ? 1 : 0;
-      syncModeToggle.setButtonText(
-          midiOutNode.transportSyncMode == 0 ? "Clock Sync" : "Key Sync");
+    syncModeBox.addItem("Gestural", (int)MidiOutNode::SyncMode::Gestural + 1);
+    syncModeBox.addItem("Synchronized",
+                        (int)MidiOutNode::SyncMode::Synchronized + 1);
+    syncModeBox.addItem("Deterministic",
+                        (int)MidiOutNode::SyncMode::Deterministic + 1);
+    syncModeBox.setSelectedId((int)midiOutNode.syncMode + 1,
+                              juce::dontSendNotification);
+    syncModeBox.onChange = [this]() {
+      midiOutNode.syncMode =
+          (MidiOutNode::SyncMode)(syncModeBox.getSelectedId() - 1);
+      updateResetToggles();
       if (midiOutNode.onNodeDirtied)
         midiOutNode.onNodeDirtied();
     };
-    addAndMakeVisible(syncModeToggle);
+    addAndMakeVisible(syncModeBox);
+    updateResetToggles();
 
     patternResetToggle.setButtonText("Reset Pattern");
     patternResetToggle.setToggleState(midiOutNode.patternResetOnRelease,
@@ -228,6 +231,13 @@ public:
     lROffset.setText("R OFFSET", juce::dontSendNotification);
   }
 
+  void updateResetToggles() {
+    bool isDeterministic =
+        midiOutNode.syncMode == MidiOutNode::SyncMode::Deterministic;
+    patternResetToggle.setEnabled(!isDeterministic);
+    rhythmResetToggle.setEnabled(!isDeterministic);
+  }
+
   void updateCycleLabel() {
     cycleLengthLabel.setText("Cycle: " + midiOutNode.getCycleLengthInfo(),
                              juce::dontSendNotification);
@@ -285,7 +295,7 @@ public:
     placeB(tripletToggle, rowCtrl1S, rowCtrl1E, 27, 52);
     placeB(outputChannelBox, rowCtrl1S, rowCtrl1E, 53, 78);
 
-    placeB(syncModeToggle, rowCtrl2S, rowCtrl2E, 1, 26);
+    placeB(syncModeBox, rowCtrl2S, rowCtrl2E, 1, 26);
     placeB(patternResetToggle, rowCtrl2S, rowCtrl2E, 27, 52);
     placeB(rhythmResetToggle, rowCtrl2S, rowCtrl2E, 53, 78);
 
@@ -357,7 +367,7 @@ private:
   juce::ToggleButton tripletToggle;
 
   // Sync & Reset
-  juce::ToggleButton syncModeToggle;
+  juce::ComboBox syncModeBox;
   juce::Label syncModeLabel;
   juce::ToggleButton patternResetToggle;
   juce::ToggleButton rhythmResetToggle;

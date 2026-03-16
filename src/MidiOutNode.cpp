@@ -25,8 +25,8 @@ int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
   int nL = newSequence.size();
 
   for (int i = 0; i < nL; ++i) {
-    int cI = (previousIndex + i) % nL;
-    if (stepsAreEqual(newSequence[cI], stepToFind))
+    int cI = (int)((previousIndex + i) % nL);
+    if (stepsAreEqual(newSequence[(size_t)cI], stepToFind))
       return cI;
   }
 
@@ -44,6 +44,15 @@ int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
 constexpr double DIVISIONS[] = {16.0, 8.0, 4.0, 2.0, 1.0, 0.5, 0.25, 0.125};
 constexpr int NUM_DIVISIONS = 8;
 
+int countOnes(const std::vector<bool> &pattern, int upTo) {
+  int count = 0;
+  for (int i = 0; i < upTo && i < (int)pattern.size(); ++i) {
+    if (pattern[i])
+      count++;
+  }
+  return count;
+}
+
 } // namespace
 
 void MidiOutNode::clampParameters() {
@@ -60,7 +69,7 @@ void MidiOutNode::process() {
   auto it = inputSequences.find(0);
   if (it != inputSequences.end()) {
     const NoteSequence &newSequence = it->second;
-    int numSteps = newSequence.size();
+    int numSteps = (int)newSequence.size();
 
     if (numSteps == 0) {
       sequenceIndex = 0;
@@ -81,12 +90,19 @@ void MidiOutNode::process() {
 
 void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                                int samplePosition) {
-  // --- Reset-on-release detection ---
   auto it0 = inputSequences.find(0);
   bool holdingNotes = (it0 != inputSequences.end() && !it0->second.empty());
+  bool isPlaying = clockManager.isHostPlaying();
+  double currentPpq = clockManager.getCumulativePpq();
 
+  // --- Compute current division ---
+  int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
+  double division = DIVISIONS[divIdx];
+  if (triplet)
+    division *= (2.0 / 3.0);
+
+  // --- Reset/Sync State Tracking ---
   if (wasHoldingNotes && !holdingNotes) {
-    // All keys just released
     if (patternResetOnRelease) {
       sequenceIndex = 0;
       patternIndex = 0;
@@ -96,62 +112,55 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       rhythmIndex = 0;
       visualRhythmIndex = 0;
     }
-    if (transportSyncMode == 1) {
-      keySyncArmed = true;
+    syncArmed = true;
+  }
+
+  // Detect onset (start trigger)
+  if (!wasHoldingNotes && holdingNotes) {
+    if (syncMode == SyncMode::Gestural) {
+      anchorPpq = currentPpq;
+      forceTick = true;
+      syncArmed = false;
+    } else if (syncMode == SyncMode::Synchronized ||
+               syncMode == SyncMode::Deterministic) {
+      // Snap anchor to the nearest past division boundary of the DAW grid
+      anchorPpq = std::floor(currentPpq / division) * division;
+      forceTick = true;
+      syncArmed = false;
     }
   }
 
-  // Get the unified cumulative PPQ (always incrementing, host or free-running)
-  double currentPpq = clockManager.getCumulativePpq();
+  // Detect transport start
+  if (!wasPlaying && isPlaying) {
+    // If transport starts exactly on a grid division and we're holding notes,
+    // fire it. We check if floor(current/div) is effectively 0.0 or unchanged.
+    if (holdingNotes && std::fmod(currentPpq, division) < 0.001) {
+      forceTick = true;
+    }
+  }
 
-  // Detect first keypress for Key Sync arming
-  if (!wasHoldingNotes && holdingNotes && transportSyncMode == 1 &&
-      keySyncArmed) {
-    keySyncArmed = false;
-    keySyncImmediateTick = true;
-    keySyncStartPpq = currentPpq; // Anchor "the 1" to this moment
+  // --- Tick Detection ---
+  bool isTick = false;
+  double effectivePpq = (syncMode == SyncMode::Deterministic)
+                            ? currentPpq
+                            : (currentPpq - anchorPpq);
+  double prevEffective = (syncMode == SyncMode::Deterministic)
+                             ? lastTickPpq
+                             : (lastTickPpq - anchorPpq);
+
+  double currTick = std::floor(effectivePpq / division);
+  double prevTick = std::floor(prevEffective / division);
+
+  if (currTick > prevTick || forceTick) {
+    isTick = true;
+    forceTick = false;
   }
 
   wasHoldingNotes = holdingNotes;
-
-  // --- Compute the effective division in PPQ ---
-  int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
-  double division = DIVISIONS[divIdx];
-  if (triplet) {
-    division *= (2.0 / 3.0);
-  }
-
-  // --- Determine if this block is a tick ---
-  bool isTick = false;
-
-  if (keySyncImmediateTick) {
-    // Key Sync: fire immediately on first keypress — this IS the "1"
-    isTick = true;
-    keySyncImmediateTick = false;
-    lastTickPpq = currentPpq; // Initialize for subsequent detection
-  } else if (lastTickPpq >= 0.0) {
-    // Normal tick detection using PPQ boundary crossings
-    double effectiveCurrent, effectivePrev;
-
-    if (transportSyncMode == 0) {
-      // Clock Sync: ticks on the absolute grid
-      effectiveCurrent = currentPpq;
-      effectivePrev = lastTickPpq;
-    } else {
-      // Key Sync: ticks relative to key-press anchor
-      effectiveCurrent = currentPpq - keySyncStartPpq;
-      effectivePrev = lastTickPpq - keySyncStartPpq;
-    }
-
-    double prevTick = std::floor(effectivePrev / division);
-    double currTick = std::floor(effectiveCurrent / division);
-    if (currTick > prevTick) {
-      isTick = true;
-    }
-  }
-
+  wasPlaying = isPlaying;
   lastTickPpq = currentPpq;
 
+  // Cleanup playing notes on every tick
   if (isTick) {
     for (const auto &note : playingNotes) {
       outputBuffer.addEvent(
@@ -161,28 +170,23 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     playingNotes.clear();
   }
 
-  auto it = inputSequences.find(0);
-  if (it == inputSequences.end() || it->second.empty())
+  if (!holdingNotes)
     return;
 
   if (isTick) {
-    const auto &sequence = it->second;
-
-    // --- 1. RHYTHM LAYER (Beat vs Rest) ---
+    const auto &sequence = it0->second;
     clampParameters();
+
+    // --- Retrieve Parameters (Macros etc) ---
     int actualRSteps =
         macroRSteps != -1 && macros[macroRSteps] != nullptr
             ? 1 + (int)std::round(macros[macroRSteps]->load() * 31.0f)
             : rSteps;
-
-    // Bounds for Rhythm Beats: [1, actualRSteps]
     int actualRBeats = macroRBeats != -1 && macros[macroRBeats] != nullptr
                            ? 1 + (int)std::round(macros[macroRBeats]->load() *
                                                  (float)(actualRSteps - 1))
                            : rBeats;
     actualRBeats = std::clamp(actualRBeats, 1, actualRSteps);
-
-    // Bounds for Rhythm Offset: Bipolar [-actualRSteps/2, actualRSteps/2]
     int halfR = (actualRSteps + 1) / 2;
     int actualROffset =
         macroROffset != -1 && macros[macroROffset] != nullptr
@@ -197,32 +201,44 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (rhythmPattern.empty())
       return;
 
-    if (rhythmIndex >= (int)rhythmPattern.size()) {
-      rhythmIndex = 0;
-    }
-
-    bool isRhythmBeat = rhythmPattern[rhythmIndex];
-    visualRhythmIndex = rhythmIndex;
-    rhythmIndex = (int)((rhythmIndex + 1) % rhythmPattern.size());
-
-    if (!isRhythmBeat) {
-      return;
-    }
-
-    // --- 2. PATTERN LAYER (Note vs Skip) ---
     int actualPSteps =
         macroPSteps != -1 && macros[macroPSteps] != nullptr
             ? 1 + (int)std::round(macros[macroPSteps]->load() * 31.0f)
             : pSteps;
 
-    // Bounds for Pattern Beats: [1, actualPSteps]
+    // --- Mode-Specific Index Calculation ---
+    if (syncMode == SyncMode::Deterministic) {
+      long long absTick = (long long)currTick;
+      rhythmIndex = (int)(absTick % (long long)actualRSteps);
+
+      long long cycles = absTick / (long long)actualRSteps;
+      int partialSteps = (int)(absTick % (long long)actualRSteps);
+      long long cumulativeBeats =
+          (cycles * (long long)actualRBeats) +
+          (long long)countOnes(rhythmPattern, partialSteps);
+
+      patternIndex = (int)(cumulativeBeats % (long long)actualPSteps);
+      sequenceIndex = (int)(cumulativeBeats % (long long)sequence.size());
+    }
+
+    bool isRhythmBeat =
+        rhythmPattern[(size_t)rhythmIndex % rhythmPattern.size()];
+    visualRhythmIndex = rhythmIndex % (int)rhythmPattern.size();
+
+    // In incremental modes, we advance after using the index
+    if (syncMode != SyncMode::Deterministic) {
+      rhythmIndex = (int)((rhythmIndex + 1) % (int)rhythmPattern.size());
+    }
+
+    if (!isRhythmBeat)
+      return;
+
+    // --- Pattern Logic ---
     int actualPBeats = macroPBeats != -1 && macros[macroPBeats] != nullptr
                            ? 1 + (int)std::round(macros[macroPBeats]->load() *
                                                  (float)(actualPSteps - 1))
                            : pBeats;
     actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
-
-    // Bounds for Pattern Offset: Bipolar [-actualPSteps/2, actualPSteps/2]
     int halfP = (actualPSteps + 1) / 2;
     int actualPOffset =
         macroPOffset != -1 && macros[macroPOffset] != nullptr
@@ -237,23 +253,25 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (pattern.empty())
       return;
 
-    if (patternIndex >= (int)pattern.size()) {
-      patternIndex = 0;
+    if (syncMode != SyncMode::Deterministic) {
+      // Incremental pattern advancement (skipping rests)
+      size_t skipsProcessed = 0;
+      while (!pattern[(size_t)patternIndex % pattern.size()] &&
+             skipsProcessed < pattern.size()) {
+        patternIndex = (int)((patternIndex + 1) % (int)pattern.size());
+        sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
+        skipsProcessed++;
+      }
     }
 
-    size_t skipsProcessed = 0;
-    while (!pattern[patternIndex] && skipsProcessed < pattern.size()) {
-      patternIndex = (int)((patternIndex + 1) % pattern.size());
-      sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
-      skipsProcessed++;
-    }
+    if (pattern[(size_t)patternIndex % pattern.size()]) {
+      const auto &step = sequence[(size_t)sequenceIndex % sequence.size()];
+      visualPatternIndex = patternIndex % (int)pattern.size();
 
-    if (pattern[patternIndex]) {
-      const auto &step = sequence[sequenceIndex];
-
-      visualPatternIndex = patternIndex;
-      patternIndex = (int)((patternIndex + 1) % pattern.size());
-      sequenceIndex = (int)((sequenceIndex + 1) % sequence.size());
+      if (syncMode != SyncMode::Deterministic) {
+        patternIndex = (int)((patternIndex + 1) % (int)pattern.size());
+        sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
+      }
 
       for (const HeldNote &noteTrigger : step) {
         float currentPressure =
@@ -361,7 +379,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("macroRBeats", macroRBeats);
     xml->setAttribute("macroROffset", macroROffset);
 
-    xml->setAttribute("transportSyncMode", transportSyncMode);
+    xml->setAttribute("syncMode", (int)syncMode);
     xml->setAttribute("patternResetOnRelease", patternResetOnRelease ? 1 : 0);
     xml->setAttribute("rhythmResetOnRelease", rhythmResetOnRelease ? 1 : 0);
     xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
@@ -374,10 +392,10 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     pSteps = xml->getIntAttribute("pSteps", 16);
     pBeats = xml->getIntAttribute("pBeats", 4);
-    pOffset = xml->getIntAttribute("pOffset", 16);
+    pOffset = xml->getIntAttribute("pOffset", 0);
     rSteps = xml->getIntAttribute("rSteps", 16);
     rBeats = xml->getIntAttribute("rBeats", 16);
-    rOffset = xml->getIntAttribute("rOffset", 16);
+    rOffset = xml->getIntAttribute("rOffset", 0);
 
     macroPSteps = xml->getIntAttribute("macroPSteps", -1);
     macroPBeats = xml->getIntAttribute("macroPBeats", -1);
@@ -386,7 +404,14 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     macroRBeats = xml->getIntAttribute("macroRBeats", -1);
     macroROffset = xml->getIntAttribute("macroROffset", -1);
 
-    transportSyncMode = xml->getIntAttribute("transportSyncMode", 0);
+    // Load new syncMode, fallback to deprecated transportSyncMode
+    if (xml->hasAttribute("syncMode")) {
+      syncMode = (SyncMode)xml->getIntAttribute("syncMode", 1);
+    } else {
+      int oldMode = xml->getIntAttribute("transportSyncMode", 0);
+      syncMode = (oldMode == 0) ? SyncMode::Synchronized : SyncMode::Gestural;
+    }
+
     patternResetOnRelease =
         xml->getIntAttribute("patternResetOnRelease", 1) != 0;
     rhythmResetOnRelease = xml->getIntAttribute("rhythmResetOnRelease", 1) != 0;
