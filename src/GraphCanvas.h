@@ -58,6 +58,9 @@ public:
   void updateCableDrag(juce::Point<int> canvasPos);
   void endCableDrag(juce::Point<int> canvasPos);
 
+  // Called by NodeBlock to request a clone
+  void requestNodeClone(GraphNode *original, int gridX, int gridY);
+
   // Check if any cable carries a sequence >10K steps
   void checkForLargeSequences();
 
@@ -78,6 +81,9 @@ public:
 
   // Callback when a node type string is dropped from the library DragAndDrop
   std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
+
+  // Callback when a node clone is requested (original node, gridX, gridY)
+  std::function<void(GraphNode *, int, int)> onNodeCloneRequest;
 
   // Refresh the cached cable paths
   void refreshCableCache();

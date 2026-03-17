@@ -53,6 +53,35 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     }
   };
 
+  graphCanvas->onNodeCloneRequest = [this](GraphNode *original, int gridX,
+                                           int gridY) {
+    if (original == nullptr)
+      return;
+
+    auto newNode = NodeFactory::createNode(
+        original->getName(), audioProcessor.midiHandler,
+        audioProcessor.clockManager, audioProcessor.macros);
+
+    if (newNode) {
+      // Copy state
+      juce::XmlElement xml("Temp");
+      original->saveNodeState(&xml);
+      newNode->loadNodeState(&xml);
+
+      newNode->gridX = gridX;
+      newNode->gridY = gridY;
+      newNode->nodeX =
+          (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
+      newNode->nodeY =
+          (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
+
+      audioProcessor.addNode(newNode);
+      graphCanvas->rebuild();
+      if (graphCanvas->onGraphChanged)
+        graphCanvas->onGraphChanged();
+    }
+  };
+
   // Setup MIDI Keyboard and Clear Button
   addAndMakeVisible(midiKeyboard);
   midiKeyboard.setMidiChannel(1);

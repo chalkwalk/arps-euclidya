@@ -249,6 +249,14 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     onPortDragEnd(canvasPos);
   }
   if (isDraggingNode) {
+    if (e.mods.isCtrlDown()) {
+      int finalX = parentCanvas.getGhostX();
+      int finalY = parentCanvas.getGhostY();
+      cancelDrag(); // Revert original
+      parentCanvas.requestNodeClone(targetNode.get(), finalX, finalY);
+      return;
+    }
+
     // Snap to the ghost slot if it's valid...
     if (parentCanvas.isGhostValid()) {
       targetNode->gridX = parentCanvas.getGhostX();

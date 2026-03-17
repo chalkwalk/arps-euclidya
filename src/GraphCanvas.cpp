@@ -464,11 +464,17 @@ void GraphCanvas::updateCableDrag(juce::Point<int> canvasPos) {
   }
 }
 
+void GraphCanvas::requestNodeClone(GraphNode *original, int gridX, int gridY) {
+  if (onNodeCloneRequest)
+    onNodeCloneRequest(original, gridX, gridY);
+}
+
 void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
   if (!isDraggingCable)
     return;
 
   isDraggingCable = false;
+  repaint();
 
   // Find target port under the release point
   for (auto *block : nodeBlocks) {
