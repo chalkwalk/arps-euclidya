@@ -299,7 +299,11 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     if (onPositionChanged)
       onPositionChanged();
 
-    parentCanvas.attemptProximityConnection(targetNode.get(), mousePosOnCanvas);
+    if (!parentCanvas.attemptSignalPathInsertion(targetNode.get(),
+                                                 mousePosOnCanvas)) {
+      parentCanvas.attemptProximityConnection(targetNode.get(),
+                                              mousePosOnCanvas);
+    }
     parentCanvas.clearProximityHighlight();
   }
 

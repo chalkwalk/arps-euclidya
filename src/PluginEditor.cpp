@@ -50,7 +50,9 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
         audioProcessor.clockManager, audioProcessor.macros);
     if (newNode) {
       graphCanvas->addNodeAtPosition(newNode, screenPos);
-      graphCanvas->attemptProximityConnection(newNode.get(), screenPos);
+      if (!graphCanvas->attemptSignalPathInsertion(newNode.get(), screenPos)) {
+        graphCanvas->attemptProximityConnection(newNode.get(), screenPos);
+      }
     }
   };
 

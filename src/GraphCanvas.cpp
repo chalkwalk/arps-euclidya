@@ -220,15 +220,25 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 
   // 1. Draw background cables
   for (const auto &cable : cachedCables) {
-    if (!cable.isSelected) {
+    if (!cable.isSelected && !proximityCableID.matches(cable)) {
       drawCable(g, cable.path, false, cable.isLarge, false);
     }
   }
 
   // 2. Draw foreground/selected cables
   for (const auto &cable : cachedCables) {
-    if (cable.isSelected) {
+    if (cable.isSelected && !proximityCableID.matches(cable)) {
       drawCable(g, cable.path, false, cable.isLarge, true);
+    }
+  }
+
+  // 3. Draw proximity highlight cable (on top)
+  if (proximityCableID.isValid()) {
+    for (const auto &cable : cachedCables) {
+      if (proximityCableID.matches(cable)) {
+        drawCable(g, cable.path, true, cable.isLarge, true);
+        break;
+      }
     }
   }
 
@@ -534,6 +544,59 @@ void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
     if (onGraphChanged)
       onGraphChanged();
   }
+}
+
+bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
+                                             juce::Point<int> mousePos) {
+  if (newNode == nullptr)
+    return false;
+
+  // Transform screen to world
+  float fx = (float)mousePos.x;
+  float fy = (float)mousePos.y;
+  getCameraTransform().inverted().transformPoint(fx, fy);
+  juce::Point<float> worldMousePos(fx, fy);
+
+  // High threshold for "near" a cable (15 world-space pixels)
+  const float threshold = 15.0f;
+  CachedCable *bestCable = nullptr;
+  float bestDist = threshold;
+
+  for (auto &cable : cachedCables) {
+    juce::Point<float> nearest;
+    cable.path.getNearestPoint(worldMousePos, nearest);
+    float d = worldMousePos.getDistanceFrom(nearest);
+    if (d < bestDist) {
+      bestDist = d;
+      bestCable = &cable;
+    }
+  }
+
+  if (bestCable != nullptr) {
+    GraphNode *sourceNode = bestCable->sourceNode;
+    int sourcePort = bestCable->sourcePort;
+    GraphNode *targetNode = bestCable->targetNode;
+    int targetPort = bestCable->targetPort;
+
+    // Disconnect A -> B. Then A -> New(0), New(0) -> B
+    graphEngine.removeConnection(sourceNode, sourcePort, targetNode,
+                                 targetPort);
+
+    bool conn1 =
+        graphEngine.addExplicitConnection(sourceNode, sourcePort, newNode, 0);
+    bool conn2 =
+        graphEngine.addExplicitConnection(newNode, 0, targetNode, targetPort);
+
+    if (conn1 || conn2) {
+      refreshCableCache();
+      repaint();
+      if (onGraphChanged)
+        onGraphChanged();
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // Find target port under the release point
@@ -869,45 +932,70 @@ void GraphCanvas::updateProximityHighlight(juce::Point<int> mousePos,
                                            GraphNode *draggingNode) {
   GraphNode *newTarget = nullptr;
   ProximityZone newZone = ProximityZone::None;
+  CableID bestCableID;
 
   float fx = (float)mousePos.x;
   float fy = (float)mousePos.y;
   getCameraTransform().inverted().transformPoint(fx, fy);
   juce::Point<float> worldMousePos(fx, fy);
 
-  for (auto *block : nodeBlocks) {
-    auto *node = block->getNode().get();
-    if (node == draggingNode)
-      continue;
-
-    // Use world-space bounds from the node itself
-    juce::Rectangle<float> worldBounds(node->nodeX, node->nodeY,
-                                       (float)block->getWidth(),
-                                       (float)block->getHeight());
-    if (worldBounds.contains(worldMousePos)) {
-      newTarget = node;
-      float targetWidth = (float)block->getWidth();
-      float localX = worldMousePos.x - node->nodeX;
-
-      if (localX < targetWidth * 0.25f)
-        newZone = ProximityZone::Left;
-      else if (localX > targetWidth * 0.75f)
-        newZone = ProximityZone::Right;
-      break;
+  // 1. Check Cable Insertion first (precedence)
+  const float cableThreshold = 15.0f;
+  float bestDist = cableThreshold;
+  for (auto &cable : cachedCables) {
+    juce::Point<float> nearest;
+    cable.path.getNearestPoint(worldMousePos, nearest);
+    float d = worldMousePos.getDistanceFrom(nearest);
+    if (d < bestDist) {
+      bestDist = d;
+      bestCableID = {cable.sourceNode, cable.sourcePort, cable.targetNode,
+                     cable.targetPort};
     }
   }
 
-  if (newTarget != proximityTargetNode || newZone != proximityZone) {
+  // 2. If no cable, check Node Proximity
+  if (!bestCableID.isValid()) {
+    for (auto *block : nodeBlocks) {
+      auto *node = block->getNode().get();
+      if (node == draggingNode)
+        continue;
+
+      // Use world-space bounds from the node itself
+      juce::Rectangle<float> worldBounds(node->nodeX, node->nodeY,
+                                         (float)block->getWidth(),
+                                         (float)block->getHeight());
+      if (worldBounds.contains(worldMousePos)) {
+        newTarget = node;
+        float targetWidth = (float)block->getWidth();
+        float localX = worldMousePos.x - node->nodeX;
+
+        if (localX < targetWidth * 0.25f)
+          newZone = ProximityZone::Left;
+        else if (localX > targetWidth * 0.75f)
+          newZone = ProximityZone::Right;
+        break;
+      }
+    }
+  }
+
+  if (newTarget != proximityTargetNode || newZone != proximityZone ||
+      !(bestCableID.sourceNode == proximityCableID.sourceNode &&
+        bestCableID.sourcePort == proximityCableID.sourcePort &&
+        bestCableID.targetNode == proximityCableID.targetNode &&
+        bestCableID.targetPort == proximityCableID.targetPort)) {
     proximityTargetNode = newTarget;
     proximityZone = newZone;
+    proximityCableID = bestCableID;
     repaint();
   }
 }
 
 void GraphCanvas::clearProximityHighlight() {
-  if (proximityTargetNode != nullptr || proximityZone != ProximityZone::None) {
+  if (proximityTargetNode != nullptr || proximityZone != ProximityZone::None ||
+      proximityCableID.isValid()) {
     proximityTargetNode = nullptr;
     proximityZone = ProximityZone::None;
+    proximityCableID.clear();
     repaint();
   }
 }

@@ -81,8 +81,10 @@ public:
   int getGhostY() const { return ghostTargetY; }
   bool isGhostValid() const { return ghostIsValid; }
 
-  // Proximity auto-connection
+  // Proximity auto-connection & Signal Path Insertion
   void attemptProximityConnection(GraphNode *droppedNode,
+                                  juce::Point<int> mousePos);
+  bool attemptSignalPathInsertion(GraphNode *newNode,
                                   juce::Point<int> mousePos);
 
   enum class ProximityZone { None, Left, Right };
@@ -150,11 +152,6 @@ private:
   int ghostTargetH = 1;
   bool ghostIsValid = false;
 
-  // Selection & Highlight state
-  GraphNode *selectedNode = nullptr;
-  GraphNode *proximityTargetNode = nullptr;
-  ProximityZone proximityZone = ProximityZone::None;
-
   struct CachedCable {
     GraphNode *sourceNode;
     int sourcePort;
@@ -164,6 +161,32 @@ private:
     bool isLarge = false;
     bool isSelected = false;
   };
+
+  struct CableID {
+    GraphNode *sourceNode = nullptr;
+    int sourcePort = 0;
+    GraphNode *targetNode = nullptr;
+    int targetPort = 0;
+
+    bool isValid() const {
+      return sourceNode != nullptr && targetNode != nullptr;
+    }
+    void clear() {
+      sourceNode = nullptr;
+      targetNode = nullptr;
+    }
+    bool matches(const CachedCable &c) const {
+      return sourceNode == c.sourceNode && sourcePort == c.sourcePort &&
+             targetNode == c.targetNode && targetPort == c.targetPort;
+    }
+  };
+
+  // Selection & Highlight state
+  GraphNode *selectedNode = nullptr;
+  GraphNode *proximityTargetNode = nullptr;
+  ProximityZone proximityZone = ProximityZone::None;
+  CableID proximityCableID;
+
   std::vector<CachedCable> cachedCables;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphCanvas)
