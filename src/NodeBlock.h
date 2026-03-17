@@ -20,6 +20,9 @@ public:
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
 
+  // Aborts movement and reverts to start position
+  void cancelDrag();
+
   std::shared_ptr<GraphNode> getNode() const { return targetNode; }
 
   // Get the centre point of a port in parent (canvas) coordinates
@@ -56,6 +59,8 @@ private:
 
   int dragStartGridX = 0;
   int dragStartGridY = 0;
+  float dragStartWorldX = 0.0f;
+  float dragStartWorldY = 0.0f;
 
   juce::ComponentDragger dragger;
   bool isDraggingNode = false;

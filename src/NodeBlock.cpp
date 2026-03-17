@@ -180,6 +180,8 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
   // But we store the starting point of the drag
   dragStartGridX = targetNode->gridX;
   dragStartGridY = targetNode->gridY;
+  dragStartWorldX = targetNode->nodeX;
+  dragStartWorldY = targetNode->nodeY;
 
   parentCanvas.setGhostTarget(dragStartGridX, dragStartGridY,
                               targetNode->getGridWidth(),
@@ -276,6 +278,20 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
 
   isDraggingCable = false;
   isDraggingNode = false;
+}
+
+void NodeBlock::cancelDrag() {
+  if (isDraggingNode) {
+    targetNode->gridX = dragStartGridX;
+    targetNode->gridY = dragStartGridY;
+    targetNode->nodeX = dragStartWorldX;
+    targetNode->nodeY = dragStartWorldY;
+    parentCanvas.clearGhostTarget();
+    if (onPositionChanged)
+      onPositionChanged();
+  }
+  isDraggingNode = false;
+  isDraggingCable = false;
 }
 
 juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {

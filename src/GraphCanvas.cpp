@@ -546,6 +546,20 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
     }
   }
 
+  if (key.isKeyCode(juce::KeyPress::escapeKey)) {
+    // Cancel cable dragging
+    if (isDraggingCable) {
+      endCableDrag(cableDragEnd); // This cleans up state
+      return true;
+    }
+
+    // Cancel any node dragging
+    for (auto *block : nodeBlocks) {
+      block->cancelDrag();
+    }
+    return true;
+  }
+
   return false;
 }
 
