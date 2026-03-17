@@ -202,39 +202,12 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (rhythmPattern.empty())
       return;
 
+    // --- Pattern Logic ---
     int actualPSteps =
         macroPSteps != -1 && macros[macroPSteps] != nullptr
             ? 1 + (int)std::round(macros[macroPSteps]->load() * 31.0f)
             : pSteps;
 
-    // --- Mode-Specific Index Calculation ---
-    if (syncMode == SyncMode::Deterministic) {
-      long long absTick = (long long)currTick;
-      rhythmIndex = (int)(absTick % (long long)actualRSteps);
-
-      long long cycles = absTick / (long long)actualRSteps;
-      int partialSteps = (int)(absTick % (long long)actualRSteps);
-      long long cumulativeBeats =
-          (cycles * (long long)actualRBeats) +
-          (long long)countOnes(rhythmPattern, partialSteps);
-
-      patternIndex = (int)(cumulativeBeats % (long long)actualPSteps);
-      sequenceIndex = (int)(cumulativeBeats % (long long)sequence.size());
-    }
-
-    bool isRhythmBeat =
-        rhythmPattern[(size_t)rhythmIndex % rhythmPattern.size()];
-    visualRhythmIndex = rhythmIndex % (int)rhythmPattern.size();
-
-    // In incremental modes, we advance after using the index
-    if (syncMode != SyncMode::Deterministic) {
-      rhythmIndex = (int)((rhythmIndex + 1) % (int)rhythmPattern.size());
-    }
-
-    if (!isRhythmBeat)
-      return;
-
-    // --- Pattern Logic ---
     int actualPBeats = macroPBeats != -1 && macros[macroPBeats] != nullptr
                            ? 1 + (int)std::round(macros[macroPBeats]->load() *
                                                  (float)(actualPSteps - 1))
@@ -254,15 +227,78 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     if (pattern.empty())
       return;
 
+    // --- Mode-Specific Index Calculation ---
+    auto countOnes = [](const std::vector<bool> &p, int end) {
+      int count = 0;
+      for (int i = 0; i < end && i < (int)p.size(); ++i)
+        if (p[i])
+          count++;
+      return count;
+    };
+
+    auto findIndexOfNote = [](const std::vector<bool> &p, int n) {
+      int seen = 0;
+      for (int i = 0; i < (int)p.size(); ++i) {
+        if (p[i]) {
+          if (seen == n)
+            return i;
+          seen++;
+        }
+      }
+      return 0; // Should not happen if beats > 0
+    };
+
+    if (syncMode == SyncMode::Deterministic) {
+      long long absTick = (long long)currTick;
+      rhythmIndex = (int)(absTick % (long long)actualRSteps);
+
+      long long cycles = absTick / (long long)actualRSteps;
+      int partialSteps = (int)(absTick % (long long)actualRSteps);
+      long long nR = (cycles * (long long)actualRBeats) +
+                     (long long)countOnes(rhythmPattern, partialSteps);
+
+      if (nR > 0) {
+        // Pos(nR, Pattern)
+        long long k = nR - 1;
+        long long pCycles = k / (long long)actualPBeats;
+        int pNoteIdx = (int)(k % (long long)actualPBeats);
+        long long pos = (pCycles * (long long)actualPSteps) +
+                        (long long)findIndexOfNote(pattern, (int)pNoteIdx);
+
+        patternIndex = (int)(pos % (long long)actualPSteps);
+        sequenceIndex = (int)(pos % (long long)sequence.size());
+      } else {
+        patternIndex = 0;
+        sequenceIndex = 0;
+      }
+    }
+
+    bool isRhythmBeat =
+        rhythmPattern[(size_t)rhythmIndex % rhythmPattern.size()];
+    visualRhythmIndex = rhythmIndex % (int)rhythmPattern.size();
+
     if (syncMode != SyncMode::Deterministic) {
-      // Incremental pattern advancement (skipping rests)
-      size_t skipsProcessed = 0;
-      while (!pattern[(size_t)patternIndex % pattern.size()] &&
-             skipsProcessed < pattern.size()) {
+      rhythmIndex = (int)((rhythmIndex + 1) % (int)rhythmPattern.size());
+    }
+
+    if (!isRhythmBeat)
+      return;
+
+    // --- Note Triggering & Advance ---
+    if (syncMode != SyncMode::Deterministic) {
+      // Advance Pattern until we hit a note (Euclidean 1)
+      bool found = false;
+      int limit = (int)pattern.size();
+      while (limit-- > 0) {
+        if (pattern[(size_t)patternIndex % pattern.size()]) {
+          found = true;
+          break;
+        }
         patternIndex = (int)((patternIndex + 1) % (int)pattern.size());
         sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
-        skipsProcessed++;
       }
+      if (!found)
+        return;
     }
 
     if (pattern[(size_t)patternIndex % pattern.size()]) {
@@ -270,7 +306,8 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       visualPatternIndex = patternIndex % (int)pattern.size();
 
       if (syncMode != SyncMode::Deterministic) {
-        patternIndex = (int)((patternIndex + 1) % (int)pattern.size());
+        // Prepare for NEXT rhythm beat: Advance at least once
+        patternIndex = (int)((patternIndex + 1) % (int)actualPSteps);
         sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
       }
 
@@ -298,8 +335,9 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                 : timbreToVelocity;
 
         float finalVelocity = std::clamp(
-            noteTrigger.velocity + (currentPressure * actualPressMod) +
-                (currentTimbre * actualTimbMod),
+            noteTrigger.velocity +
+                actualPressMod * (currentPressure - noteTrigger.velocity) +
+                actualTimbMod * (currentTimbre - noteTrigger.velocity),
             0.0f, 1.0f);
 
         outputBuffer.addEvent(juce::MidiMessage::noteOn(outputChannel,
