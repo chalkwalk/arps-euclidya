@@ -57,8 +57,22 @@ void NodeBlock::paint(juce::Graphics &g) {
   g.fillRoundedRectangle(bounds, 6.0f);
 
   // Border (Neon tinted)
-  g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
-  g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.5f);
+  bool isSelected = (parentCanvas.getSelectedNode() == targetNode.get());
+  if (isSelected) {
+    // Outer glow for selected node
+    g.setColour(juce::Colour(0xff0df0e3));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
+                           2.5f);
+
+    // Subtle halo
+    g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.2f));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().expanded(2.0f), 8.0f,
+                           4.0f);
+  } else {
+    g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
+                           1.5f);
+  }
 
   // Draw input ports (Half stadiums flush with left edge)
   int numIn = targetNode->getNumInputPorts();

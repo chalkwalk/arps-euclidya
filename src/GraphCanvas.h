@@ -6,7 +6,8 @@
 
 class GraphCanvas : public juce::Component,
                     public juce::ScrollBar::Listener,
-                    public juce::DragAndDropTarget {
+                    public juce::DragAndDropTarget,
+                    public juce::KeyListener {
 public:
   GraphCanvas(GraphEngine &engine, juce::AudioProcessorValueTreeState &apvts,
               juce::CriticalSection &lock);
@@ -26,6 +27,9 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
   void mouseWheelMove(const juce::MouseEvent &e,
                       const juce::MouseWheelDetails &wheel) override;
+
+  bool keyPressed(const juce::KeyPress &key,
+                  juce::Component *originatingComponent) override;
 
   // Zoom manipulation
   void setZoomFactor(float newZoom);

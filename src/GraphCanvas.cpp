@@ -27,6 +27,7 @@ GraphCanvas::GraphCanvas(GraphEngine &engine,
 
   // Intercept all child mouse events to support universal middle-click panning
   addMouseListener(this, true);
+  addKeyListener(this);
 }
 
 void GraphCanvas::rebuild() {
@@ -527,6 +528,26 @@ NodeBlock *GraphCanvas::findBlockForNode(GraphNode *node) const {
 }
 
 void GraphCanvas::resized() { updateScrollBars(); }
+
+bool GraphCanvas::keyPressed(const juce::KeyPress &key,
+                             juce::Component *originatingComponent) {
+  juce::ignoreUnused(originatingComponent);
+
+  if (key.isKeyCode(juce::KeyPress::deleteKey) ||
+      key.isKeyCode(juce::KeyPress::backspaceKey)) {
+    if (selectedNode != nullptr) {
+      const juce::ScopedLock sl(graphLock);
+      graphEngine.removeNode(selectedNode);
+      selectedNode = nullptr;
+      rebuild();
+      if (onGraphChanged)
+        onGraphChanged();
+      return true;
+    }
+  }
+
+  return false;
+}
 
 void GraphCanvas::scrollBarMoved(juce::ScrollBar *scrollBar,
                                  double newRangeStart) {
