@@ -1,5 +1,6 @@
 #pragma once
 
+#include "NodeBlock.h" // For NodeDragPreview
 #include <JuceHeader.h>
 #include <string>
 #include <vector>
@@ -32,12 +33,18 @@ public:
   void focusSearch();
 
 private:
+  class LibraryListBox : public juce::ListBox {
+  public:
+    LibraryListBox(const juce::String &name, juce::ListBoxModel *m);
+    void mouseDrag(const juce::MouseEvent &e) override;
+  };
+
   void textEditorTextChanged(juce::TextEditor &editor) override;
   void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
   void updateFilter();
 
   juce::TextEditor searchBox;
-  juce::ListBox moduleList;
+  LibraryListBox moduleList;
 
   std::vector<std::string> allNodeTypes;
   std::vector<std::string> filteredNodeTypes;

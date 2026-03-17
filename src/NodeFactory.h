@@ -100,4 +100,36 @@ public:
             "Unzip",        "Route",       "Select",           "Switch",
             "Sequence",     "Midi Out"};
   }
+
+  struct NodeMetadata {
+    int gridW = 1, gridH = 1, numIn = 1, numOut = 1;
+  };
+
+  static NodeMetadata getPreviewMetadata(const std::string &type) {
+    NodeMetadata m;
+    if (type == "Midi In") {
+      m.gridW = 2;
+      m.gridH = 2;
+      m.numIn = 0;
+    } else if (type == "Midi Out") {
+      m.gridW = 4;
+      m.gridH = 3;
+      m.numOut = 0;
+    } else if (type == "Sequence") {
+      m.gridW = 4;
+      m.gridH = 2;
+      m.numIn = 0;
+    } else if (type == "Diagnostic" || type == "Fold" || type == "Quantizer" ||
+               type == "Split" || type == "Walk") {
+      m.gridW = 2;
+      m.gridH = 2;
+      if (type == "Split")
+        m.numOut = 2;
+    } else if (type == "Chord Split" || type == "Diverge" || type == "Unzip") {
+      m.numOut = 2;
+    } else if (type == "Converge" || type == "Zip" || type == "Concatenate") {
+      m.numIn = 2;
+    }
+    return m;
+  }
 };

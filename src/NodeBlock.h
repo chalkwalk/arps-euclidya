@@ -74,3 +74,22 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NodeBlock)
 };
+
+/**
+ * A lightweight preview of a node used during dragging from the library.
+ * Mimics the NodeBlock visual style.
+ */
+class NodeDragPreview : public juce::Component {
+public:
+  NodeDragPreview(const juce::String &nodeType, int gridW, int gridH, int numIn,
+                  int numOut);
+
+  void paint(juce::Graphics &g) override;
+
+  int getGridWidth() const { return gridW; }
+  int getGridHeight() const { return gridH; }
+
+private:
+  juce::String type;
+  int gridW, gridH, numIn, numOut;
+};

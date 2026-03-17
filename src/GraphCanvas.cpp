@@ -1,6 +1,7 @@
 #include "GraphCanvas.h"
 #include "ArpsLookAndFeel.h"
 #include "LayoutConstants.h"
+#include "NodeFactory.h"
 
 GraphCanvas::GraphCanvas(GraphEngine &engine,
                          juce::AudioProcessorValueTreeState &apvtsRef,
@@ -903,13 +904,22 @@ void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
   float worldY = (float)screenPos.y;
   getCameraTransform().inverted().transformPoint(worldX, worldY);
 
-  int dropGridX = (int)std::round(worldX / Layout::GridPitchFloat);
-  int dropGridY = (int)std::round(worldY / Layout::GridPitchFloat);
+  int dropGridX, dropGridY;
 
-  auto nearest = graphEngine.findClosestFreeSpot(
-      dropGridX, dropGridY, node->getGridWidth(), node->getGridHeight());
-  node->gridX = nearest.x;
-  node->gridY = nearest.y;
+  if (showGhostTarget && ghostIsValid) {
+    dropGridX = ghostTargetX;
+    dropGridY = ghostTargetY;
+  } else {
+    int ix = (int)std::round(worldX / Layout::GridPitchFloat);
+    int iy = (int)std::round(worldY / Layout::GridPitchFloat);
+    auto nearest = graphEngine.findClosestFreeSpot(ix, iy, node->getGridWidth(),
+                                                   node->getGridHeight());
+    dropGridX = nearest.x;
+    dropGridY = nearest.y;
+  }
+
+  node->gridX = dropGridX;
+  node->gridY = dropGridY;
 
   node->nodeX =
       (float)(node->gridX * Layout::GridPitch) + Layout::TramlineOffset;
@@ -1005,19 +1015,40 @@ bool GraphCanvas::isInterestedInDragSource(const SourceDetails &details) {
 }
 
 void GraphCanvas::itemDragMove(const SourceDetails &details) {
+  juce::String nodeType = details.description.toString();
+  auto meta = NodeFactory::getPreviewMetadata(nodeType.toStdString());
+
+  // Calculate grid position for ghost
+  float fx = (float)details.localPosition.x;
+  float fy = (float)details.localPosition.y;
+  getCameraTransform().inverted().transformPoint(fx, fy);
+
+  // Calculate top-left based on centered drag image
+  float halfW = (meta.gridW * Layout::GridPitchFloat) / 2.0f;
+  float halfH = (meta.gridH * Layout::GridPitchFloat) / 2.0f;
+
+  int gx = juce::roundToInt((fx - halfW - Layout::TramlineOffset) /
+                            Layout::GridPitchFloat);
+  int gy = juce::roundToInt((fy - halfH - Layout::TramlineOffset) /
+                            Layout::GridPitchFloat);
+
+  setGhostTarget(gx, gy, meta.gridW, meta.gridH, nullptr);
+
   updateProximityHighlight(details.localPosition, nullptr);
 }
 
 void GraphCanvas::itemDragExit(const SourceDetails &details) {
   juce::ignoreUnused(details);
+  clearGhostTarget();
   clearProximityHighlight();
 }
 
 void GraphCanvas::itemDropped(const SourceDetails &details) {
-  clearProximityHighlight();
   if (onNodeDropped) {
     onNodeDropped(details.description.toString(), details.localPosition);
   }
+  clearGhostTarget();
+  clearProximityHighlight();
 }
 
 void GraphCanvas::selectNode(GraphNode *node) {

@@ -325,6 +325,49 @@ void NodeBlock::cancelDrag() {
   isDraggingCable = false;
 }
 
+NodeDragPreview::NodeDragPreview(const juce::String &nodeType, int gridW,
+                                 int gridH, int numIn, int numOut)
+    : type(nodeType), gridW(gridW), gridH(gridH), numIn(numIn), numOut(numOut) {
+  int width = (gridW * Layout::GridPitch) - Layout::TramlineMargin;
+  int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
+  setSize(width, height);
+  setInterceptsMouseClicks(false, false);
+}
+
+void NodeDragPreview::paint(juce::Graphics &g) {
+  auto bounds = getLocalBounds().toFloat();
+
+  // Draw translucent body
+  g.setColour(ArpsLookAndFeel::getForegroundSlate().withAlpha(0.6f));
+  g.fillRoundedRectangle(bounds, 6.0f);
+
+  // Border
+  g.setColour(juce::Colours::white.withAlpha(0.4f));
+  g.drawRoundedRectangle(bounds.reduced(0.5f), 6.0f, 1.0f);
+
+  // Header/Title
+  g.setColour(juce::Colours::white.withAlpha(0.8f));
+  g.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
+  g.drawText(type, 10, 0, getWidth() - 20, NodeBlock::HEADER_HEIGHT,
+             juce::Justification::centredLeft);
+
+  // Ports
+  g.setColour(ArpsLookAndFeel::getBackgroundCharcoal().withAlpha(0.8f));
+  for (int i = 0; i < numIn; ++i) {
+    int py = NodeBlock::HEADER_HEIGHT + 10 + i * NodeBlock::PORT_SPACING;
+    g.fillEllipse(0.0f, (float)(py - NodeBlock::PORT_RADIUS),
+                  (float)NodeBlock::PORT_RADIUS,
+                  (float)(NodeBlock::PORT_RADIUS * 2));
+  }
+  for (int i = 0; i < numOut; ++i) {
+    int py = NodeBlock::HEADER_HEIGHT + 10 + i * NodeBlock::PORT_SPACING;
+    g.fillEllipse((float)(getWidth() - NodeBlock::PORT_RADIUS),
+                  (float)(py - NodeBlock::PORT_RADIUS),
+                  (float)NodeBlock::PORT_RADIUS,
+                  (float)(NodeBlock::PORT_RADIUS * 2));
+  }
+}
+
 juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
   int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
   // Flush with the left edge. Width is RADIUS. Height is 2*RADIUS.

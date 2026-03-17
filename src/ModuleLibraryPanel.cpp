@@ -2,7 +2,7 @@
 #include "ArpsLookAndFeel.h"
 #include "NodeFactory.h"
 
-ModuleLibraryPanel::ModuleLibraryPanel() {
+ModuleLibraryPanel::ModuleLibraryPanel() : moduleList("ModuleList", this) {
   addAndMakeVisible(searchBox);
   searchBox.setTextToShowWhenEmpty("Search modules...", juce::Colours::grey);
   searchBox.setReturnKeyStartsNewLine(false);
@@ -10,7 +10,6 @@ ModuleLibraryPanel::ModuleLibraryPanel() {
   searchBox.addListener(this);
 
   addAndMakeVisible(moduleList);
-  moduleList.setModel(this);
   moduleList.setRowHeight(30);
   moduleList.setMultipleSelectionEnabled(false);
 
@@ -18,10 +17,7 @@ ModuleLibraryPanel::ModuleLibraryPanel() {
   updateFilter();
 }
 
-ModuleLibraryPanel::~ModuleLibraryPanel() {
-  searchBox.removeListener(this);
-  moduleList.setModel(nullptr);
-}
+ModuleLibraryPanel::~ModuleLibraryPanel() { searchBox.removeListener(this); }
 
 void ModuleLibraryPanel::paint(juce::Graphics &g) {
   g.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
@@ -113,3 +109,40 @@ void ModuleLibraryPanel::updateFilter() {
 }
 
 void ModuleLibraryPanel::focusSearch() { searchBox.grabKeyboardFocus(); }
+
+//==============================================================================
+ModuleLibraryPanel::LibraryListBox::LibraryListBox(const juce::String &name,
+                                                   juce::ListBoxModel *m)
+    : juce::ListBox(name, m) {}
+
+void ModuleLibraryPanel::LibraryListBox::mouseDrag(const juce::MouseEvent &e) {
+  if (auto *m = getListBoxModel()) {
+    auto selectedRows = getSelectedRows();
+    if (selectedRows.size() > 0 && e.mouseWasDraggedSinceMouseDown()) {
+      if (auto *container =
+              juce::DragAndDropContainer::findParentDragContainerFor(this)) {
+        if (!container->isDragAndDropActive()) {
+          auto desc = m->getDragSourceDescription(selectedRows);
+          if (!desc.isVoid()) {
+            juce::String nodeType = desc.toString();
+            auto meta = NodeFactory::getPreviewMetadata(nodeType.toStdString());
+
+            NodeDragPreview preview(nodeType, meta.gridW, meta.gridH,
+                                    meta.numIn, meta.numOut);
+            juce::Image snapshot =
+                preview.createComponentSnapshot(preview.getLocalBounds());
+
+            // Center the preview on the mouse
+            juce::Point<int> offset(-preview.getWidth() / 2,
+                                    -preview.getHeight() / 2);
+
+            container->startDragging(
+                desc, this, juce::ScaledImage(snapshot, 1.0f), true, &offset);
+            return;
+          }
+        }
+      }
+    }
+  }
+  ListBox::mouseDrag(e);
+}
