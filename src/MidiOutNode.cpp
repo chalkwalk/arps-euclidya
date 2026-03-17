@@ -48,10 +48,22 @@ constexpr int NUM_DIVISIONS = 8;
 int countOnes(const std::vector<bool> &pattern, int upTo) {
   int count = 0;
   for (int i = 0; i < upTo && i < (int)pattern.size(); ++i) {
-    if (pattern[i])
+    if (pattern[static_cast<size_t>(i)])
       count++;
   }
   return count;
+}
+
+int findIndexOfNote(const std::vector<bool> &pattern, int n) {
+  int seen = 0;
+  for (int i = 0; i < (int)pattern.size(); ++i) {
+    if (pattern[static_cast<size_t>(i)]) {
+      if (seen == n)
+        return i;
+      seen++;
+    }
+  }
+  return 0; // Should not happen if beats > 0
 }
 
 } // namespace
@@ -76,7 +88,7 @@ void MidiOutNode::process() {
       sequenceIndex = 0;
     } else if (!previousSequence.empty() &&
                sequenceIndex < (int)previousSequence.size()) {
-      auto stepToFind = previousSequence[sequenceIndex];
+      auto stepToFind = previousSequence[static_cast<size_t>(sequenceIndex)];
       sequenceIndex = findClosestNoteIndex(stepToFind, previousSequence,
                                            newSequence, sequenceIndex);
     } else {
@@ -180,19 +192,24 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
     // --- Retrieve Parameters (Macros etc) ---
     int actualRSteps =
-        macroRSteps != -1 && macros[macroRSteps] != nullptr
-            ? 1 + (int)std::round(macros[macroRSteps]->load() * 31.0f)
+        macroRSteps != -1 && macros[static_cast<size_t>(macroRSteps)] != nullptr
+            ? 1 + (int)std::round(
+                      macros[static_cast<size_t>(macroRSteps)]->load() * 31.0f)
             : rSteps;
-    int actualRBeats = macroRBeats != -1 && macros[macroRBeats] != nullptr
-                           ? 1 + (int)std::round(macros[macroRBeats]->load() *
-                                                 (float)(actualRSteps - 1))
-                           : rBeats;
+    int actualRBeats =
+        macroRBeats != -1 && macros[static_cast<size_t>(macroRBeats)] != nullptr
+            ? 1 + (int)std::round(
+                      macros[static_cast<size_t>(macroRBeats)]->load() *
+                      (float)(actualRSteps - 1))
+            : rBeats;
     actualRBeats = std::clamp(actualRBeats, 1, actualRSteps);
     int halfR = (actualRSteps + 1) / 2;
     int actualROffset =
-        macroROffset != -1 && macros[macroROffset] != nullptr
-            ? (int)std::round((macros[macroROffset]->load() - 0.5f) *
-                              (float)actualRSteps)
+        macroROffset != -1 &&
+                macros[static_cast<size_t>(macroROffset)] != nullptr
+            ? (int)std::round(
+                  (macros[static_cast<size_t>(macroROffset)]->load() - 0.5f) *
+                  (float)actualRSteps)
             : rOffset;
     actualROffset = std::clamp(actualROffset, -halfR, halfR);
 
@@ -204,20 +221,25 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
     // --- Pattern Logic ---
     int actualPSteps =
-        macroPSteps != -1 && macros[macroPSteps] != nullptr
-            ? 1 + (int)std::round(macros[macroPSteps]->load() * 31.0f)
+        macroPSteps != -1 && macros[static_cast<size_t>(macroPSteps)] != nullptr
+            ? 1 + (int)std::round(
+                      macros[static_cast<size_t>(macroPSteps)]->load() * 31.0f)
             : pSteps;
 
-    int actualPBeats = macroPBeats != -1 && macros[macroPBeats] != nullptr
-                           ? 1 + (int)std::round(macros[macroPBeats]->load() *
-                                                 (float)(actualPSteps - 1))
-                           : pBeats;
+    int actualPBeats =
+        macroPBeats != -1 && macros[static_cast<size_t>(macroPBeats)] != nullptr
+            ? 1 + (int)std::round(
+                      macros[static_cast<size_t>(macroPBeats)]->load() *
+                      (float)(actualPSteps - 1))
+            : pBeats;
     actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
     int halfP = (actualPSteps + 1) / 2;
     int actualPOffset =
-        macroPOffset != -1 && macros[macroPOffset] != nullptr
-            ? (int)std::round((macros[macroPOffset]->load() - 0.5f) *
-                              (float)actualPSteps)
+        macroPOffset != -1 &&
+                macros[static_cast<size_t>(macroPOffset)] != nullptr
+            ? (int)std::round(
+                  (macros[static_cast<size_t>(macroPOffset)]->load() - 0.5f) *
+                  (float)actualPSteps)
             : pOffset;
     actualPOffset = std::clamp(actualPOffset, -halfP, halfP);
 
@@ -228,26 +250,6 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       return;
 
     // --- Mode-Specific Index Calculation ---
-    auto countOnes = [](const std::vector<bool> &p, int end) {
-      int count = 0;
-      for (int i = 0; i < end && i < (int)p.size(); ++i)
-        if (p[i])
-          count++;
-      return count;
-    };
-
-    auto findIndexOfNote = [](const std::vector<bool> &p, int n) {
-      int seen = 0;
-      for (int i = 0; i < (int)p.size(); ++i) {
-        if (p[i]) {
-          if (seen == n)
-            return i;
-          seen++;
-        }
-      }
-      return 0; // Should not happen if beats > 0
-    };
-
     if (syncMode == SyncMode::Deterministic) {
       long long absTick = (long long)currTick;
       rhythmIndex = (int)(absTick % (long long)actualRSteps);
@@ -257,19 +259,25 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       long long nR = (cycles * (long long)actualRBeats) +
                      (long long)countOnes(rhythmPattern, partialSteps);
 
-      if (nR > 0) {
-        // Pos(nR, Pattern)
-        long long k = nR - 1;
-        long long pCycles = k / (long long)actualPBeats;
-        int pNoteIdx = (int)(k % (long long)actualPBeats);
-        long long pos = (pCycles * (long long)actualPSteps) +
-                        (long long)findIndexOfNote(pattern, (int)pNoteIdx);
+      if (patternMode == PatternMode::Clocked) {
+        if (nR > 0) {
+          // Pos(nR, Pattern)
+          long long k = nR - 1;
+          long long pCycles = k / (long long)actualPBeats;
+          int pNoteIdx = (int)(k % (long long)actualPBeats);
+          long long pos = (pCycles * (long long)actualPSteps) +
+                          (long long)findIndexOfNote(pattern, (int)pNoteIdx);
 
-        patternIndex = (int)(pos % (long long)actualPSteps);
-        sequenceIndex = (int)(pos % (long long)sequence.size());
+          patternIndex = (int)(pos % (long long)actualPSteps);
+          sequenceIndex = (int)(pos % (long long)sequence.size());
+        } else {
+          patternIndex = 0;
+          sequenceIndex = 0;
+        }
       } else {
-        patternIndex = 0;
-        sequenceIndex = 0;
+        // Gated: Rhythm counts map directly to Indices
+        patternIndex = (int)(nR % (long long)actualPSteps);
+        sequenceIndex = (int)(nR % (long long)sequence.size());
       }
     }
 
@@ -286,30 +294,20 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
     // --- Note Triggering & Advance ---
     if (syncMode != SyncMode::Deterministic) {
-      // Advance Pattern until we hit a note (Euclidean 1)
-      bool found = false;
-      int limit = (int)pattern.size();
-      while (limit-- > 0) {
-        if (pattern[(size_t)patternIndex % pattern.size()]) {
-          found = true;
-          break;
+      if (patternMode == PatternMode::Clocked) {
+        // Skip over rests instantaneously
+        int limit = (int)pattern.size();
+        while (!pattern[(size_t)patternIndex % pattern.size()] && limit-- > 0) {
+          patternIndex = (int)((patternIndex + 1) % (int)actualPSteps);
+          sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
         }
-        patternIndex = (int)((patternIndex + 1) % (int)pattern.size());
-        sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
       }
-      if (!found)
-        return;
     }
 
     if (pattern[(size_t)patternIndex % pattern.size()]) {
-      const auto &step = sequence[(size_t)sequenceIndex % sequence.size()];
+      const auto &step =
+          sequence[(size_t)sequenceIndex % (size_t)sequence.size()];
       visualPatternIndex = patternIndex % (int)pattern.size();
-
-      if (syncMode != SyncMode::Deterministic) {
-        // Prepare for NEXT rhythm beat: Advance at least once
-        patternIndex = (int)((patternIndex + 1) % (int)actualPSteps);
-        sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
-      }
 
       for (const HeldNote &noteTrigger : step) {
         float currentPressure = 0.0f;
@@ -347,6 +345,12 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
         playingNotes.push_back({outputChannel, noteTrigger.noteNumber});
       }
+    }
+
+    if (syncMode != SyncMode::Deterministic) {
+      // Advance to prepare for next rhythm beat
+      patternIndex = (int)((patternIndex + 1) % (int)actualPSteps);
+      sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
     }
   }
 }
@@ -441,6 +445,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("macroROffset", macroROffset);
 
     xml->setAttribute("syncMode", (int)syncMode);
+    xml->setAttribute("patternMode", (int)patternMode);
     xml->setAttribute("patternResetOnRelease", patternResetOnRelease ? 1 : 0);
     xml->setAttribute("rhythmResetOnRelease", rhythmResetOnRelease ? 1 : 0);
     xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
@@ -477,6 +482,9 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
       int oldMode = xml->getIntAttribute("transportSyncMode", 0);
       syncMode = (oldMode == 0) ? SyncMode::Synchronized : SyncMode::Gestural;
     }
+
+    patternMode = (PatternMode)xml->getIntAttribute("patternMode",
+                                                    (int)PatternMode::Gated);
 
     patternResetOnRelease =
         xml->getIntAttribute("patternResetOnRelease", 1) != 0;

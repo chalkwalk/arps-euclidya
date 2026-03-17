@@ -209,6 +209,21 @@ public:
         midiOutNode.onNodeDirtied();
     };
     addAndMakeVisible(syncModeBox);
+
+    // --- Pattern Mode ---
+    patternModeBox.addItem("Gated", (int)MidiOutNode::PatternMode::Gated + 1);
+    patternModeBox.addItem("Clocked",
+                           (int)MidiOutNode::PatternMode::Clocked + 1);
+    patternModeBox.setSelectedId((int)midiOutNode.patternMode + 1,
+                                 juce::dontSendNotification);
+    patternModeBox.onChange = [this]() {
+      midiOutNode.patternMode =
+          (MidiOutNode::PatternMode)(patternModeBox.getSelectedId() - 1);
+      if (midiOutNode.onNodeDirtied)
+        midiOutNode.onNodeDirtied();
+    };
+    addAndMakeVisible(patternModeBox);
+
     updateResetToggles();
 
     patternResetToggle.setButtonText("Reset Pattern");
@@ -396,7 +411,7 @@ public:
     };
 
     placeMpeK(lPressMod, pressMod, rowCtrl1S, rowMidE);
-    placeMpeK(lTimbMod, timbMod, rowMidS + 1, rowFooterE);
+    placeMpeK(lTimbMod, timbMod, 1 + rowMidS, rowFooterE);
 
     // --- Bottom Controls (Shifted right of MPE) ---
     int ctrlColS = 18; // Margin after MPE column
@@ -413,12 +428,13 @@ public:
     };
 
     placeB(clockDivBox, rowCtrl1S, rowCtrl1E, 1, 26);
-    placeB(tripletToggle, rowCtrl1S, rowCtrl1E, 27, 52);
-    placeB(outputChannelBox, rowCtrl1S, rowCtrl1E, 53, 78);
+    placeB(syncModeBox, rowCtrl1S, rowCtrl1E, 27, 52);
+    placeB(patternModeBox, rowCtrl1S, rowCtrl1E, 53, 78);
 
-    placeB(syncModeBox, rowCtrl2S, rowCtrl2E, 1, 26);
-    placeB(patternResetToggle, rowCtrl2S, rowCtrl2E, 27, 52);
-    placeB(rhythmResetToggle, rowCtrl2S, rowCtrl2E, 53, 78);
+    placeB(outputChannelBox, rowCtrl2S, rowCtrl2E, 1, 22);
+    placeB(tripletToggle, rowCtrl2S, rowCtrl2E, 23, 40);
+    placeB(patternResetToggle, rowCtrl2S, rowCtrl2E, 41, 59);
+    placeB(rhythmResetToggle, rowCtrl2S, rowCtrl2E, 60, 78);
 
     // --- Footer ---
     grid.items.add(
@@ -501,6 +517,10 @@ private:
   // Visualization
   EuclideanVisualizer visualizer;
   juce::Label patternTitle, rhythmTitle;
+
+  // Pattern Mode
+  juce::ComboBox patternModeBox;
+  juce::Label patternModeLabel;
 
   // Cycle length display
   juce::Label cycleLengthLabel;

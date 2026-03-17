@@ -32,6 +32,11 @@ public:
     Deterministic = 2 // Position bound to absolute DAW playhead
   };
 
+  enum class PatternMode {
+    Gated = 0,  // Pattern acts as a filter (skips are rests)
+    Clocked = 1 // Pattern acts as a melodic map (skips are jumps)
+  };
+
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
@@ -78,6 +83,7 @@ public:
 
   // Sync & Reset Controls
   SyncMode syncMode = SyncMode::Synchronized;
+  PatternMode patternMode = PatternMode::Gated;
   int transportSyncMode = 0;         // DEPRECATED - replaced by syncMode
   bool patternResetOnRelease = true; // Reset sequence + pattern on all-keys-up
   bool rhythmResetOnRelease = true;  // Reset rhythm on all-keys-up
