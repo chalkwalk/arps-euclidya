@@ -50,6 +50,8 @@ public:
   // DragAndDropTarget overrides
   bool
   isInterestedInDragSource(const SourceDetails &dragSourceDetails) override;
+  void itemDragMove(const SourceDetails &dragSourceDetails) override;
+  void itemDragExit(const SourceDetails &dragSourceDetails) override;
   void itemDropped(const SourceDetails &dragSourceDetails) override;
 
   // Called by NodeBlock when a port drag starts/moves/ends
@@ -79,10 +81,19 @@ public:
   int getGhostY() const { return ghostTargetY; }
   bool isGhostValid() const { return ghostIsValid; }
 
-  // Callback when a node type string is dropped from the library DragAndDrop
-  std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
+  // Proximity auto-connection
+  void attemptProximityConnection(GraphNode *droppedNode,
+                                  juce::Point<int> mousePos);
 
-  // Callback when a node clone is requested (original node, gridX, gridY)
+  enum class ProximityZone { None, Left, Right };
+  void updateProximityHighlight(juce::Point<int> mousePos,
+                                GraphNode *draggingNode);
+  void clearProximityHighlight();
+  GraphNode *getProximityTargetNode() const { return proximityTargetNode; }
+  ProximityZone getProximityZone() const { return proximityZone; }
+
+  // Callbacks for editor/processor
+  std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
   std::function<void(GraphNode *, int, int)> onNodeCloneRequest;
 
   // Refresh the cached cable paths
@@ -139,8 +150,10 @@ private:
   int ghostTargetH = 1;
   bool ghostIsValid = false;
 
-  // Selected node for highlighting
+  // Selection & Highlight state
   GraphNode *selectedNode = nullptr;
+  GraphNode *proximityTargetNode = nullptr;
+  ProximityZone proximityZone = ProximityZone::None;
 
   struct CachedCable {
     GraphNode *sourceNode;

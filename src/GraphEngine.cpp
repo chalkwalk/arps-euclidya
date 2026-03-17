@@ -161,6 +161,27 @@ void GraphEngine::removeConnection(GraphNode *source, int outPort,
   }
 }
 
+bool GraphEngine::isInputPortOccupied(GraphNode *targetNode, int inPort) const {
+  for (const auto &n : nodes) {
+    for (const auto &[port, connVec] : n->getConnections()) {
+      for (const auto &conn : connVec) {
+        if (conn.targetNode == targetNode && conn.targetInputPort == inPort)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool GraphEngine::isOutputPortOccupied(GraphNode *node, int portIndex) const {
+  auto &conns = node->getConnections();
+  auto it = conns.find(portIndex);
+  if (it != conns.end()) {
+    return !it->second.empty();
+  }
+  return false;
+}
+
 bool GraphEngine::wouldCreateCycle(GraphNode *source, GraphNode *target) const {
   // If target can reach source via existing connections, adding source→target
   // would create a cycle

@@ -469,6 +469,74 @@ void GraphCanvas::requestNodeClone(GraphNode *original, int gridX, int gridY) {
     onNodeCloneRequest(original, gridX, gridY);
 }
 
+void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
+                                             juce::Point<int> mousePos) {
+  if (droppedNode == nullptr)
+    return;
+
+  // Transform mouse position to world coordinates
+  float fx = (float)mousePos.x;
+  float fy = (float)mousePos.y;
+  getCameraTransform().inverted().transformPoint(fx, fy);
+  juce::Point<float> worldMousePos(fx, fy);
+
+  NodeBlock *targetBlock = nullptr;
+  for (auto *block : nodeBlocks) {
+    auto *node = block->getNode().get();
+    if (node == droppedNode)
+      continue;
+
+    // Use world-space bounds from the node itself
+    juce::Rectangle<float> worldBounds(node->nodeX, node->nodeY,
+                                       (float)block->getWidth(),
+                                       (float)block->getHeight());
+    if (worldBounds.contains(worldMousePos)) {
+      targetBlock = block;
+      break;
+    }
+  }
+
+  if (targetBlock == nullptr)
+    return;
+
+  GraphNode *targetNode = targetBlock->getNode().get();
+  float targetWidth = (float)targetBlock->getWidth();
+  float localX = worldMousePos.x - targetNode->nodeX;
+
+  bool connected = false;
+  if (localX < targetWidth * 0.25f) {
+    // Left 1/4 of Target: Dropped Output(s) -> Target Input(s)
+    int limit = std::min(droppedNode->getNumOutputPorts(),
+                         targetNode->getNumInputPorts());
+    for (int i = 0; i < limit; ++i) {
+      if (!graphEngine.isInputPortOccupied(targetNode, i)) {
+        if (graphEngine.addExplicitConnection(droppedNode, i, targetNode, i)) {
+          connected = true;
+        }
+      }
+    }
+  } else if (localX > targetWidth * 0.75f) {
+    // Right 1/4 of Target: Target Output(s) -> Dropped Input(s)
+    int limit = std::min(targetNode->getNumOutputPorts(),
+                         droppedNode->getNumInputPorts());
+    for (int i = 0; i < limit; ++i) {
+      if (!graphEngine.isInputPortOccupied(droppedNode, i)) {
+        if (graphEngine.addExplicitConnection(targetNode, i, droppedNode, i)) {
+          connected = true;
+        }
+      }
+    }
+  }
+
+  if (connected) {
+    refreshCableCache();
+    repaint();
+    if (onGraphChanged)
+      onGraphChanged();
+  }
+}
+
+// Find target port under the release point
 void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
   if (!isDraggingCable)
     return;
@@ -797,15 +865,70 @@ void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
     onGraphChanged();
 }
 
-bool GraphCanvas::isInterestedInDragSource(
-    const SourceDetails &dragSourceDetails) {
-  return dragSourceDetails.description.isString();
+void GraphCanvas::updateProximityHighlight(juce::Point<int> mousePos,
+                                           GraphNode *draggingNode) {
+  GraphNode *newTarget = nullptr;
+  ProximityZone newZone = ProximityZone::None;
+
+  float fx = (float)mousePos.x;
+  float fy = (float)mousePos.y;
+  getCameraTransform().inverted().transformPoint(fx, fy);
+  juce::Point<float> worldMousePos(fx, fy);
+
+  for (auto *block : nodeBlocks) {
+    auto *node = block->getNode().get();
+    if (node == draggingNode)
+      continue;
+
+    // Use world-space bounds from the node itself
+    juce::Rectangle<float> worldBounds(node->nodeX, node->nodeY,
+                                       (float)block->getWidth(),
+                                       (float)block->getHeight());
+    if (worldBounds.contains(worldMousePos)) {
+      newTarget = node;
+      float targetWidth = (float)block->getWidth();
+      float localX = worldMousePos.x - node->nodeX;
+
+      if (localX < targetWidth * 0.25f)
+        newZone = ProximityZone::Left;
+      else if (localX > targetWidth * 0.75f)
+        newZone = ProximityZone::Right;
+      break;
+    }
+  }
+
+  if (newTarget != proximityTargetNode || newZone != proximityZone) {
+    proximityTargetNode = newTarget;
+    proximityZone = newZone;
+    repaint();
+  }
 }
 
-void GraphCanvas::itemDropped(const SourceDetails &dragSourceDetails) {
+void GraphCanvas::clearProximityHighlight() {
+  if (proximityTargetNode != nullptr || proximityZone != ProximityZone::None) {
+    proximityTargetNode = nullptr;
+    proximityZone = ProximityZone::None;
+    repaint();
+  }
+}
+
+bool GraphCanvas::isInterestedInDragSource(const SourceDetails &details) {
+  return details.description.toString().isNotEmpty();
+}
+
+void GraphCanvas::itemDragMove(const SourceDetails &details) {
+  updateProximityHighlight(details.localPosition, nullptr);
+}
+
+void GraphCanvas::itemDragExit(const SourceDetails &details) {
+  juce::ignoreUnused(details);
+  clearProximityHighlight();
+}
+
+void GraphCanvas::itemDropped(const SourceDetails &details) {
+  clearProximityHighlight();
   if (onNodeDropped) {
-    onNodeDropped(dragSourceDetails.description.toString(),
-                  dragSourceDetails.localPosition);
+    onNodeDropped(details.description.toString(), details.localPosition);
   }
 }
 

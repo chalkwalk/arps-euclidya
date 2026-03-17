@@ -58,16 +58,28 @@ void NodeBlock::paint(juce::Graphics &g) {
 
   // Border (Neon tinted)
   bool isSelected = (parentCanvas.getSelectedNode() == targetNode.get());
-  if (isSelected) {
+  if (parentCanvas.getSelectedNode() == targetNode.get()) {
     // Outer glow for selected node
     g.setColour(juce::Colour(0xff0df0e3));
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
                            2.5f);
 
-    // Subtle halo
-    g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.2f));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().expanded(2.0f), 8.0f,
-                           4.0f);
+    // Selection Halo
+    g.setColour(ArpsLookAndFeel::getNeonColor().withAlpha(0.4f));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().expanded(4.0f), 8.0f,
+                           3.0f);
+  }
+
+  // Highlight for proximity auto-connection
+  if (parentCanvas.getProximityTargetNode() == targetNode.get()) {
+    auto zone = parentCanvas.getProximityZone();
+    g.setColour(juce::Colour(0x600df0e3)); // Semi-transparent neon
+    if (zone == GraphCanvas::ProximityZone::Left)
+      g.fillRoundedRectangle(
+          getLocalBounds().removeFromLeft(getWidth() / 4).toFloat(), 6.0f);
+    else if (zone == GraphCanvas::ProximityZone::Right)
+      g.fillRoundedRectangle(
+          getLocalBounds().removeFromRight(getWidth() / 4).toFloat(), 6.0f);
   } else {
     g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
@@ -236,6 +248,9 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
 
     if (onPositionChanged)
       onPositionChanged();
+
+    parentCanvas.updateProximityHighlight(
+        e.getEventRelativeTo(&parentCanvas).getPosition(), targetNode.get());
   }
 }
 
@@ -244,9 +259,10 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     return;
   }
 
+  auto mousePosOnCanvas = e.getEventRelativeTo(&parentCanvas).getPosition();
+
   if (isDraggingCable && onPortDragEnd) {
-    auto canvasPos = e.getEventRelativeTo(&parentCanvas).getPosition();
-    onPortDragEnd(canvasPos);
+    onPortDragEnd(mousePosOnCanvas);
   }
   if (isDraggingNode) {
     if (e.mods.isCtrlDown()) {
@@ -282,6 +298,9 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
 
     if (onPositionChanged)
       onPositionChanged();
+
+    parentCanvas.attemptProximityConnection(targetNode.get(), mousePosOnCanvas);
+    parentCanvas.clearProximityHighlight();
   }
 
   isDraggingCable = false;

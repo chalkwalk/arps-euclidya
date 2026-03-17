@@ -40,6 +40,10 @@ public:
 
   std::function<void()> onGraphDirtied;
 
+  // Occupancy checks
+  bool isInputPortOccupied(GraphNode *node, int portIndex) const;
+  bool isOutputPortOccupied(GraphNode *node, int portIndex) const;
+
   // Check if adding a connection would create a cycle
   bool wouldCreateCycle(GraphNode *source, GraphNode *target) const;
 

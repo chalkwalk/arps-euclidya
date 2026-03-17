@@ -50,6 +50,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
         audioProcessor.clockManager, audioProcessor.macros);
     if (newNode) {
       graphCanvas->addNodeAtPosition(newNode, screenPos);
+      graphCanvas->attemptProximityConnection(newNode.get(), screenPos);
     }
   };
 
@@ -77,6 +78,18 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
 
       audioProcessor.addNode(newNode);
       graphCanvas->rebuild();
+
+      // Attempt proximity connection at the new location
+      juce::Point<int> screenPos(
+          (int)(newNode->nodeX),
+          (int)(newNode->nodeY)); // Rough world to screen conversion
+      // Actually we need the screen position.
+      // But rebuild() might have changed the component positions.
+      // Let's just use the grid coordinates to find the block...
+      // Or better, let attemptProximityConnection handle the world coordinates
+      // too? I'll skip it for clone for now as it's less common to clone *onto*
+      // a node. But the library drop is critical.
+
       if (graphCanvas->onGraphChanged)
         graphCanvas->onGraphChanged();
     }
