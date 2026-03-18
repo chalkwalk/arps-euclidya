@@ -79,6 +79,11 @@ public:
   std::atomic<bool> macrosDirty{true};
 
   // Graph Editor methods
+  static constexpr int CURRENT_PATCH_VERSION = 1;
+
+  bool savePatch(const juce::File &file);
+  bool loadPatch(const juce::File &file);
+
   void addNode(std::shared_ptr<GraphNode> node);
   void removeNode(GraphNode *node);
 
@@ -86,6 +91,8 @@ public:
   // Hardcoded Step 2 Nodes
 
 private:
+  void upgradePatch(juce::XmlElement *xml, int fromVersion);
+  void loadFromXml(juce::XmlElement *xmlState);
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArpsEuclidyaProcessor)

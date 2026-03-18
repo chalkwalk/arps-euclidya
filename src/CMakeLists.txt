@@ -62,6 +62,7 @@ target_sources(ArpsEuclidya
         NodeBlock.cpp
         GraphCanvas.cpp
         ArpsLookAndFeel.cpp
+        PatchManagementPanel.cpp
     PUBLIC    NodeEditorPanel.cpp)
 
 clap_juce_extensions_plugin(TARGET ArpsEuclidya CLAP_ID "com.ChalkWalkMusic.ArpsEuclidya" CLAP_FEATURES "note-effect" "tool")

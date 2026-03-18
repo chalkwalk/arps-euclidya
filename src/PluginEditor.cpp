@@ -3,7 +3,7 @@
 #include "NodeFactory.h"
 
 ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
-    : AudioProcessorEditor(p), audioProcessor(p),
+    : AudioProcessorEditor(p), audioProcessor(p), patchPanel(p),
       midiKeyboard(p.keyboardState,
                    juce::MidiKeyboardComponent::horizontalKeyboard) {
 
@@ -36,6 +36,8 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     toggleSidebarButton.setButtonText(isSidebarExpanded ? "<" : ">");
     resized();
   };
+
+  addAndMakeVisible(patchPanel);
 
   // Setup Graph Canvas
   graphCanvas = std::make_unique<GraphCanvas>(audioProcessor.graphEngine,
@@ -151,17 +153,21 @@ void ArpsEuclidyaEditor::timerCallback() {
 }
 
 void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
-  g.fillAll(juce::Colour(0xff111111));
-  g.setColour(juce::Colour(0xff222222));
   if (isSidebarExpanded)
     g.fillRect(libraryPanel.getBounds());
   g.fillRect(macroBar.getBounds());
+  g.fillRect(patchPanel.getBounds());
 }
 
 void ArpsEuclidyaEditor::resized() {
   auto bounds = getLocalBounds();
 
-  // Macro bar at the top
+  // Patch Management Area (at the top, above macros or alongside)
+  // Let's put it at the very top
+  auto patchBounds = bounds.removeFromTop(40);
+  patchPanel.setBounds(patchBounds);
+
+  // Macro bar below patch panel
   auto macroBounds = bounds.removeFromTop(80);
   macroBar.setBounds(macroBounds);
 
@@ -204,5 +210,11 @@ void ArpsEuclidyaEditor::addNodeFromLibrary(const juce::String &nodeType) {
       audioProcessor.clockManager, audioProcessor.macros);
   if (newNode) {
     graphCanvas->addNodeAtDefaultPosition(newNode);
+  }
+}
+
+void ArpsEuclidyaEditor::rebuildCanvas() {
+  if (graphCanvas != nullptr) {
+    graphCanvas->rebuild();
   }
 }

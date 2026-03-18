@@ -212,26 +212,88 @@ void ArpsEuclidyaProcessor::setStateInformation(const void *data,
       getXmlFromBinary(data, sizeInBytes));
 
   if (xmlState != nullptr && xmlState->hasTagName("ArpsEuclidyaState")) {
-    // Restore APVTS Macros
-    auto *apvtsWrapper = xmlState->getChildByName("APVTS");
-    if (apvtsWrapper != nullptr && apvtsWrapper->getNumChildElements() > 0) {
-      auto *apvtsXml = apvtsWrapper->getChildElement(0);
-      if (apvtsXml->hasTagName(apvts.state.getType())) {
-        apvts.replaceState(juce::ValueTree::fromXml(*apvtsXml));
-      }
-    }
+    loadFromXml(xmlState.get());
+  }
+}
 
-    // Restore Graph State
-    auto *graphXml = xmlState->getChildByName("Graph");
-    if (graphXml != nullptr) {
-      const juce::ScopedLock sl(graphLock);
-      graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
-      for (auto &node : graphEngine.getNodes()) {
-        node->onMappingChanged = [this]() { updateMacroNames(); };
-      }
-      updateMacroNames();
+bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
+  juce::XmlElement xmlRoot("ArpsEuclidyaState");
+  xmlRoot.setAttribute("version", CURRENT_PATCH_VERSION);
+
+  // Save APVTS Macros
+  auto state = apvts.copyState();
+  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
+  if (apvtsXml != nullptr) {
+    auto *wrapper = xmlRoot.createNewChildElement("APVTS");
+    wrapper->addChildElement(apvtsXml.release());
+  }
+
+  // Save Graph State
+  auto *graphXml = xmlRoot.createNewChildElement("Graph");
+  {
+    const juce::ScopedLock sl(graphLock);
+    graphEngine.saveState(graphXml);
+  }
+
+  return xmlRoot.writeTo(file);
+}
+
+bool ArpsEuclidyaProcessor::loadPatch(const juce::File &file) {
+  auto xmlState = juce::XmlDocument::parse(file);
+
+  if (xmlState != nullptr && xmlState->hasTagName("ArpsEuclidyaState")) {
+    loadFromXml(xmlState.get());
+    return true;
+  }
+  return false;
+}
+
+void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
+  int version = xmlState->getIntAttribute("version", 0);
+
+  if (version > CURRENT_PATCH_VERSION) {
+    return;
+  }
+
+  if (version < CURRENT_PATCH_VERSION) {
+    upgradePatch(xmlState, version);
+  }
+
+  // Restore APVTS Macros
+  auto *apvtsWrapper = xmlState->getChildByName("APVTS");
+  if (apvtsWrapper != nullptr && apvtsWrapper->getNumChildElements() > 0) {
+    auto *apvtsXml = apvtsWrapper->getChildElement(0);
+    if (apvtsXml->hasTagName(apvts.state.getType())) {
+      apvts.replaceState(juce::ValueTree::fromXml(*apvtsXml));
     }
   }
+
+  // Restore Graph State
+  auto *graphXml = xmlState->getChildByName("Graph");
+  if (graphXml != nullptr) {
+    const juce::ScopedLock sl(graphLock);
+    graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
+    for (auto &node : graphEngine.getNodes()) {
+      node->onMappingChanged = [this]() { updateMacroNames(); };
+    }
+    updateMacroNames();
+
+    if (auto *editor = getEditor()) {
+      editor->rebuildCanvas();
+    }
+  }
+}
+
+void ArpsEuclidyaProcessor::upgradePatch(juce::XmlElement *xml,
+                                         int fromVersion) {
+  // Incremental upgrades
+  for (int v = fromVersion; v < CURRENT_PATCH_VERSION; ++v) {
+    if (v == 1) {
+      // Example migration for v1 to v2
+      // upgradeV1toV2(xml);
+    }
+  }
+  xml->setAttribute("version", CURRENT_PATCH_VERSION);
 }
 
 ArpsEuclidyaEditor *ArpsEuclidyaProcessor::getEditor() {

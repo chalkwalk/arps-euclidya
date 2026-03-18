@@ -3,6 +3,7 @@
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "ModuleLibraryPanel.h"
+#include "PatchManagementPanel.h"
 #include "PluginProcessor.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -19,6 +20,8 @@ public:
   void resized() override;
   void timerCallback() override;
 
+  void rebuildCanvas();
+
 private:
   void addNodeFromLibrary(const juce::String &nodeType);
 
@@ -28,6 +31,9 @@ private:
   ModuleLibraryPanel libraryPanel;
   juce::TextButton toggleSidebarButton;
   bool isSidebarExpanded = true;
+
+  // Patch Management
+  PatchManagementPanel patchPanel;
 
   // Graph canvas
   std::unique_ptr<GraphCanvas> graphCanvas;
