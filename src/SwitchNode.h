@@ -12,8 +12,7 @@ public:
   int getNumOutputPorts() const override { return 1; }
 
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
@@ -22,9 +21,9 @@ public:
     return {{"Switch", &macroSwitch}};
   }
 
-  bool switchOn = true;
+  int switchOn = 1;
   int macroSwitch = -1;
+
+private:
   std::array<std::atomic<float> *, 32> &macros;
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

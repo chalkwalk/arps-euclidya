@@ -1,103 +1,28 @@
 #include "ChordNNode.h"
-#include "MacroMappingMenu.h"
 #include <algorithm>
-
-class ChordNNodeEditor : public juce::Component {
-public:
-  ChordNNodeEditor(ChordNNode &node, juce::AudioProcessorValueTreeState &apvts)
-      : chordNNode(node) {
-
-    auto setupSlider = [this, &apvts](
-                           CustomMacroSlider &slider, juce::Label &label,
-                           int &nodeValueRef, int &nodeMacroRef,
-                           std::unique_ptr<MacroAttachment> &attachment,
-                           const juce::String &labelText, int min, int max) {
-      slider.setRange(min, max, 1);
-      slider.setValue(nodeValueRef, juce::dontSendNotification);
-      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-      addAndMakeVisible(slider);
-
-      label.setText(labelText, juce::dontSendNotification);
-      label.setJustificationType(juce::Justification::centred);
-      addAndMakeVisible(label);
-
-      slider.onValueChange = [this, &slider, &nodeValueRef]() {
-        nodeValueRef = (int)slider.getValue();
-        if (chordNNode.onNodeDirtied)
-          chordNNode.onNodeDirtied();
-      };
-
-      auto updateSliderVisibility = [&slider](int macro) {
-        if (macro == -1) {
-          slider.removeColour(juce::Slider::rotarySliderFillColourId);
-          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-        } else {
-          slider.setColour(juce::Slider::rotarySliderFillColourId,
-                           juce::Colours::orange);
-          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                           juce::Colours::orange.withAlpha(0.3f));
-        }
-      };
-
-      updateSliderVisibility(nodeMacroRef);
-
-      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
-                             updateSliderVisibility]() {
-        MacroMappingMenu::showMenu(
-            &slider, nodeMacroRef,
-            [this, &nodeMacroRef, &attachment, &apvts, &slider,
-             updateSliderVisibility](int macroIndex) {
-              nodeMacroRef = macroIndex;
-              if (macroIndex == -1) {
-                attachment.reset();
-                slider.setTooltip("");
-              } else {
-                attachment = std::make_unique<MacroAttachment>(
-                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
-                slider.setTooltip("Mapped to Macro " +
-                                  juce::String(macroIndex + 1));
-              }
-              updateSliderVisibility(macroIndex);
-              if (chordNNode.onMappingChanged)
-                chordNNode.onMappingChanged();
-            });
-      };
-
-      // INIT
-      if (nodeMacroRef != -1) {
-        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
-        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
-      }
-    };
-
-    setupSlider(nValueSlider, nValueLabel, chordNNode.nValue,
-                chordNNode.macroNValue, nValueAttachment, "CHORD N", 1, 16);
-
-    setSize(100, 100);
-  }
-
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(2);
-    nValueLabel.setBounds(bounds.removeFromTop(16));
-    nValueSlider.setBounds(bounds);
-  }
-
-private:
-  ChordNNode &chordNNode;
-  CustomMacroSlider nValueSlider;
-  juce::Label nValueLabel;
-  std::unique_ptr<MacroAttachment> nValueAttachment;
-};
+#include <set>
 
 // --- ChordNNode Impl
 
 ChordNNode::ChordNNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
-std::unique_ptr<juce::Component>
-ChordNNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<ChordNNodeEditor>(*this, apvts);
+NodeLayout ChordNNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
+
+  UIElement slider;
+  slider.type = UIElementType::RotarySlider;
+  slider.label = "CHORD N";
+  slider.valueRef = const_cast<int *>(&nValue);
+  slider.macroIndexRef = const_cast<int *>(&macroNValue);
+  slider.minValue = 1;
+  slider.maxValue = 16;
+  slider.gridBounds = {0, 0, 3, 2};
+  layout.elements.push_back(slider);
+
+  return layout;
 }
 
 void ChordNNode::saveNodeState(juce::XmlElement *xml) {
@@ -116,8 +41,8 @@ void ChordNNode::loadNodeState(juce::XmlElement *xml) {
 
 void ChordNNode::process() {
   int actualNValue =
-      macroNValue != -1 && macros[macroNValue] != nullptr
-          ? 1 + (int)std::round(macros[macroNValue]->load() * 15.0f)
+      macroNValue != -1 && macros[(size_t)macroNValue] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroNValue]->load() * 15.0f)
           : nValue;
 
   auto it = inputSequences.find(0);

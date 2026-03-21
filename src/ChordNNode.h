@@ -1,18 +1,16 @@
 #pragma once
 #include "GraphNode.h"
-#include "SharedMacroUI.h"
 #include <array>
 #include <atomic>
-
-class ChordNNodeEditor;
 
 class ChordNNode : public GraphNode {
 public:
   ChordNNode(std::array<std::atomic<float> *, 32> &macros);
+  ~ChordNNode() override = default;
+
   std::string getName() const override { return "ChordN"; }
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
     return {{"Chord N", &macroNValue}};
@@ -26,7 +24,4 @@ public:
 
 private:
   std::array<std::atomic<float> *, 32> &macros;
-  friend class ChordNNodeEditor;
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

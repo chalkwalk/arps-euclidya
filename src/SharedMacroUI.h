@@ -17,6 +17,20 @@ public:
   }
 };
 
+class CustomMacroButton : public juce::TextButton {
+public:
+  std::function<void()> onRightClick;
+
+  void mouseDown(const juce::MouseEvent &e) override {
+    if (e.mods.isPopupMenu()) {
+      if (onRightClick)
+        onRightClick();
+    } else {
+      juce::TextButton::mouseDown(e);
+    }
+  }
+};
+
 class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
                         public juce::Slider::Listener {
 public:
@@ -53,4 +67,35 @@ private:
   juce::String paramID;
   juce::Slider &slider;
   bool isUpdating = false;
+};
+
+class ButtonAttachment : public juce::AudioProcessorValueTreeState::Listener,
+                         private juce::Timer {
+public:
+  ButtonAttachment(juce::AudioProcessorValueTreeState &s,
+                   const juce::String &pID, juce::Button &b)
+      : state(s), paramID(pID), button(b) {
+    state.addParameterListener(paramID, this);
+    startTimerHz(30);
+    parameterChanged(paramID, *state.getRawParameterValue(paramID));
+  }
+  ~ButtonAttachment() override {
+    state.removeParameterListener(paramID, this);
+    stopTimer();
+  }
+  void parameterChanged(const juce::String &, float newValue) override {
+    targetValue = newValue >= 0.5f;
+  }
+
+  void timerCallback() override {
+    if (button.getToggleState() != targetValue) {
+      button.setToggleState(targetValue, juce::dontSendNotification);
+    }
+  }
+
+private:
+  juce::AudioProcessorValueTreeState &state;
+  juce::String paramID;
+  juce::Button &button;
+  std::atomic<bool> targetValue{false};
 };

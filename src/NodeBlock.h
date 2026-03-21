@@ -6,7 +6,7 @@
 
 class GraphCanvas; // forward declaration
 
-class NodeBlock : public juce::Component {
+class NodeBlock : public juce::Component, private juce::Timer {
 public:
   NodeBlock(std::shared_ptr<GraphNode> node,
             juce::AudioProcessorValueTreeState &apvts, GraphCanvas &canvas);
@@ -14,6 +14,7 @@ public:
 
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void timerCallback() override;
 
   // Mouse handling for dragging the node
   void mouseDown(const juce::MouseEvent &e) override;
@@ -55,7 +56,14 @@ private:
 
   juce::Label titleLabel;
   juce::TextButton deleteButton{"X"};
+
+  // Fallback for nodes not yet migrated to NodeLayout
   std::unique_ptr<juce::Component> customControls;
+
+  // Dynamic UI Elements (Layout-driven)
+  juce::OwnedArray<juce::Component> dynamicComponents;
+  std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::Listener>>
+      dynamicAttachments;
 
   int dragStartGridX = 0;
   int dragStartGridY = 0;

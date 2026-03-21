@@ -2,6 +2,7 @@
 
 #include "DataModel.h"
 #include "LayoutConstants.h"
+#include "NodeLayout.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -17,13 +18,22 @@ public:
 
   virtual std::string getName() const = 0;
 
+  // UI and Grid Layout (the source of truth for node footprint)
+  virtual NodeLayout getLayout() const { return {}; }
+
   // Port counts — override in subclasses with non-standard port layouts
   virtual int getNumInputPorts() const { return 1; }
   virtual int getNumOutputPorts() const { return 1; }
 
-  // Grid footprint (integer grid cells)
-  virtual int getGridWidth() const { return 1; }
-  virtual int getGridHeight() const { return 1; }
+  // Grid footprint (derived from layout by default, but overridable)
+  virtual int getGridWidth() const {
+    auto layout = getLayout();
+    return (layout.gridWidth > 0) ? layout.gridWidth : 1;
+  }
+  virtual int getGridHeight() const {
+    auto layout = getLayout();
+    return (layout.gridHeight > 0) ? layout.gridHeight : 1;
+  }
 
   // Canvas position (persistent grid coordinates)
   int gridX = 0;
@@ -69,6 +79,12 @@ public:
   virtual std::unique_ptr<juce::Component>
   createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
     juce::ignoreUnused(apvts);
+    return nullptr;
+  }
+
+  virtual std::unique_ptr<juce::Component>
+  createCustomComponent(const juce::String &name) {
+    juce::ignoreUnused(name);
     return nullptr;
   }
 

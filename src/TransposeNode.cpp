@@ -1,105 +1,29 @@
 #include "TransposeNode.h"
-#include "MacroMappingMenu.h"
 #include <algorithm>
-
-class TransposeNodeEditor : public juce::Component {
-public:
-  TransposeNodeEditor(TransposeNode &node,
-                      juce::AudioProcessorValueTreeState &apvts)
-      : transposeNode(node) {
-
-    auto setupSlider = [this, &apvts](
-                           CustomMacroSlider &slider, juce::Label &label,
-                           int &nodeValueRef, int &nodeMacroRef,
-                           std::unique_ptr<MacroAttachment> &attachment,
-                           const juce::String &labelText, int min, int max) {
-      slider.setRange(min, max, 1);
-      slider.setValue(nodeValueRef, juce::dontSendNotification);
-      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-      addAndMakeVisible(slider);
-
-      label.setText(labelText, juce::dontSendNotification);
-      label.setJustificationType(juce::Justification::centred);
-      addAndMakeVisible(label);
-
-      slider.onValueChange = [this, &slider, &nodeValueRef]() {
-        nodeValueRef = (int)slider.getValue();
-        if (transposeNode.onNodeDirtied)
-          transposeNode.onNodeDirtied();
-      };
-
-      auto updateSliderVisibility = [&slider](int macro) {
-        if (macro == -1) {
-          slider.removeColour(juce::Slider::rotarySliderFillColourId);
-          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-        } else {
-          slider.setColour(juce::Slider::rotarySliderFillColourId,
-                           juce::Colours::orange);
-          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                           juce::Colours::orange.withAlpha(0.3f));
-        }
-      };
-
-      updateSliderVisibility(nodeMacroRef);
-
-      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
-                             updateSliderVisibility]() {
-        MacroMappingMenu::showMenu(
-            &slider, nodeMacroRef,
-            [this, &nodeMacroRef, &attachment, &apvts, &slider,
-             updateSliderVisibility](int macroIndex) {
-              nodeMacroRef = macroIndex;
-              if (macroIndex == -1) {
-                attachment.reset();
-                slider.setTooltip("");
-              } else {
-                attachment = std::make_unique<MacroAttachment>(
-                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
-                slider.setTooltip("Mapped to Macro " +
-                                  juce::String(macroIndex + 1));
-              }
-              updateSliderVisibility(macroIndex);
-              if (transposeNode.onMappingChanged)
-                transposeNode.onMappingChanged();
-            });
-      };
-
-      // INIT
-      if (nodeMacroRef != -1) {
-        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
-        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
-      }
-    };
-
-    setupSlider(semitonesSlider, semitonesLabel, transposeNode.semitones,
-                transposeNode.macroSemitones, semitonesAttachment, "TRANSPOSE",
-                -24, 24);
-
-    setSize(100, 100);
-  }
-
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(2);
-    semitonesLabel.setBounds(bounds.removeFromTop(16));
-    semitonesSlider.setBounds(bounds);
-  }
-
-private:
-  TransposeNode &transposeNode;
-  CustomMacroSlider semitonesSlider;
-  juce::Label semitonesLabel;
-  std::unique_ptr<MacroAttachment> semitonesAttachment;
-};
 
 // --- TransposeNode Impl
 
 TransposeNode::TransposeNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
-std::unique_ptr<juce::Component> TransposeNode::createEditorComponent(
-    juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<TransposeNodeEditor>(*this, apvts);
+NodeLayout TransposeNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
+
+  UIElement slider;
+  slider.type = UIElementType::RotarySlider;
+  slider.label = "TRANSPOSE";
+  slider.valueRef = const_cast<int *>(&semitones);
+  slider.macroIndexRef = const_cast<int *>(&macroSemitones);
+  slider.minValue = -24;
+  slider.maxValue = 24;
+  // Node is 1x1 major (100x100), body starts at PORT_MARGIN (14) and
+  // HEADER_HEIGHT (28). A 3x2 sub-grid fits well.
+  slider.gridBounds = {0, 0, 3, 2};
+  layout.elements.push_back(slider);
+
+  return layout;
 }
 
 void TransposeNode::saveNodeState(juce::XmlElement *xml) {

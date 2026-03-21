@@ -2,6 +2,8 @@
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
+#include "MacroMappingMenu.h"
+#include "SharedMacroUI.h"
 
 NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                      juce::AudioProcessorValueTreeState &apvts,
@@ -32,10 +34,132 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
     });
   };
 
-  customControls = node->createEditorComponent(apvts);
-  if (customControls != nullptr) {
-    customControls->setInterceptsMouseClicks(false, true);
-    addAndMakeVisible(customControls.get());
+  auto layout = node->getLayout();
+  for (const auto &element : layout.elements) {
+    juce::Component *comp = nullptr;
+
+    if (element.type == UIElementType::RotarySlider) {
+      auto *slider = new CustomMacroSlider();
+      slider->setRange(element.minValue, element.maxValue, 1);
+      slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+      slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+
+      if (element.valueRef != nullptr) {
+        slider->setValue(*element.valueRef, juce::dontSendNotification);
+        slider->onValueChange = [node, slider, valRef = element.valueRef]() {
+          *valRef = (int)slider->getValue();
+          if (node->onNodeDirtied)
+            node->onNodeDirtied();
+        };
+      }
+
+      if (element.macroIndexRef != nullptr) {
+        auto updateSliderVisibility = [slider](int macro) {
+          if (macro == -1) {
+            slider->removeColour(juce::Slider::rotarySliderFillColourId);
+            slider->removeColour(juce::Slider::rotarySliderOutlineColourId);
+          } else {
+            slider->setColour(juce::Slider::rotarySliderFillColourId,
+                              juce::Colours::orange);
+            slider->setColour(juce::Slider::rotarySliderOutlineColourId,
+                              juce::Colours::orange.withAlpha(0.3f));
+          }
+        };
+
+        updateSliderVisibility(*element.macroIndexRef);
+
+        slider->onRightClick = [this, node, slider,
+                                macroRef = element.macroIndexRef, &apvts,
+                                updateSliderVisibility]() {
+          MacroMappingMenu::showMenu(slider, *macroRef,
+                                     [this, node, macroRef, &apvts, slider,
+                                      updateSliderVisibility](int macroIndex) {
+                                       *macroRef = macroIndex;
+                                       if (node->onMappingChanged)
+                                         node->onMappingChanged();
+                                     });
+        };
+
+        if (*element.macroIndexRef != -1) {
+          juce::String paramID =
+              "macro_" + juce::String(*element.macroIndexRef + 1);
+          dynamicAttachments.push_back(
+              std::make_unique<MacroAttachment>(apvts, paramID, *slider));
+        }
+      }
+      comp = slider;
+    } else if (element.type == UIElementType::Label) {
+      auto *label = new juce::Label();
+      label->setText(element.label, juce::dontSendNotification);
+      label->setJustificationType(juce::Justification::centred);
+      label->setInterceptsMouseClicks(false, false);
+      comp = label;
+    } else if (element.type == UIElementType::PushButton ||
+               element.type == UIElementType::Toggle) {
+      auto *button = new CustomMacroButton();
+      button->setButtonText(element.label);
+
+      if (element.type == UIElementType::Toggle) {
+        button->setClickingTogglesState(true);
+      }
+
+      if (element.valueRef != nullptr) {
+        // Initial state sync
+        button->setToggleState(*element.valueRef != 0,
+                               juce::dontSendNotification);
+
+        button->onClick = [node, button, valRef = element.valueRef, element]() {
+          if (element.macroIndexRef != nullptr && *element.macroIndexRef != -1)
+            return;
+
+          if (element.type == UIElementType::Toggle) {
+            *valRef = button->getToggleState() ? 1 : 0;
+          } else {
+            // PushButton logic (e.g. toggle dest or trigger)
+            *valRef = (*valRef == 0) ? 1 : 0;
+          }
+
+          if (node->onNodeDirtied)
+            node->onNodeDirtied();
+        };
+      }
+
+      if (element.macroIndexRef != nullptr) {
+        button->onRightClick = [this, node, button,
+                                macroRef = element.macroIndexRef, &apvts]() {
+          MacroMappingMenu::showMenu(button, *macroRef,
+                                     [this, node, macroRef](int macroIndex) {
+                                       *macroRef = macroIndex;
+                                       if (node->onMappingChanged)
+                                         node->onMappingChanged();
+                                     });
+        };
+
+        if (*element.macroIndexRef != -1) {
+          juce::String paramID =
+              "macro_" + juce::String(*element.macroIndexRef + 1);
+          dynamicAttachments.push_back(
+              std::make_unique<ButtonAttachment>(apvts, paramID, *button));
+        }
+      }
+      comp = button;
+    } else if (element.type == UIElementType::Custom) {
+      if (auto custom = node->createCustomComponent(element.customType)) {
+        comp = custom.release();
+      }
+    }
+
+    if (comp != nullptr) {
+      dynamicComponents.add(comp);
+      addAndMakeVisible(comp);
+    }
+  }
+
+  if (layout.elements.empty()) {
+    customControls = node->createEditorComponent(apvts);
+    if (customControls != nullptr) {
+      addAndMakeVisible(customControls.get());
+    }
   }
 
   // Physical bounds derived exclusively from grid properties
@@ -47,6 +171,37 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
   int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
 
   setSize(width, height);
+  startTimerHz(12); // Steady UI sync
+}
+
+void NodeBlock::timerCallback() {
+  auto layout = targetNode->getLayout();
+  for (int i = 0; i < dynamicComponents.size(); ++i) {
+    if (i < (int)layout.elements.size()) {
+      auto &element = layout.elements[i];
+      auto *comp = dynamicComponents[i];
+
+      if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
+        if (element.valueRef != nullptr && !slider->isMouseButtonDown()) {
+          slider->setValue(*element.valueRef, juce::dontSendNotification);
+        }
+      } else if (auto *button = dynamic_cast<juce::TextButton *>(comp)) {
+        if (element.label != button->getButtonText()) {
+          button->setButtonText(element.label);
+        }
+        if (element.valueRef != nullptr && !button->isMouseButtonDown()) {
+          bool state = (*element.valueRef != 0);
+          if (button->getToggleState() != state) {
+            button->setToggleState(state, juce::dontSendNotification);
+          }
+        }
+      } else if (auto *label = dynamic_cast<juce::Label *>(comp)) {
+        if (element.label != label->getText()) {
+          label->setText(element.label, juce::dontSendNotification);
+        }
+      }
+    }
+  }
 }
 
 void NodeBlock::paint(juce::Graphics &g) {
@@ -57,7 +212,6 @@ void NodeBlock::paint(juce::Graphics &g) {
   g.fillRoundedRectangle(bounds, 6.0f);
 
   // Border (Neon tinted)
-  bool isSelected = (parentCanvas.getSelectedNode() == targetNode.get());
   if (parentCanvas.getSelectedNode() == targetNode.get()) {
     // Outer glow for selected node
     g.setColour(juce::Colour(0xff0df0e3));
@@ -136,17 +290,37 @@ void NodeBlock::resized() {
   // Floating Header Area
   auto header = bounds.removeFromTop(HEADER_HEIGHT);
 
-  // Right aligned delete button (small white cross, no frame)
-  // Positioned flush to the right boundary of the node
+  // Right aligned delete button
   deleteButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
 
-  // Title takes the rest, moved further left with minimal padding
+  // Title
   titleLabel.setBounds(header.withTrimmedLeft(6));
 
-  // Body: custom controls
+  // Body: dynamic controls
+  auto layout = targetNode->getLayout();
+
+  // Base offset for internal elements (below header, inside margins)
+  int startX = PORT_MARGIN;
+  int startY = HEADER_HEIGHT;
+
+  // We use a sub-grid of 25 pixels for internal placement
+  const int subGridSize = 25;
+
+  for (int i = 0; i < dynamicComponents.size(); ++i) {
+    if (i < (int)layout.elements.size()) {
+      auto &element = layout.elements[i];
+      auto elementBounds = element.gridBounds;
+
+      dynamicComponents[i]->setBounds(
+          startX + elementBounds.getX() * subGridSize,
+          startY + elementBounds.getY() * subGridSize,
+          elementBounds.getWidth() * subGridSize,
+          elementBounds.getHeight() * subGridSize);
+    }
+  }
+
   if (customControls != nullptr) {
-    auto body = bounds.reduced(PORT_MARGIN + 4, 4);
-    customControls->setBounds(body);
+    customControls->setBounds(bounds.reduced(PORT_MARGIN, 4));
   }
 }
 
@@ -325,6 +499,53 @@ void NodeBlock::cancelDrag() {
   isDraggingCable = false;
 }
 
+juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
+  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
+  // Flush with the left edge. Width is RADIUS. Height is 2*RADIUS.
+  return juce::Rectangle<int>(0, y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2);
+}
+
+juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
+  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
+  // Flush with the right edge. Width is RADIUS. Height is 2*RADIUS.
+  return juce::Rectangle<int>(getWidth() - PORT_RADIUS, y - PORT_RADIUS,
+                              PORT_RADIUS, PORT_RADIUS * 2);
+}
+
+juce::Point<int> NodeBlock::getInputPortCentre(int portIndex) const {
+  auto rect = getInputPortRect(portIndex);
+  return getPosition() + rect.getCentre();
+}
+
+juce::Point<int> NodeBlock::getOutputPortCentre(int portIndex) const {
+  auto rect = getOutputPortRect(portIndex);
+  return getPosition() + rect.getCentre();
+}
+
+int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
+  int numIn = targetNode->getNumInputPorts();
+  auto localFloat = localPoint.toFloat();
+  for (int i = 0; i < numIn; ++i) {
+    auto rect = getInputPortRect(i);
+    auto centre = rect.getCentre().toFloat();
+    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS)
+      return i;
+  }
+  return -1;
+}
+
+int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
+  int numOut = targetNode->getNumOutputPorts();
+  auto localFloat = localPoint.toFloat();
+  for (int i = 0; i < numOut; ++i) {
+    auto rect = getOutputPortRect(i);
+    auto centre = rect.getCentre().toFloat();
+    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS)
+      return i;
+  }
+  return -1;
+}
+
 NodeDragPreview::NodeDragPreview(const juce::String &nodeType, int gridW,
                                  int gridH, int numIn, int numOut)
     : type(nodeType), gridW(gridW), gridH(gridH), numIn(numIn), numOut(numOut) {
@@ -366,51 +587,4 @@ void NodeDragPreview::paint(juce::Graphics &g) {
                   (float)NodeBlock::PORT_RADIUS,
                   (float)(NodeBlock::PORT_RADIUS * 2));
   }
-}
-
-juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
-  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
-  // Flush with the left edge. Width is RADIUS. Height is 2*RADIUS.
-  return juce::Rectangle<int>(0, y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2);
-}
-
-juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
-  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
-  // Flush with the right edge. Width is RADIUS. Height is 2*RADIUS.
-  return juce::Rectangle<int>(getWidth() - PORT_RADIUS, y - PORT_RADIUS,
-                              PORT_RADIUS, PORT_RADIUS * 2);
-}
-
-juce::Point<int> NodeBlock::getInputPortCentre(int portIndex) const {
-  auto rect = getInputPortRect(portIndex);
-  return getPosition() + rect.getCentre();
-}
-
-juce::Point<int> NodeBlock::getOutputPortCentre(int portIndex) const {
-  auto rect = getOutputPortRect(portIndex);
-  return getPosition() + rect.getCentre();
-}
-
-int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
-  int numIn = targetNode->getNumInputPorts();
-  auto localFloat = localPoint.toFloat();
-  for (int i = 0; i < numIn; ++i) {
-    auto rect = getInputPortRect(i);
-    auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
-      return i;
-  }
-  return -1;
-}
-
-int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
-  int numOut = targetNode->getNumOutputPorts();
-  auto localFloat = localPoint.toFloat();
-  for (int i = 0; i < numOut; ++i) {
-    auto rect = getOutputPortRect(i);
-    auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= PORT_HIT_RADIUS)
-      return i;
-  }
-  return -1;
 }
