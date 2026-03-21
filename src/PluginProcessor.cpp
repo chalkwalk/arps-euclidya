@@ -1,10 +1,10 @@
 #include "PluginProcessor.h"
 #include "MacroParameter.h"
-#include "MidiInNode.h"
-#include "MidiOutNode.h"
+#include "MidiInNode/MidiInNode.h"
+#include "MidiOutNode/MidiOutNode.h"
 #include "PluginEditor.h"
-#include "ReverseNode.h"
-#include "SortNode.h"
+#include "ReverseNode/ReverseNode.h"
+#include "SortNode/SortNode.h"
 
 ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     : AudioProcessor(BusesProperties()), // No audio channels for MIDI effect

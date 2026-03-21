@@ -22,48 +22,47 @@ juce_generate_juce_header(ArpsEuclidya)
 
 target_sources(ArpsEuclidya
     PRIVATE
-        PluginProcessor.cpp
-        PluginEditor.cpp
-        MidiInNode.cpp
-        MidiOutNode.cpp
-        ClockManager.cpp
-        GraphNode.cpp
-        GraphEngine.cpp
-        SortNode.cpp
-        ReverseNode.cpp
-        MidiHandler.cpp
-        EuclideanMath.cpp
-        TransposeNode.cpp
-        FoldNode.cpp
-        UnfoldNode.cpp
-        QuantizerNode.cpp
-        ChordNNode.cpp
-        OctaveStackNode.cpp
-        MultiplyNode.cpp
-        ChordSplitNode.cpp
-        DiagnosticNode.cpp
-        ConvergeNode.cpp
-        DivergeNode.cpp
-        WalkNode.cpp
-        ZipNode.cpp
-        UnzipNode.cpp
-        RouteNode.cpp
-        SelectNode.cpp
-        SwitchNode.cpp
-        ChordSplitNode.cpp
-        SequenceNode.cpp
-        OctaveTransposeNode.cpp
-        MultiplyNode.cpp
-        AllNotesNode.cpp
-        SplitNode.cpp
-        ConcatenateNode.cpp
-        MidiOutNodeEditor.cpp
-        ModuleLibraryPanel.cpp
-        NodeBlock.cpp
-        GraphCanvas.cpp
+        AllNotesNode/AllNotesNode.cpp
         ArpsLookAndFeel.cpp
+        ChordNNode/ChordNNode.cpp
+        ChordSplitNode/ChordSplitNode.cpp
+        ClockManager.cpp
+        ConcatenateNode/ConcatenateNode.cpp
+        ConvergeNode/ConvergeNode.cpp
+        DiagnosticNode/DiagnosticNode.cpp
+        DivergeNode/DivergeNode.cpp
+        EuclideanMath.cpp
+        FoldNode/FoldNode.cpp
+        GraphCanvas.cpp
+        GraphEngine.cpp
+        GraphNode.cpp
+        MidiHandler.cpp
+        MidiInNode/MidiInNode.cpp
+        MidiOutNode/MidiOutNode.cpp
+        MidiOutNode/MidiOutNodeEditor.cpp
+        ModuleLibraryPanel.cpp
+        MultiplyNode/MultiplyNode.cpp
+        NodeBlock.cpp
+        OctaveStackNode/OctaveStackNode.cpp
+        OctaveTransposeNode/OctaveTransposeNode.cpp
         PatchManagementPanel.cpp
-    PUBLIC    NodeEditorPanel.cpp)
+        PluginEditor.cpp
+        PluginProcessor.cpp
+        QuantizerNode/QuantizerNode.cpp
+        ReverseNode/ReverseNode.cpp
+        RouteNode/RouteNode.cpp
+        SelectNode/SelectNode.cpp
+        SequenceNode/SequenceNode.cpp
+        SortNode/SortNode.cpp
+        SplitNode/SplitNode.cpp
+        SwitchNode/SwitchNode.cpp
+        TransposeNode/TransposeNode.cpp
+        UnfoldNode/UnfoldNode.cpp
+        UnzipNode/UnzipNode.cpp
+        WalkNode/WalkNode.cpp
+        ZipNode/ZipNode.cpp
+    PUBLIC
+        NodeEditorPanel.cpp)
 
 clap_juce_extensions_plugin(TARGET ArpsEuclidya CLAP_ID "com.ChalkWalkMusic.ArpsEuclidya" CLAP_FEATURES "note-effect" "tool")
 
