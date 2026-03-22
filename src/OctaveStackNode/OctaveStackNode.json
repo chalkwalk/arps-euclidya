@@ -8,8 +8,8 @@
       "gridBounds": [
         0,
         0,
-        2,
-        1
+        20,
+        7
       ]
     },
     {
@@ -18,9 +18,9 @@
       "maxValue": 4,
       "gridBounds": [
         0,
-        1,
-        2,
-        1
+        7,
+        20,
+        7
       ],
       "label": "octaves"
     },
@@ -29,9 +29,9 @@
       "label": "uniqueOnly",
       "gridBounds": [
         0,
-        2,
-        2,
-        1
+        13,
+        20,
+        7
       ]
     }
   ]

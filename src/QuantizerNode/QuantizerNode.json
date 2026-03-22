@@ -8,8 +8,8 @@
       "gridBounds": [
         0,
         0,
-        3,
-        1
+        17,
+        13
       ]
     },
     {
@@ -32,10 +32,10 @@
         "Diminished"
       ],
       "gridBounds": [
-        3,
+        17,
         0,
-        4,
-        1
+        23,
+        13
       ],
       "label": "tonality"
     },
@@ -44,9 +44,9 @@
       "label": "Root",
       "gridBounds": [
         0,
-        1,
-        3,
-        1
+        13,
+        17,
+        13
       ]
     },
     {
@@ -66,10 +66,10 @@
         "B"
       ],
       "gridBounds": [
-        3,
-        1,
-        4,
-        1
+        17,
+        13,
+        23,
+        13
       ],
       "label": "rootNote"
     },
@@ -78,18 +78,18 @@
       "label": "Mode",
       "gridBounds": [
         0,
-        2,
-        3,
-        1
+        27,
+        17,
+        13
       ]
     },
     {
       "type": "Toggle",
       "gridBounds": [
-        3,
-        2,
-        4,
-        1
+        17,
+        27,
+        23,
+        13
       ],
       "label": "mode"
     }

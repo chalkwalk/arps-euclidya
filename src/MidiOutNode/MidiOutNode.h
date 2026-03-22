@@ -20,6 +20,9 @@ public:
   // Re-caches internally when graph sequence changes
   void process() override;
 
+  // Called immediately when UI controls change
+  void parameterChanged() override { clampParameters(); }
+
   void generateMidi(juce::MidiBuffer &outputBuffer, int samplePosition);
 
   // Returns a formatted string showing the cycle length in ticks, quarter
@@ -95,6 +98,22 @@ public:
 
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;
+
+  // UI proxy variables (NodeBlock UI needs integer pointers)
+  int ui_syncMode = 1;
+  int ui_patternMode = 0;
+  int ui_patternResetOnRelease = 1;
+  int ui_rhythmResetOnRelease = 1;
+  int ui_triplet = 0;
+
+  int ui_pBeatsMin = 1;
+  int ui_pBeatsMax = 32;
+  int ui_pOffsetMin = -16;
+  int ui_pOffsetMax = 16;
+  int ui_rBeatsMin = 1;
+  int ui_rBeatsMax = 32;
+  int ui_rOffsetMin = -16;
+  int ui_rOffsetMax = 16;
 
 private:
   MidiHandler &midiHandler;

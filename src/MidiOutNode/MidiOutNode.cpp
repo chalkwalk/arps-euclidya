@@ -76,9 +76,27 @@ void MidiOutNode::clampParameters() {
   rSteps = std::max(1, rSteps);
   rBeats = std::clamp(rBeats, 1, rSteps);
   rOffset = std::clamp(rOffset, -(rSteps + 1) / 2, (rSteps + 1) / 2);
+
+  syncMode = static_cast<SyncMode>(ui_syncMode);
+  patternMode = static_cast<PatternMode>(ui_patternMode);
+  patternResetOnRelease = (ui_patternResetOnRelease != 0);
+  rhythmResetOnRelease = (ui_rhythmResetOnRelease != 0);
+  triplet = (ui_triplet != 0);
+
+  ui_pBeatsMin = 1;
+  ui_pBeatsMax = pSteps;
+  ui_pOffsetMin = -(pSteps + 1) / 2;
+  ui_pOffsetMax = (pSteps + 1) / 2;
+
+  ui_rBeatsMin = 1;
+  ui_rBeatsMax = rSteps;
+  ui_rOffsetMin = -(rSteps + 1) / 2;
+  ui_rOffsetMax = (rSteps + 1) / 2;
 }
 
 void MidiOutNode::process() {
+  clampParameters();
+
   auto it = inputSequences.find(0);
   if (it != inputSequences.end()) {
     const NoteSequence &newSequence = it->second;
@@ -498,6 +516,13 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     macroPressureToVelocity =
         xml->getIntAttribute("macroPressureToVelocity", -1);
     macroTimbreToVelocity = xml->getIntAttribute("macroTimbreToVelocity", -1);
+
+    // Sync UI proxies
+    ui_syncMode = static_cast<int>(syncMode);
+    ui_patternMode = static_cast<int>(patternMode);
+    ui_patternResetOnRelease = patternResetOnRelease ? 1 : 0;
+    ui_rhythmResetOnRelease = rhythmResetOnRelease ? 1 : 0;
+    ui_triplet = triplet ? 1 : 0;
   }
 }
 

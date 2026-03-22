@@ -1,0 +1,336 @@
+{
+    "gridWidth": 4,
+    "gridHeight": 3,
+    "elements": [
+        {
+            "type": "Label",
+            "label": "PATTERN",
+            "colorHex": "ffff00ff",
+            "gridBounds": [
+                0,
+                0,
+                27,
+                4
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "RHYTHM",
+            "colorHex": "ff00ffff",
+            "gridBounds": [
+                53,
+                0,
+                27,
+                4
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "P STEPS",
+            "gridBounds": [
+                9,
+                4,
+                13,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "pSteps",
+            "minValue": 1,
+            "maxValue": 32,
+            "gridBounds": [
+                7,
+                7,
+                17,
+                10
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "P BEATS",
+            "gridBounds": [
+                5,
+                17,
+                13,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "pBeats",
+            "minValue": 1,
+            "maxValue": 32,
+            "gridBounds": [
+                3,
+                20,
+                17,
+                10
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "P OFFSET",
+            "gridBounds": [
+                9,
+                30,
+                13,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "pOffset",
+            "minValue": -16,
+            "maxValue": 16,
+            "bipolar": true,
+            "gridBounds": [
+                7,
+                33,
+                17,
+                10
+            ]
+        },
+        {
+            "type": "Custom",
+            "customType": "Visualizer",
+            "label": "Visualizer",
+            "gridBounds": [
+                18,
+                2,
+                44,
+                41
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "R STEPS",
+            "gridBounds": [
+                58,
+                4,
+                13,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "rSteps",
+            "minValue": 1,
+            "maxValue": 32,
+            "gridBounds": [
+                56,
+                7,
+                17,
+                10
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "R BEATS",
+            "gridBounds": [
+                62,
+                17,
+                13,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "rBeats",
+            "minValue": 1,
+            "maxValue": 32,
+            "gridBounds": [
+                60,
+                20,
+                17,
+                10
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "R OFFSET",
+            "gridBounds": [
+                58,
+                30,
+                13,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "rOffset",
+            "minValue": -16,
+            "maxValue": 16,
+            "bipolar": true,
+            "gridBounds": [
+                56,
+                33,
+                17,
+                10
+            ]
+        },
+        {
+            "type": "ComboBox",
+            "label": "clockDivisionIndex",
+            "options": [
+                "4/1",
+                "2/1",
+                "1/1",
+                "1/2",
+                "1/4",
+                "1/8",
+                "1/16",
+                "1/32"
+            ],
+            "gridBounds": [
+                18,
+                43,
+                20,
+                5
+            ]
+        },
+        {
+            "type": "ComboBox",
+            "label": "syncMode",
+            "options": [
+                "Gestural",
+                "Synchronized",
+                "Deterministic"
+            ],
+            "gridBounds": [
+                38,
+                43,
+                22,
+                5
+            ]
+        },
+        {
+            "type": "ComboBox",
+            "label": "patternMode",
+            "options": [
+                "Gated",
+                "Clocked"
+            ],
+            "gridBounds": [
+                60,
+                43,
+                20,
+                5
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Press -> Vel",
+            "gridBounds": [
+                0,
+                53,
+                9,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "pressureToVelocity",
+            "floatMin": 0,
+            "floatMax": 1,
+            "step": 0.01,
+            "gridBounds": [
+                0,
+                46,
+                10,
+                8
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Timb -> Vel",
+            "gridBounds": [
+                9,
+                53,
+                9,
+                2
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "timbreToVelocity",
+            "floatMin": 0,
+            "floatMax": 1,
+            "step": 0.01,
+            "gridBounds": [
+                8,
+                46,
+                10,
+                8
+            ]
+        },
+        {
+            "type": "ComboBox",
+            "label": "outputChannel",
+            "options": [
+                "Ch 1",
+                "Ch 2",
+                "Ch 3",
+                "Ch 4",
+                "Ch 5",
+                "Ch 6",
+                "Ch 7",
+                "Ch 8",
+                "Ch 9",
+                "Ch 10",
+                "Ch 11",
+                "Ch 12",
+                "Ch 13",
+                "Ch 14",
+                "Ch 15",
+                "Ch 16"
+            ],
+            "gridBounds": [
+                18,
+                48,
+                14,
+                5
+            ]
+        },
+        {
+            "type": "Toggle",
+            "label": "triplet",
+            "gridBounds": [
+                32,
+                48,
+                12,
+                5
+            ]
+        },
+        {
+            "type": "Toggle",
+            "label": "patternResetOnRelease",
+            "gridBounds": [
+                44,
+                48,
+                13,
+                5
+            ]
+        },
+        {
+            "type": "Toggle",
+            "label": "rhythmResetOnRelease",
+            "gridBounds": [
+                57,
+                48,
+                13,
+                5
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "",
+            "gridBounds": [
+                18,
+                55,
+                62,
+                5
+            ]
+        }
+    ]
+}

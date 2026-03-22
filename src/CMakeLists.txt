@@ -71,6 +71,7 @@ juce_add_binary_data(NodeLayoutData SOURCES
     DiagnosticNode/DiagnosticNode.json
     FoldNode/FoldNode.json
     MidiInNode/MidiInNode.json
+    MidiOutNode/MidiOutNode.json
     MultiplyNode/MultiplyNode.json
     OctaveStackNode/OctaveStackNode.json
     OctaveTransposeNode/OctaveTransposeNode.json

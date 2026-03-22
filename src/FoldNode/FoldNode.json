@@ -8,8 +8,8 @@
       "gridBounds": [
         0,
         0,
-        6,
-        1
+        40,
+        8
       ]
     },
     {
@@ -17,10 +17,10 @@
       "minValue": 1,
       "maxValue": 16,
       "gridBounds": [
-        1,
-        1,
-        4,
-        4
+        7,
+        8,
+        27,
+        32
       ],
       "label": "nValue"
     }

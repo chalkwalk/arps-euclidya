@@ -41,6 +41,20 @@ public:
             if (elemObj->hasProperty("maxValue"))
               el.maxValue = elemObj->getProperty("maxValue");
 
+            // Float range (for float-valued sliders)
+            if (elemObj->hasProperty("floatMin"))
+              el.floatMin = (float)(double)elemObj->getProperty("floatMin");
+            if (elemObj->hasProperty("floatMax"))
+              el.floatMax = (float)(double)elemObj->getProperty("floatMax");
+
+            // Step size
+            if (elemObj->hasProperty("step"))
+              el.step = (float)(double)elemObj->getProperty("step");
+
+            // Bipolar flag
+            if (elemObj->hasProperty("bipolar"))
+              el.bipolar = (bool)elemObj->getProperty("bipolar");
+
             // Options (for ComboBox)
             if (elemObj->hasProperty("options")) {
               auto optVar = elemObj->getProperty("options");
@@ -53,6 +67,10 @@ public:
             // Custom type
             if (elemObj->hasProperty("customType"))
               el.customType = elemObj->getProperty("customType").toString();
+
+            // Label text color
+            if (elemObj->hasProperty("colorHex"))
+              el.colorHex = elemObj->getProperty("colorHex").toString();
 
             // Grid bounds [x, y, w, h]
             if (elemObj->hasProperty("gridBounds")) {

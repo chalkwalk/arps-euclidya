@@ -95,6 +95,9 @@ public:
     return {};
   }
 
+  // Hook called by NodeBlock when a UI control mapped to this node changes
+  virtual void parameterChanged() {}
+
   std::function<void()> onNodeDirtied;
   std::function<void()> onMappingChanged;
 

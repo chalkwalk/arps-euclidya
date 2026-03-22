@@ -40,17 +40,35 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
     if (element.type == UIElementType::RotarySlider) {
       auto *slider = new CustomMacroSlider();
-      slider->setRange(element.minValue, element.maxValue, 1);
       slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
       slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
-      if (element.valueRef != nullptr) {
-        slider->setValue(*element.valueRef, juce::dontSendNotification);
-        slider->onValueChange = [node, slider, valRef = element.valueRef]() {
-          *valRef = (int)slider->getValue();
+      if (element.bipolar)
+        slider->getProperties().set("bipolar", true);
+
+      if (element.floatValueRef != nullptr) {
+        // Float-valued slider
+        slider->setRange(element.floatMin, element.floatMax, element.step);
+        slider->setValue(*element.floatValueRef, juce::dontSendNotification);
+        slider->onValueChange = [node, slider,
+                                 valRef = element.floatValueRef]() {
+          *valRef = (float)slider->getValue();
+          node->parameterChanged();
           if (node->onNodeDirtied)
             node->onNodeDirtied();
         };
+      } else {
+        // Int-valued slider
+        slider->setRange(element.minValue, element.maxValue, element.step);
+        if (element.valueRef != nullptr) {
+          slider->setValue(*element.valueRef, juce::dontSendNotification);
+          slider->onValueChange = [node, slider, valRef = element.valueRef]() {
+            *valRef = (int)slider->getValue();
+            node->parameterChanged();
+            if (node->onNodeDirtied)
+              node->onNodeDirtied();
+          };
+        }
       }
 
       if (element.macroIndexRef != nullptr) {
@@ -75,6 +93,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                                      [this, node, macroRef, &apvts, slider,
                                       updateSliderVisibility](int macroIndex) {
                                        *macroRef = macroIndex;
+                                       node->parameterChanged();
                                        if (node->onMappingChanged)
                                          node->onMappingChanged();
                                      });
@@ -93,6 +112,13 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
       label->setText(element.label, juce::dontSendNotification);
       label->setJustificationType(juce::Justification::centred);
       label->setInterceptsMouseClicks(false, false);
+
+      if (element.colorHex.isNotEmpty()) {
+        label->setColour(juce::Label::textColourId,
+                         juce::Colour::fromString(element.colorHex));
+        label->setFont(juce::Font(13.0f, juce::Font::bold));
+      }
+
       comp = label;
     } else if (element.type == UIElementType::PushButton ||
                element.type == UIElementType::Toggle) {
@@ -119,6 +145,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
             *valRef = (*valRef == 0) ? 1 : 0;
           }
 
+          node->parameterChanged();
           if (node->onNodeDirtied)
             node->onNodeDirtied();
         };
@@ -130,6 +157,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
           MacroMappingMenu::showMenu(button, *macroRef,
                                      [this, node, macroRef](int macroIndex) {
                                        *macroRef = macroIndex;
+                                       node->parameterChanged();
                                        if (node->onMappingChanged)
                                          node->onMappingChanged();
                                      });
@@ -154,6 +182,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
         combo->setSelectedId(*element.valueRef + 1, juce::dontSendNotification);
         combo->onChange = [node, combo, valRef = element.valueRef]() {
           *valRef = combo->getSelectedId() - 1;
+          node->parameterChanged();
           if (node->onNodeDirtied)
             node->onNodeDirtied();
         };
@@ -199,8 +228,23 @@ void NodeBlock::timerCallback() {
       auto *comp = dynamicComponents[i];
 
       if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
-        if (element.valueRef != nullptr && !slider->isMouseButtonDown()) {
-          slider->setValue(*element.valueRef, juce::dontSendNotification);
+        if (element.dynamicMinRef != nullptr &&
+            element.dynamicMaxRef != nullptr) {
+          int curMin = *element.dynamicMinRef;
+          int curMax = *element.dynamicMaxRef;
+          if (slider->getMinimum() != curMin ||
+              slider->getMaximum() != curMax) {
+            slider->setRange(curMin, curMax, element.step);
+          }
+        }
+
+        if (!slider->isMouseButtonDown()) {
+          if (element.floatValueRef != nullptr) {
+            slider->setValue(*element.floatValueRef,
+                             juce::dontSendNotification);
+          } else if (element.valueRef != nullptr) {
+            slider->setValue(*element.valueRef, juce::dontSendNotification);
+          }
         }
       } else if (auto *button = dynamic_cast<juce::TextButton *>(comp)) {
         if (element.label != button->getButtonText()) {
@@ -331,21 +375,14 @@ void NodeBlock::resized() {
   int bodyWidth = getWidth() - PORT_MARGIN * 2;     // margins on both sides
   int bodyHeight = getHeight() - HEADER_HEIGHT - 4; // header + small bottom pad
 
-  // Determine the maximum grid extent used by any element
-  int maxGridRight = 1;
-  int maxGridBottom = 1;
-  for (const auto &element : layout.elements) {
-    int right = element.gridBounds.getX() + element.gridBounds.getWidth();
-    int bottom = element.gridBounds.getY() + element.gridBounds.getHeight();
-    if (right > maxGridRight)
-      maxGridRight = right;
-    if (bottom > maxGridBottom)
-      maxGridBottom = bottom;
-  }
+  // Uniform grid: 20 subdivisions per module grid unit
+  constexpr int SUBS_PER_UNIT = 20;
+  int gridCols = layout.gridWidth * SUBS_PER_UNIT;
+  int gridRows = layout.gridHeight * SUBS_PER_UNIT;
 
-  // Compute the sub-grid pitch to fit all elements within the body
-  float subGridX = (float)bodyWidth / (float)maxGridRight;
-  float subGridY = (float)bodyHeight / (float)maxGridBottom;
+  // Compute the sub-grid pitch
+  float subGridX = (float)bodyWidth / (float)gridCols;
+  float subGridY = (float)bodyHeight / (float)gridRows;
 
   for (int i = 0; i < dynamicComponents.size(); ++i) {
     if (i < (int)layout.elements.size()) {
@@ -452,8 +489,8 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
           targetNode->getGridHeight(), targetNode.get());
     }
 
-    // We ALWAYS move the floating physical coordinate of the node to follow the
-    // mouse linearly. This must be outside the if block so it updates
+    // We ALWAYS move the floating physical coordinate of the node to follow
+    // the mouse linearly. This must be outside the if block so it updates
     // continuously!
     targetNode->nodeX = dragStartGridX * Layout::GridPitchFloat +
                         Layout::TramlineOffset + deltaX;
