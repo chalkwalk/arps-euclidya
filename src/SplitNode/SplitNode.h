@@ -17,14 +17,11 @@ public:
 
   void process() override;
 
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
   int splitMode = 0;     // 0=first/last, 1=odd/even, 2=percentage
   int splitPercent = 50; // Used in percentage mode (1-99)
-  int getGridWidth() const override { return 2; }
-  int getGridHeight() const override { return 2; }
 };

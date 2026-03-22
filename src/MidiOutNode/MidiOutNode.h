@@ -46,8 +46,10 @@ public:
   std::vector<bool> getPattern() const;
   std::vector<bool> getRhythm() const;
 
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
+  std::unique_ptr<juce::Component> createCustomComponent(
+      const juce::String &name,
+      juce::AudioProcessorValueTreeState *apvts = nullptr) override;
 
   void clampParameters();
 
@@ -120,6 +122,4 @@ private:
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)
   std::vector<std::pair<int, int>> playingNotes;
-  int getGridWidth() const override { return 4; }
-  int getGridHeight() const override { return 3; }
 };

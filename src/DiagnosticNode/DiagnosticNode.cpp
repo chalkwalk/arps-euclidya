@@ -1,8 +1,9 @@
 #include "DiagnosticNode.h"
 
-class DiagnosticNodeEditor : public juce::Component, public juce::ListBoxModel {
+class DiagnosticNodeCustomComponent : public juce::Component,
+                                      public juce::ListBoxModel {
 public:
-  DiagnosticNodeEditor(DiagnosticNode &node) : diagNode(node) {
+  DiagnosticNodeCustomComponent(DiagnosticNode &node) : diagNode(node) {
     listBox.setModel(this);
     listBox.setRowHeight(20);
     listBox.setColour(juce::ListBox::backgroundColourId,
@@ -109,8 +110,24 @@ void DiagnosticNode::process() {
   }
 }
 
-std::unique_ptr<juce::Component> DiagnosticNode::createEditorComponent(
-    juce::AudioProcessorValueTreeState &apvts) {
+NodeLayout DiagnosticNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 2;
+  layout.gridHeight = 2;
+
+  UIElement customList;
+  customList.type = UIElementType::Custom;
+  customList.customType = "ListBox";
+  customList.gridBounds = {0, 0, 7, 7};
+  layout.elements.push_back(customList);
+
+  return layout;
+}
+
+std::unique_ptr<juce::Component> DiagnosticNode::createCustomComponent(
+    const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
   juce::ignoreUnused(apvts);
-  return std::make_unique<DiagnosticNodeEditor>(*this);
+  if (name == "ListBox")
+    return std::make_unique<DiagnosticNodeCustomComponent>(*this);
+  return nullptr;
 }

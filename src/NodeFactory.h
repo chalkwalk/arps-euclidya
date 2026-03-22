@@ -108,8 +108,8 @@ public:
   static NodeMetadata getPreviewMetadata(const std::string &type) {
     NodeMetadata m;
     if (type == "Midi In") {
-      m.gridW = 2;
-      m.gridH = 2;
+      m.gridW = 1;
+      m.gridH = 1;
       m.numIn = 0;
     } else if (type == "Midi Out") {
       m.gridW = 4;

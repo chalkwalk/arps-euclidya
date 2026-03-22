@@ -16,7 +16,6 @@ NodeLayout SwitchNode::getLayout() const {
   button.label = "ENABLE";
   button.valueRef = const_cast<int *>(&switchOn);
   button.macroIndexRef = const_cast<int *>(&macroSwitch);
-  // Centered in a 1x1 grid (sub-grid 4x4)
   button.gridBounds = {0, 0, 3, 1};
   layout.elements.push_back(button);
 

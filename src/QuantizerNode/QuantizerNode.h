@@ -9,8 +9,7 @@ public:
   ~QuantizerNode() override = default;
 
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   std::string getName() const override { return "Quantizer"; }
 
@@ -20,6 +19,4 @@ public:
   int tonality = 0;
   int rootNote = 0;
   int mode = 0;
-  int getGridWidth() const override { return 2; }
-  int getGridHeight() const override { return 2; }
 };

@@ -86,59 +86,31 @@ void SplitNode::loadNodeState(juce::XmlElement *xml) {
   }
 }
 
-// --- Editor ---
-class SplitNodeEditor : public juce::Component {
-public:
-  SplitNodeEditor(SplitNode &node) : splitNode(node) {
-    modeBox.addItem("First/Last Half", 1);
-    modeBox.addItem("Odd/Even", 2);
-    modeBox.addItem("Percentage", 3);
-    modeBox.addItem("First", 4);
-    modeBox.addItem("Last", 5);
-    modeBox.setSelectedId(node.splitMode + 1, juce::dontSendNotification);
-    modeBox.onChange = [this]() {
-      splitNode.splitMode = modeBox.getSelectedId() - 1;
-      percentSlider.setVisible(splitNode.splitMode == 2);
-      if (splitNode.onNodeDirtied)
-        splitNode.onNodeDirtied();
-    };
-    addAndMakeVisible(modeBox);
+NodeLayout SplitNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 2;
+  layout.gridHeight = 2;
 
-    percentSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    percentSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
-    percentSlider.setRange(1, 99, 1);
-    percentSlider.setValue(node.splitPercent);
-    percentSlider.onValueChange = [this]() {
-      splitNode.splitPercent = (int)percentSlider.getValue();
-      if (splitNode.onNodeDirtied)
-        splitNode.onNodeDirtied();
-    };
-    percentSlider.setVisible(node.splitMode == 2);
-    addAndMakeVisible(percentSlider);
+  UIElement modeBox;
+  modeBox.type = UIElementType::ComboBox;
+  modeBox.options = {"Alternating", "Random", "Probability"};
+  modeBox.valueRef = const_cast<int *>(&splitMode);
+  modeBox.gridBounds = {0, 0, 6, 1};
+  layout.elements.push_back(modeBox);
 
-    setSize(260, 60);
-  }
+  UIElement pLabel;
+  pLabel.type = UIElementType::Label;
+  pLabel.label = "Prob %";
+  pLabel.gridBounds = {0, 1, 3, 1};
+  layout.elements.push_back(pLabel);
 
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(10);
+  UIElement pSlider;
+  pSlider.type = UIElementType::RotarySlider;
+  pSlider.minValue = 1;
+  pSlider.maxValue = 99;
+  pSlider.valueRef = const_cast<int *>(&splitPercent);
+  pSlider.gridBounds = {0, 2, 3, 4};
+  layout.elements.push_back(pSlider);
 
-    // Mode box in top half
-    modeBox.setBounds(bounds.removeFromTop(30).reduced(2));
-
-    // Percentage slider in bottom half (if visible)
-    if (percentSlider.isVisible()) {
-      bounds.removeFromTop(10); // spacing
-      percentSlider.setBounds(bounds.removeFromTop(30).reduced(2));
-    }
-  }
-
-private:
-  SplitNode &splitNode;
-  juce::ComboBox modeBox;
-  juce::Slider percentSlider;
-};
-
-std::unique_ptr<juce::Component>
-SplitNode::createEditorComponent(juce::AudioProcessorValueTreeState &) {
-  return std::make_unique<SplitNodeEditor>(*this);
+  return layout;
 }

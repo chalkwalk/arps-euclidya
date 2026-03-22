@@ -16,8 +16,7 @@ public:
 
   void process() override;
 
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
     return {{"Multiply N", &macroRepeatCount}};
@@ -31,6 +30,4 @@ public:
 
 private:
   std::array<std::atomic<float> *, 32> macros;
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

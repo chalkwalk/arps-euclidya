@@ -3,122 +3,46 @@
 #include <algorithm>
 #include <set>
 
-class OctaveStackNodeEditor : public juce::Component {
-public:
-  OctaveStackNodeEditor(OctaveStackNode &node,
-                        juce::AudioProcessorValueTreeState &apvts)
-      : octaveNode(node) {
-
-    auto setupSlider = [this, &apvts](
-                           CustomMacroSlider &slider, juce::Label &label,
-                           int &nodeValueRef, int &nodeMacroRef,
-                           std::unique_ptr<MacroAttachment> &attachment,
-                           const juce::String &labelText, int min, int max) {
-      slider.setRange(min, max, 1);
-      slider.setValue(nodeValueRef, juce::dontSendNotification);
-      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-      addAndMakeVisible(slider);
-
-      label.setText(labelText, juce::dontSendNotification);
-      label.setJustificationType(juce::Justification::centred);
-      addAndMakeVisible(label);
-
-      slider.onValueChange = [this, &slider, &nodeValueRef]() {
-        nodeValueRef = (int)slider.getValue();
-        if (octaveNode.onNodeDirtied)
-          octaveNode.onNodeDirtied();
-      };
-
-      auto updateSliderVisibility = [&slider](int macro) {
-        if (macro == -1) {
-          slider.removeColour(juce::Slider::rotarySliderFillColourId);
-          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-        } else {
-          slider.setColour(juce::Slider::rotarySliderFillColourId,
-                           juce::Colours::orange);
-          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                           juce::Colours::orange.withAlpha(0.3f));
-        }
-      };
-
-      updateSliderVisibility(nodeMacroRef);
-
-      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
-                             updateSliderVisibility]() {
-        MacroMappingMenu::showMenu(
-            &slider, nodeMacroRef,
-            [this, &nodeMacroRef, &attachment, &apvts, &slider,
-             updateSliderVisibility](int macroIndex) {
-              nodeMacroRef = macroIndex;
-              if (macroIndex == -1) {
-                attachment.reset();
-                slider.setTooltip("");
-              } else {
-                attachment = std::make_unique<MacroAttachment>(
-                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
-                slider.setTooltip("Mapped to Macro " +
-                                  juce::String(macroIndex + 1));
-              }
-              updateSliderVisibility(macroIndex);
-              if (octaveNode.onMappingChanged)
-                octaveNode.onMappingChanged();
-            });
-      };
-
-      // INIT
-      if (nodeMacroRef != -1) {
-        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
-        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
-      }
-    };
-
-    setupSlider(octavesSlider, octavesLabel, octaveNode.octaves,
-                octaveNode.macroOctaves, octavesAttachment, "OCT STACK", 1, 4);
-
-    uniqueToggle.setButtonText("Unique Only");
-    uniqueToggle.setToggleState(octaveNode.uniqueOnly,
-                                juce::dontSendNotification);
-    uniqueToggle.onClick = [this]() {
-      octaveNode.uniqueOnly = uniqueToggle.getToggleState();
-      if (octaveNode.onNodeDirtied)
-        octaveNode.onNodeDirtied();
-    };
-    addAndMakeVisible(uniqueToggle);
-
-    setSize(100, 100);
-  }
-
-  void resized() override {
-    auto b = getLocalBounds().reduced(2);
-    octavesLabel.setBounds(b.removeFromTop(16));
-    uniqueToggle.setBounds(b.removeFromBottom(18));
-    octavesSlider.setBounds(b);
-  }
-
-private:
-  OctaveStackNode &octaveNode;
-  CustomMacroSlider octavesSlider;
-  juce::Label octavesLabel;
-  std::unique_ptr<MacroAttachment> octavesAttachment;
-  juce::ToggleButton uniqueToggle;
-};
-
 // --- OctaveStackNode Impl
 
 OctaveStackNode::OctaveStackNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
-std::unique_ptr<juce::Component> OctaveStackNode::createEditorComponent(
-    juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<OctaveStackNodeEditor>(*this, apvts);
+NodeLayout OctaveStackNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
+
+  UIElement label;
+  label.type = UIElementType::Label;
+  label.label = "Octaves";
+  label.gridBounds = {0, 0, 2, 1};
+  layout.elements.push_back(label);
+
+  UIElement slider;
+  slider.type = UIElementType::RotarySlider;
+  slider.minValue = 1;
+  slider.maxValue = 4;
+  slider.valueRef = const_cast<int *>(&octaves);
+  slider.macroIndexRef = const_cast<int *>(&macroOctaves);
+  slider.gridBounds = {0, 1, 2, 1};
+  layout.elements.push_back(slider);
+
+  UIElement uniqueToggle;
+  uniqueToggle.type = UIElementType::Toggle;
+  uniqueToggle.label = "Unique";
+  uniqueToggle.valueRef = const_cast<int *>(&uniqueOnly);
+  uniqueToggle.gridBounds = {0, 2, 2, 1};
+  layout.elements.push_back(uniqueToggle);
+
+  return layout;
 }
 
 void OctaveStackNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("octaves", octaves);
     xml->setAttribute("macroOctaves", macroOctaves);
-    xml->setAttribute("uniqueOnly", uniqueOnly);
+    xml->setAttribute("uniqueOnly", uniqueOnly != 0);
   }
 }
 
@@ -126,7 +50,7 @@ void OctaveStackNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     octaves = xml->getIntAttribute("octaves", 1);
     macroOctaves = xml->getIntAttribute("macroOctaves", -1);
-    uniqueOnly = xml->getBoolAttribute("uniqueOnly", true);
+    uniqueOnly = xml->getBoolAttribute("uniqueOnly", true) ? 1 : 0;
   }
 }
 

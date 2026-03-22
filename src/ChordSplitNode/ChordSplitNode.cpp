@@ -73,32 +73,17 @@ void ChordSplitNode::loadNodeState(juce::XmlElement *xml) {
   }
 }
 
-// --- Editor ---
-class ChordSplitNodeEditor : public juce::Component {
-public:
-  ChordSplitNodeEditor(ChordSplitNode &node) : chordSplitNode(node) {
-    toggle.setButtonText(node.splitMode == 0 ? "TOP" : "BOTTOM");
-    toggle.setToggleState(node.splitMode != 0, juce::dontSendNotification);
-    toggle.setClickingTogglesState(true);
-    toggle.onClick = [this]() {
-      chordSplitNode.splitMode = toggle.getToggleState() ? 1 : 0;
-      toggle.setButtonText(chordSplitNode.splitMode == 0 ? "TOP" : "BOTTOM");
-      if (chordSplitNode.onNodeDirtied)
-        chordSplitNode.onNodeDirtied();
-    };
-    addAndMakeVisible(toggle);
+NodeLayout ChordSplitNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
 
-    setSize(160, 30);
-  }
+  UIElement toggle;
+  toggle.type = UIElementType::Toggle;
+  toggle.label = splitMode == 0 ? "TOP" : "BOTTOM";
+  toggle.valueRef = const_cast<int *>(&splitMode);
+  toggle.gridBounds = {0, 1, 3, 1};
+  layout.elements.push_back(toggle);
 
-  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
-
-private:
-  ChordSplitNode &chordSplitNode;
-  juce::ToggleButton toggle;
-};
-
-std::unique_ptr<juce::Component>
-ChordSplitNode::createEditorComponent(juce::AudioProcessorValueTreeState &) {
-  return std::make_unique<ChordSplitNodeEditor>(*this);
+  return layout;
 }

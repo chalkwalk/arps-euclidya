@@ -1,49 +1,28 @@
 #include "AllNotesNode.h"
 
-class AllNotesNodeEditor : public juce::Component {
-public:
-  AllNotesNodeEditor(AllNotesNode &node,
-                     juce::AudioProcessorValueTreeState &apvts)
-      : allNotesNode(node) {
-
-    octaveCombo.addItemList(
-        {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}, 1);
-    octaveCombo.setSelectedId(allNotesNode.baseOctave + 1,
-                              juce::dontSendNotification);
-
-    octaveCombo.onChange = [this]() {
-      allNotesNode.baseOctave = octaveCombo.getSelectedId() - 1;
-      if (allNotesNode.onNodeDirtied)
-        allNotesNode.onNodeDirtied();
-    };
-
-    addAndMakeVisible(octaveCombo);
-
-    octaveLabel.setText("Base Octave", juce::dontSendNotification);
-    octaveLabel.attachToComponent(&octaveCombo, false);
-    addAndMakeVisible(octaveLabel);
-
-    setSize(400, 150);
-  }
-
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(20);
-    octaveCombo.setBounds(bounds.removeFromTop(30).withWidth(120).withX(20));
-  }
-
-private:
-  AllNotesNode &allNotesNode;
-  juce::ComboBox octaveCombo;
-  juce::Label octaveLabel;
-};
-
 // --- AllNotesNode Impl
 
 AllNotesNode::AllNotesNode() {}
 
-std::unique_ptr<juce::Component>
-AllNotesNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<AllNotesNodeEditor>(*this, apvts);
+NodeLayout AllNotesNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
+
+  UIElement label;
+  label.type = UIElementType::Label;
+  label.label = "Octave";
+  label.gridBounds = {0, 0, 3, 1};
+  layout.elements.push_back(label);
+
+  UIElement combo;
+  combo.type = UIElementType::ComboBox;
+  combo.options = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
+  combo.valueRef = const_cast<int *>(&baseOctave);
+  combo.gridBounds = {0, 1, 3, 1};
+  layout.elements.push_back(combo);
+
+  return layout;
 }
 
 void AllNotesNode::saveNodeState(juce::XmlElement *xml) {

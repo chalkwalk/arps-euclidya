@@ -12,8 +12,10 @@ public:
   int getNumOutputPorts() const override { return 1; }
 
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
+  std::unique_ptr<juce::Component> createCustomComponent(
+      const juce::String &name,
+      juce::AudioProcessorValueTreeState *apvts = nullptr) override;
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
@@ -26,6 +28,4 @@ public:
 
 private:
   std::array<std::atomic<float> *, 32> &macros;
-  int getGridWidth() const override { return 4; }
-  int getGridHeight() const override { return 2; }
 };

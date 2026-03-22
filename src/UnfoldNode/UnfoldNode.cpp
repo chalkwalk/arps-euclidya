@@ -1,40 +1,23 @@
 #include "UnfoldNode.h"
 #include <algorithm>
 
-class UnfoldNodeEditor : public juce::Component {
-public:
-  UnfoldNodeEditor(UnfoldNode &node, juce::AudioProcessorValueTreeState &)
-      : unfoldNode(node) {
-
-    toggle.setButtonText(node.ordering == 0 ? "Ascending" : "Descending");
-    toggle.setToggleState(node.ordering != 0, juce::dontSendNotification);
-    toggle.setClickingTogglesState(true);
-    toggle.onClick = [this]() {
-      unfoldNode.ordering = toggle.getToggleState() ? 1 : 0;
-      toggle.setButtonText(unfoldNode.ordering == 0 ? "Ascending"
-                                                    : "Descending");
-      if (unfoldNode.onNodeDirtied)
-        unfoldNode.onNodeDirtied();
-    };
-    addAndMakeVisible(toggle);
-
-    setSize(160, 30);
-  }
-
-  void resized() override { toggle.setBounds(getLocalBounds().reduced(2)); }
-
-private:
-  UnfoldNode &unfoldNode;
-  juce::ToggleButton toggle;
-};
-
 // --- UnfoldNode Impl
 
 UnfoldNode::UnfoldNode() {}
 
-std::unique_ptr<juce::Component>
-UnfoldNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<UnfoldNodeEditor>(*this, apvts);
+NodeLayout UnfoldNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
+
+  UIElement toggle;
+  toggle.type = UIElementType::Toggle;
+  toggle.label = ordering == 0 ? "Ascend" : "Descend";
+  toggle.valueRef = const_cast<int *>(&ordering);
+  toggle.gridBounds = {0, 0, 3, 1};
+  layout.elements.push_back(toggle);
+
+  return layout;
 }
 
 void UnfoldNode::saveNodeState(juce::XmlElement *xml) {

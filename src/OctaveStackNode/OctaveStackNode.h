@@ -4,15 +4,12 @@
 #include <array>
 #include <atomic>
 
-class OctaveStackNodeEditor;
-
 class OctaveStackNode : public GraphNode {
 public:
   OctaveStackNode(std::array<std::atomic<float> *, 32> &macros);
   std::string getName() const override { return "Octave Stack"; }
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
     return {{"Octave Stack", &macroOctaves}};
@@ -23,11 +20,8 @@ public:
 
   int octaves = 1;
   int macroOctaves = -1;
-  bool uniqueOnly = true;
+  int uniqueOnly = 1; // 1 = true, 0 = false
 
 private:
   std::array<std::atomic<float> *, 32> &macros;
-  friend class OctaveStackNodeEditor;
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

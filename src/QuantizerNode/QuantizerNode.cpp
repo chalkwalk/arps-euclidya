@@ -20,99 +20,61 @@ const std::vector<std::vector<int>> SCALES = {
     {0, 1, 3, 4, 6, 7, 9, 10} // 14: Diminished (Half-Whole)
 };
 
-class QuantizerNodeEditor : public juce::Component {
-public:
-  QuantizerNodeEditor(QuantizerNode &node,
-                      juce::AudioProcessorValueTreeState &apvts)
-      : quantizerNode(node) {
-
-    // Tonality
-    tonalityCombo.addItemList(
-        {"Lydian", "Ionian", "Mixolydian", "Dorian", "Aeolian", "Phrygian",
-         "Locrian", "Major", "Minor", "Harmonic Minor", "Melodic Minor",
-         "Major Pentatonic", "Minor Pentatonic", "Whole Tone", "Diminished"},
-        1);
-    tonalityCombo.setSelectedId(quantizerNode.tonality + 1,
-                                juce::dontSendNotification);
-    tonalityCombo.onChange = [this]() {
-      quantizerNode.tonality = tonalityCombo.getSelectedId() - 1;
-      if (quantizerNode.onNodeDirtied)
-        quantizerNode.onNodeDirtied();
-    };
-    addAndMakeVisible(tonalityCombo);
-
-    tonalityLabel.setText("Scale", juce::dontSendNotification);
-    tonalityLabel.attachToComponent(&tonalityCombo, true);
-    addAndMakeVisible(tonalityLabel);
-
-    // Root Note
-    rootCombo.addItemList(
-        {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}, 1);
-    rootCombo.setSelectedId(quantizerNode.rootNote + 1,
-                            juce::dontSendNotification);
-    rootCombo.onChange = [this]() {
-      quantizerNode.rootNote = rootCombo.getSelectedId() - 1;
-      if (quantizerNode.onNodeDirtied)
-        quantizerNode.onNodeDirtied();
-    };
-    addAndMakeVisible(rootCombo);
-
-    rootLabel.setText("Root", juce::dontSendNotification);
-    rootLabel.attachToComponent(&rootCombo, true);
-    addAndMakeVisible(rootLabel);
-
-    // Mode
-    modeToggle.setButtonText(quantizerNode.mode == 0 ? "Filter" : "Snap");
-    modeToggle.setToggleState(quantizerNode.mode != 0,
-                              juce::dontSendNotification);
-    modeToggle.setClickingTogglesState(true);
-    modeToggle.onClick = [this]() {
-      quantizerNode.mode = modeToggle.getToggleState() ? 1 : 0;
-      modeToggle.setButtonText(quantizerNode.mode == 0 ? "Filter" : "Snap");
-      if (quantizerNode.onNodeDirtied)
-        quantizerNode.onNodeDirtied();
-    };
-    addAndMakeVisible(modeToggle);
-
-    modeLabel.setText("Mode", juce::dontSendNotification);
-    modeLabel.attachToComponent(&modeToggle, true);
-    addAndMakeVisible(modeLabel);
-
-    setSize(400, 150);
-  }
-
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(10);
-    int h = bounds.getHeight() / 3;
-    int labelWidth = 60;
-
-    auto row1 = bounds.removeFromTop(h).reduced(2);
-    tonalityCombo.setBounds(row1.withTrimmedLeft(labelWidth));
-
-    auto row2 = bounds.removeFromTop(h).reduced(2);
-    rootCombo.setBounds(row2.withTrimmedLeft(labelWidth));
-
-    auto row3 = bounds.removeFromTop(h).reduced(2);
-    modeToggle.setBounds(row3.withTrimmedLeft(labelWidth));
-  }
-
-private:
-  QuantizerNode &quantizerNode;
-  juce::ComboBox tonalityCombo;
-  juce::Label tonalityLabel;
-  juce::ComboBox rootCombo;
-  juce::Label rootLabel;
-  juce::ToggleButton modeToggle;
-  juce::Label modeLabel;
-};
-
 // --- QuantizerNode Impl
 
 QuantizerNode::QuantizerNode() {}
 
-std::unique_ptr<juce::Component> QuantizerNode::createEditorComponent(
-    juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<QuantizerNodeEditor>(*this, apvts);
+NodeLayout QuantizerNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 2;
+  layout.gridHeight = 2;
+
+  UIElement tonLabel;
+  tonLabel.type = UIElementType::Label;
+  tonLabel.label = "Scale";
+  tonLabel.gridBounds = {0, 0, 3, 1};
+  layout.elements.push_back(tonLabel);
+
+  UIElement tonalityBox;
+  tonalityBox.type = UIElementType::ComboBox;
+  tonalityBox.options = {
+      "Lydian",           "Ionian",        "Mixolydian",
+      "Dorian",           "Aeolian",       "Phrygian",
+      "Locrian",          "Major",         "Minor",
+      "Harmonic Minor",   "Melodic Minor", "Major Pentatonic",
+      "Minor Pentatonic", "Whole Tone",    "Diminished"};
+  tonalityBox.valueRef = const_cast<int *>(&tonality);
+  tonalityBox.gridBounds = {3, 0, 4, 1};
+  layout.elements.push_back(tonalityBox);
+
+  UIElement rLabel;
+  rLabel.type = UIElementType::Label;
+  rLabel.label = "Root";
+  rLabel.gridBounds = {0, 1, 3, 1};
+  layout.elements.push_back(rLabel);
+
+  UIElement rootBox;
+  rootBox.type = UIElementType::ComboBox;
+  rootBox.options = {"C",  "C#", "D",  "D#", "E",  "F",
+                     "F#", "G",  "G#", "A",  "A#", "B"};
+  rootBox.valueRef = const_cast<int *>(&rootNote);
+  rootBox.gridBounds = {3, 1, 4, 1};
+  layout.elements.push_back(rootBox);
+
+  UIElement mLabel;
+  mLabel.type = UIElementType::Label;
+  mLabel.label = "Mode";
+  mLabel.gridBounds = {0, 2, 3, 1};
+  layout.elements.push_back(mLabel);
+
+  UIElement modeToggle;
+  modeToggle.type = UIElementType::Toggle;
+  modeToggle.label = mode == 0 ? "Filter" : "Snap";
+  modeToggle.valueRef = const_cast<int *>(&mode);
+  modeToggle.gridBounds = {3, 2, 4, 1};
+  layout.elements.push_back(modeToggle);
+
+  return layout;
 }
 
 void QuantizerNode::saveNodeState(juce::XmlElement *xml) {

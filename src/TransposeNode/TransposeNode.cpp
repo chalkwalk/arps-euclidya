@@ -18,8 +18,6 @@ NodeLayout TransposeNode::getLayout() const {
   slider.macroIndexRef = const_cast<int *>(&macroSemitones);
   slider.minValue = -24;
   slider.maxValue = 24;
-  // Node is 1x1 major (100x100), body starts at PORT_MARGIN (14) and
-  // HEADER_HEIGHT (28). A 3x2 sub-grid fits well.
   slider.gridBounds = {0, 0, 3, 2};
   layout.elements.push_back(slider);
 

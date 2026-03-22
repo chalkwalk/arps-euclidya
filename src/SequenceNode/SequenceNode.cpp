@@ -206,14 +206,37 @@ private:
 };
 
 // Wrap ScrollBar::Listener properly
-class SequenceNodeEditorWrapper : public SequenceNodeEditor {};
+class SequenceNodeCustomComponent : public SequenceNodeEditor {
+public:
+  SequenceNodeCustomComponent(SequenceNode &node,
+                              juce::AudioProcessorValueTreeState &apvts)
+      : SequenceNodeEditor(node, apvts) {}
+};
 
 SequenceNode::SequenceNode(std::array<std::atomic<float> *, 32> &m)
     : macros(m) {}
 
+NodeLayout SequenceNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 4;
+  layout.gridHeight = 2;
+
+  UIElement custom;
+  custom.type = UIElementType::Custom;
+  custom.customType = "Editor";
+  custom.gridBounds = {0, 0, 15, 7};
+  layout.elements.push_back(custom);
+
+  return layout;
+}
+
 std::unique_ptr<juce::Component>
-SequenceNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<SequenceNodeEditor>(*this, apvts);
+SequenceNode::createCustomComponent(const juce::String &name,
+                                    juce::AudioProcessorValueTreeState *apvts) {
+  juce::ignoreUnused(name);
+  if (apvts != nullptr)
+    return std::make_unique<SequenceNodeCustomComponent>(*this, *apvts);
+  return nullptr;
 }
 
 void SequenceNode::saveNodeState(juce::XmlElement *xml) {

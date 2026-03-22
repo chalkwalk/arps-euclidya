@@ -9,8 +9,7 @@ public:
   ~AllNotesNode() override = default;
 
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   std::string getName() const override { return "All Notes"; }
   int getNumInputPorts() const override { return 0; }
@@ -19,6 +18,4 @@ public:
   void loadNodeState(juce::XmlElement *xml) override;
 
   int baseOctave = 3;
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

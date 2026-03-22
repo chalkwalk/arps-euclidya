@@ -9,8 +9,7 @@ public:
   ~UnfoldNode() override = default;
 
   void process() override;
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   std::string getName() const override { return "Unfold"; }
 
@@ -18,6 +17,4 @@ public:
   void loadNodeState(juce::XmlElement *xml) override;
 
   int ordering = 0; // 0: Ascending, 1: Descending
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

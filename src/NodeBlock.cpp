@@ -143,8 +143,25 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
         }
       }
       comp = button;
+    } else if (element.type == UIElementType::ComboBox) {
+      auto *combo = new juce::ComboBox();
+      int i = 1;
+      for (const auto &opt : element.options) {
+        combo->addItem(opt, i++);
+      }
+      if (element.valueRef != nullptr) {
+        // Value ref is 0-indexed, ComboBox item IDs are 1-indexed
+        combo->setSelectedId(*element.valueRef + 1, juce::dontSendNotification);
+        combo->onChange = [node, combo, valRef = element.valueRef]() {
+          *valRef = combo->getSelectedId() - 1;
+          if (node->onNodeDirtied)
+            node->onNodeDirtied();
+        };
+      }
+      comp = combo;
     } else if (element.type == UIElementType::Custom) {
-      if (auto custom = node->createCustomComponent(element.customType)) {
+      if (auto custom =
+              node->createCustomComponent(element.customType, &apvts)) {
         comp = custom.release();
       }
     }
@@ -193,6 +210,13 @@ void NodeBlock::timerCallback() {
           bool state = (*element.valueRef != 0);
           if (button->getToggleState() != state) {
             button->setToggleState(state, juce::dontSendNotification);
+          }
+        }
+      } else if (auto *combo = dynamic_cast<juce::ComboBox *>(comp)) {
+        if (element.valueRef != nullptr && !combo->isMouseButtonDown()) {
+          int state = *element.valueRef + 1;
+          if (combo->getSelectedId() != state) {
+            combo->setSelectedId(state, juce::dontSendNotification);
           }
         }
       } else if (auto *label = dynamic_cast<juce::Label *>(comp)) {
@@ -303,19 +327,35 @@ void NodeBlock::resized() {
   int startX = PORT_MARGIN;
   int startY = HEADER_HEIGHT;
 
-  // We use a sub-grid of 25 pixels for internal placement
-  const int subGridSize = 25;
+  // Available body area for placing controls
+  int bodyWidth = getWidth() - PORT_MARGIN * 2;     // margins on both sides
+  int bodyHeight = getHeight() - HEADER_HEIGHT - 4; // header + small bottom pad
+
+  // Determine the maximum grid extent used by any element
+  int maxGridRight = 1;
+  int maxGridBottom = 1;
+  for (const auto &element : layout.elements) {
+    int right = element.gridBounds.getX() + element.gridBounds.getWidth();
+    int bottom = element.gridBounds.getY() + element.gridBounds.getHeight();
+    if (right > maxGridRight)
+      maxGridRight = right;
+    if (bottom > maxGridBottom)
+      maxGridBottom = bottom;
+  }
+
+  // Compute the sub-grid pitch to fit all elements within the body
+  float subGridX = (float)bodyWidth / (float)maxGridRight;
+  float subGridY = (float)bodyHeight / (float)maxGridBottom;
 
   for (int i = 0; i < dynamicComponents.size(); ++i) {
     if (i < (int)layout.elements.size()) {
       auto &element = layout.elements[i];
-      auto elementBounds = element.gridBounds;
+      auto eb = element.gridBounds;
 
-      dynamicComponents[i]->setBounds(
-          startX + elementBounds.getX() * subGridSize,
-          startY + elementBounds.getY() * subGridSize,
-          elementBounds.getWidth() * subGridSize,
-          elementBounds.getHeight() * subGridSize);
+      dynamicComponents[i]->setBounds(startX + (int)(eb.getX() * subGridX),
+                                      startY + (int)(eb.getY() * subGridY),
+                                      (int)(eb.getWidth() * subGridX),
+                                      (int)(eb.getHeight() * subGridY));
     }
   }
 

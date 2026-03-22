@@ -83,8 +83,9 @@ public:
   }
 
   virtual std::unique_ptr<juce::Component>
-  createCustomComponent(const juce::String &name) {
-    juce::ignoreUnused(name);
+  createCustomComponent(const juce::String &name,
+                        juce::AudioProcessorValueTreeState *apvts = nullptr) {
+    juce::ignoreUnused(name, apvts);
     return nullptr;
   }
 

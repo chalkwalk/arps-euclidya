@@ -2,103 +2,32 @@
 #include "../MacroMappingMenu.h"
 #include <algorithm>
 
-class FoldNodeEditor : public juce::Component {
-public:
-  FoldNodeEditor(FoldNode &node, juce::AudioProcessorValueTreeState &apvts)
-      : foldNode(node) {
-
-    auto setupSlider = [this, &apvts](
-                           CustomMacroSlider &slider, juce::Label &label,
-                           int &nodeValueRef, int &nodeMacroRef,
-                           std::unique_ptr<MacroAttachment> &attachment,
-                           const juce::String &labelText, int min, int max) {
-      slider.setRange(min, max, 1);
-      slider.setValue(nodeValueRef, juce::dontSendNotification);
-      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-      addAndMakeVisible(slider);
-
-      label.setText(labelText, juce::dontSendNotification);
-      label.setJustificationType(juce::Justification::centred);
-      addAndMakeVisible(label);
-
-      slider.onValueChange = [this, &slider, &nodeValueRef]() {
-        nodeValueRef = (int)slider.getValue();
-        if (foldNode.onNodeDirtied)
-          foldNode.onNodeDirtied();
-      };
-
-      auto updateSliderVisibility = [&slider](int macro) {
-        if (macro == -1) {
-          slider.removeColour(juce::Slider::rotarySliderFillColourId);
-          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-        } else {
-          slider.setColour(juce::Slider::rotarySliderFillColourId,
-                           juce::Colours::orange);
-          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                           juce::Colours::orange.withAlpha(0.3f));
-        }
-      };
-
-      updateSliderVisibility(nodeMacroRef);
-
-      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
-                             updateSliderVisibility]() {
-        MacroMappingMenu::showMenu(
-            &slider, nodeMacroRef,
-            [this, &nodeMacroRef, &attachment, &apvts, &slider,
-             updateSliderVisibility](int macroIndex) {
-              nodeMacroRef = macroIndex;
-              if (macroIndex == -1) {
-                attachment.reset();
-                slider.setTooltip("");
-              } else {
-                attachment = std::make_unique<MacroAttachment>(
-                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
-                slider.setTooltip("Mapped to Macro " +
-                                  juce::String(macroIndex + 1));
-              }
-              updateSliderVisibility(macroIndex);
-              if (foldNode.onMappingChanged)
-                foldNode.onMappingChanged();
-            });
-      };
-
-      // INIT
-      if (nodeMacroRef != -1) {
-        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
-        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
-      }
-    };
-
-    setupSlider(nValueSlider, nValueLabel, foldNode.nValue,
-                foldNode.macroNValue, nValueAttachment, "N Value", 1, 16);
-
-    setSize(400, 150);
-  }
-
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(10);
-    nValueLabel.setBounds(bounds.removeFromTop(20));
-    int size = std::min(bounds.getWidth(), bounds.getHeight());
-    nValueSlider.setBounds(bounds.withSizeKeepingCentre(size, size));
-  }
-
-private:
-  FoldNode &foldNode;
-  CustomMacroSlider nValueSlider;
-  juce::Label nValueLabel;
-  std::unique_ptr<MacroAttachment> nValueAttachment;
-};
-
 // --- FoldNode Impl
 
 FoldNode::FoldNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
-std::unique_ptr<juce::Component>
-FoldNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<FoldNodeEditor>(*this, apvts);
+NodeLayout FoldNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 2;
+  layout.gridHeight = 2;
+
+  UIElement label;
+  label.type = UIElementType::Label;
+  label.label = "N Value";
+  label.gridBounds = {0, 0, 6, 1};
+  layout.elements.push_back(label);
+
+  UIElement slider;
+  slider.type = UIElementType::RotarySlider;
+  slider.minValue = 1;
+  slider.maxValue = 16;
+  slider.valueRef = const_cast<int *>(&nValue);
+  slider.macroIndexRef = const_cast<int *>(&macroNValue);
+  slider.gridBounds = {1, 1, 4, 4};
+  layout.elements.push_back(slider);
+
+  return layout;
 }
 
 void FoldNode::saveNodeState(juce::XmlElement *xml) {

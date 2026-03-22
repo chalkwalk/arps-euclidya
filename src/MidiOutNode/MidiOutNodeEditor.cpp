@@ -1,7 +1,7 @@
-#include "EuclideanVisualizer.h"
 #include "../MacroMappingMenu.h"
-#include "MidiOutNode.h"
 #include "../SharedMacroUI.h"
+#include "EuclideanVisualizer.h"
+#include "MidiOutNode.h"
 
 class MidiOutNodeEditor : public juce::Component, private juce::Timer {
 public:
@@ -536,7 +536,25 @@ private:
   float lastPressMod = -1.0f, lastTimbMod = -1.0f;
 };
 
+NodeLayout MidiOutNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 4;
+  layout.gridHeight = 3;
+
+  UIElement custom;
+  custom.type = UIElementType::Custom;
+  custom.customType = "Editor";
+  custom.gridBounds = {0, 0, 15, 11};
+  layout.elements.push_back(custom);
+
+  return layout;
+}
+
 std::unique_ptr<juce::Component>
-MidiOutNode::createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<MidiOutNodeEditor>(*this, apvts);
+MidiOutNode::createCustomComponent(const juce::String &name,
+                                   juce::AudioProcessorValueTreeState *apvts) {
+  juce::ignoreUnused(name);
+  if (apvts != nullptr)
+    return std::make_unique<MidiOutNodeEditor>(*this, *apvts);
+  return nullptr;
 }

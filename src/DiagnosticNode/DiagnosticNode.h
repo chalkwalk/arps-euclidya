@@ -10,11 +10,11 @@ public:
   std::string getName() const override { return "Diagnostic"; }
 
   void process() override;
-  int getGridWidth() const override { return 2; }
-  int getGridHeight() const override { return 2; }
 
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
+  std::unique_ptr<juce::Component> createCustomComponent(
+      const juce::String &name,
+      juce::AudioProcessorValueTreeState *apvts = nullptr) override;
 
   const NoteSequence &getLatestSequence() const { return latestSequence; }
 

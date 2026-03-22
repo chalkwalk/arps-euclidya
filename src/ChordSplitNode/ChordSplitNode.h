@@ -17,13 +17,10 @@ public:
 
   void process() override;
 
-  std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) override;
+  NodeLayout getLayout() const override;
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
   int splitMode = 0; // 0 = Top (highest soloed), 1 = Bottom (lowest soloed)
-  int getGridWidth() const override { return 1; }
-  int getGridHeight() const override { return 1; }
 };

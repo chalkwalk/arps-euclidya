@@ -2,104 +2,33 @@
 #include "../MacroMappingMenu.h"
 #include <algorithm>
 
-class OctaveTransposeNodeEditor : public juce::Component {
-public:
-  OctaveTransposeNodeEditor(OctaveTransposeNode &node,
-                            juce::AudioProcessorValueTreeState &apvts)
-      : octaveNode(node) {
-
-    auto setupSlider = [this, &apvts](
-                           CustomMacroSlider &slider, juce::Label &label,
-                           int &nodeValueRef, int &nodeMacroRef,
-                           std::unique_ptr<MacroAttachment> &attachment,
-                           const juce::String &labelText, int min, int max) {
-      slider.setRange(min, max, 1);
-      slider.setValue(nodeValueRef, juce::dontSendNotification);
-      slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-      addAndMakeVisible(slider);
-
-      label.setText(labelText, juce::dontSendNotification);
-      label.setJustificationType(juce::Justification::centred);
-      addAndMakeVisible(label);
-
-      slider.onValueChange = [this, &slider, &nodeValueRef]() {
-        nodeValueRef = (int)slider.getValue();
-        if (octaveNode.onNodeDirtied)
-          octaveNode.onNodeDirtied();
-      };
-
-      auto updateSliderVisibility = [&slider](int macro) {
-        if (macro == -1) {
-          slider.removeColour(juce::Slider::rotarySliderFillColourId);
-          slider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-        } else {
-          slider.setColour(juce::Slider::rotarySliderFillColourId,
-                           juce::Colours::orange);
-          slider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                           juce::Colours::orange.withAlpha(0.3f));
-        }
-      };
-
-      updateSliderVisibility(nodeMacroRef);
-
-      slider.onRightClick = [this, &slider, &nodeMacroRef, &attachment, &apvts,
-                             updateSliderVisibility]() {
-        MacroMappingMenu::showMenu(
-            &slider, nodeMacroRef,
-            [this, &nodeMacroRef, &attachment, &apvts, &slider,
-             updateSliderVisibility](int macroIndex) {
-              nodeMacroRef = macroIndex;
-              if (macroIndex == -1) {
-                attachment.reset();
-                slider.setTooltip("");
-              } else {
-                attachment = std::make_unique<MacroAttachment>(
-                    apvts, "macro_" + juce::String(macroIndex + 1), slider);
-                slider.setTooltip("Mapped to Macro " +
-                                  juce::String(macroIndex + 1));
-              }
-              updateSliderVisibility(macroIndex);
-              if (octaveNode.onMappingChanged)
-                octaveNode.onMappingChanged();
-            });
-      };
-
-      // INIT
-      if (nodeMacroRef != -1) {
-        juce::String paramID = "macro_" + juce::String(nodeMacroRef + 1);
-        attachment = std::make_unique<MacroAttachment>(apvts, paramID, slider);
-      }
-    };
-
-    setupSlider(octavesSlider, octavesLabel, octaveNode.octaves,
-                octaveNode.macroOctaves, octavesAttachment, "OCTAVE", -4, 4);
-
-    setSize(100, 100);
-  }
-
-  void resized() override {
-    auto bounds = getLocalBounds().reduced(2);
-    octavesLabel.setBounds(bounds.removeFromTop(16));
-    octavesSlider.setBounds(bounds);
-  }
-
-private:
-  OctaveTransposeNode &octaveNode;
-  CustomMacroSlider octavesSlider;
-  juce::Label octavesLabel;
-  std::unique_ptr<MacroAttachment> octavesAttachment;
-};
-
 // --- OctaveTransposeNode Impl
 
 OctaveTransposeNode::OctaveTransposeNode(
     std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
-std::unique_ptr<juce::Component> OctaveTransposeNode::createEditorComponent(
-    juce::AudioProcessorValueTreeState &apvts) {
-  return std::make_unique<OctaveTransposeNodeEditor>(*this, apvts);
+NodeLayout OctaveTransposeNode::getLayout() const {
+  NodeLayout layout;
+  layout.gridWidth = 1;
+  layout.gridHeight = 1;
+
+  UIElement label;
+  label.type = UIElementType::Label;
+  label.label = "Octave";
+  label.gridBounds = {0, 0, 3, 1};
+  layout.elements.push_back(label);
+
+  UIElement slider;
+  slider.type = UIElementType::RotarySlider;
+  slider.minValue = -4;
+  slider.maxValue = 4;
+  slider.valueRef = const_cast<int *>(&octaves);
+  slider.macroIndexRef = const_cast<int *>(&macroOctaves);
+  slider.gridBounds = {0, 1, 3, 2};
+  layout.elements.push_back(slider);
+
+  return layout;
 }
 
 void OctaveTransposeNode::saveNodeState(juce::XmlElement *xml) {
