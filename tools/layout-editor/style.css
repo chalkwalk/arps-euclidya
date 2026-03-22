@@ -1,0 +1,215 @@
+:root {
+    --bg-color: #1a1b1e;
+    --panel-bg: #2d2e33;
+    --text-color: #e0e0e0;
+    --accent: #2e9ac6;
+    --accent-hover: #3eb5e6;
+    --neon-cyan: #0df0e3;
+    --neon-magenta: #e00df0;
+    --sub-px: 9.5px;
+    /* 1 subdivision = 9.5 pixels */
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#toolbar {
+    background-color: var(--panel-bg);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid #000;
+}
+
+#toolbar h2 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--neon-cyan);
+    margin-right: 20px;
+}
+
+button {
+    background-color: var(--accent);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background-color: var(--accent-hover);
+}
+
+button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+    color: #888;
+}
+
+select {
+    padding: 7px;
+    border-radius: 4px;
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    min-width: 200px;
+}
+
+#main-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#canvas-wrapper {
+    flex: 1;
+    overflow: auto;
+    padding: 40px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background-color: #121212;
+}
+
+#canvas {
+    background-color: #222329;
+    border: 2px solid #444;
+    border-radius: 8px;
+    position: relative;
+    /* Grid background repeating every --sub-px */
+    background-image:
+        linear-gradient(to right, #333 1px, transparent 1px),
+        linear-gradient(to bottom, #333 1px, transparent 1px);
+    background-size: var(--sub-px) var(--sub-px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#properties-panel {
+    width: 300px;
+    background-color: var(--panel-bg);
+    border-left: 1px solid #111;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+#properties-panel h3 {
+    margin-top: 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+}
+
+.prop-row {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.prop-row label {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 4px;
+}
+
+.prop-row input,
+.prop-row select {
+    background: #1e1e1e;
+    border: 1px solid #444;
+    color: white;
+    padding: 6px;
+    border-radius: 3px;
+}
+
+.prop-row input[type="checkbox"] {
+    align-self: flex-start;
+}
+
+/* UI Elements inside Canvas */
+.ui-element {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    cursor: move;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+}
+
+.ui-element.selected {
+    border: 1px dashed var(--neon-cyan) !important;
+    background-color: rgba(13, 240, 227, 0.1);
+    z-index: 10;
+}
+
+.ui-element .resize-handle {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    width: 10px;
+    height: 10px;
+    background: var(--neon-cyan);
+    cursor: se-resize;
+    display: none;
+    border-radius: 50%;
+}
+
+.ui-element.selected .resize-handle {
+    display: block;
+}
+
+/* Render specific types */
+.ui-Label {
+    color: #ccc;
+    font-weight: normal;
+}
+
+.ui-RotarySlider::before {
+    content: '';
+    display: block;
+    width: 60%;
+    aspect-ratio: 1;
+    background: #333;
+    border: 2px solid #555;
+    border-radius: 50%;
+    margin-bottom: 4px;
+}
+
+.ui-Toggle {
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+.ui-ComboBox {
+    background: #2a2a2a;
+    border: 1px solid #555;
+    border-radius: 2px;
+}
+
+.ui-Custom {
+    background: rgba(80, 80, 80, 0.5);
+    border: 1px solid #666;
+    border-radius: 4px;
+}
