@@ -1,4 +1,6 @@
 #include "SelectNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 // --- SelectNode Impl
@@ -7,17 +9,16 @@ SelectNode::SelectNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout SelectNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::SelectNode_json,
+                                            BinaryData::SelectNode_jsonSize);
 
-  UIElement button;
-  button.type = UIElementType::PushButton;
-  button.label = (selectSource == 0) ? "IN 0" : "IN 1";
-  button.valueRef = const_cast<int *>(&selectSource);
-  button.macroIndexRef = const_cast<int *>(&macroSelectSource);
-  button.gridBounds = {0, 0, 3, 1};
-  layout.elements.push_back(button);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "selectSource") {
+      el.valueRef = const_cast<int *>(&selectSource);
+      el.macroIndexRef = const_cast<int *>(&macroSelectSource);
+    }
+  }
 
   return layout;
 }

@@ -1,0 +1,18 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "RotarySlider",
+      "label": "nValue",
+      "minValue": 1,
+      "maxValue": 16,
+      "gridBounds": [
+        0,
+        0,
+        3,
+        2
+      ]
+    }
+  ]
+}

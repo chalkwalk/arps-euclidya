@@ -1,5 +1,7 @@
 #include "DiagnosticNode.h"
 
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 class DiagnosticNodeCustomComponent : public juce::Component,
                                       public juce::ListBoxModel {
 public:
@@ -111,15 +113,8 @@ void DiagnosticNode::process() {
 }
 
 NodeLayout DiagnosticNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 2;
-  layout.gridHeight = 2;
-
-  UIElement customList;
-  customList.type = UIElementType::Custom;
-  customList.customType = "ListBox";
-  customList.gridBounds = {0, 0, 7, 7};
-  layout.elements.push_back(customList);
+  auto layout = LayoutParser::parseFromJSON(BinaryData::DiagnosticNode_json,
+                                            BinaryData::DiagnosticNode_jsonSize);
 
   return layout;
 }

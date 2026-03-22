@@ -1,0 +1,28 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "RotarySlider",
+      "label": "channelFilter",
+      "minValue": 0,
+      "maxValue": 16,
+      "gridBounds": [
+        0,
+        0,
+        3,
+        2
+      ]
+    },
+    {
+      "type": "Toggle",
+      "label": "legacyMode",
+      "gridBounds": [
+        0,
+        2,
+        3,
+        1
+      ]
+    }
+  ]
+}

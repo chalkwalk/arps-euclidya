@@ -1,4 +1,6 @@
 #include "WalkNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
 #include <algorithm>
 #include <random>
@@ -9,39 +11,20 @@ WalkNode::WalkNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout WalkNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 2;
-  layout.gridHeight = 2;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::WalkNode_json,
+                                            BinaryData::WalkNode_jsonSize);
 
-  UIElement lenLabel;
-  lenLabel.type = UIElementType::Label;
-  lenLabel.label = "Length";
-  lenLabel.gridBounds = {0, 0, 3, 1};
-  layout.elements.push_back(lenLabel);
-
-  UIElement lenSlider;
-  lenSlider.type = UIElementType::RotarySlider;
-  lenSlider.minValue = 1;
-  lenSlider.maxValue = 64;
-  lenSlider.valueRef = const_cast<int *>(&walkLength);
-  lenSlider.macroIndexRef = const_cast<int *>(&macroWalkLength);
-  lenSlider.gridBounds = {0, 1, 3, 4};
-  layout.elements.push_back(lenSlider);
-
-  UIElement skewLabel;
-  skewLabel.type = UIElementType::Label;
-  skewLabel.label = "Skew (%)";
-  skewLabel.gridBounds = {3, 0, 3, 1};
-  layout.elements.push_back(skewLabel);
-
-  UIElement skewSlider;
-  skewSlider.type = UIElementType::RotarySlider;
-  skewSlider.minValue = -100;
-  skewSlider.maxValue = 100;
-  skewSlider.valueRef = const_cast<int *>(&walkSkewInt);
-  skewSlider.macroIndexRef = const_cast<int *>(&macroWalkSkew);
-  skewSlider.gridBounds = {3, 1, 3, 4};
-  layout.elements.push_back(skewSlider);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "walkLength") {
+      el.valueRef = const_cast<int *>(&walkLength);
+      el.macroIndexRef = const_cast<int *>(&macroWalkLength);
+    }
+    else if (el.label == "walkSkewInt") {
+      el.valueRef = const_cast<int *>(&walkSkewInt);
+      el.macroIndexRef = const_cast<int *>(&macroWalkSkew);
+    }
+  }
 
   return layout;
 }

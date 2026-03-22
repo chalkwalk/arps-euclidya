@@ -1,4 +1,6 @@
 #include "QuantizerNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <algorithm>
 #include <vector>
 
@@ -25,54 +27,21 @@ const std::vector<std::vector<int>> SCALES = {
 QuantizerNode::QuantizerNode() {}
 
 NodeLayout QuantizerNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 2;
-  layout.gridHeight = 2;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::QuantizerNode_json,
+                                            BinaryData::QuantizerNode_jsonSize);
 
-  UIElement tonLabel;
-  tonLabel.type = UIElementType::Label;
-  tonLabel.label = "Scale";
-  tonLabel.gridBounds = {0, 0, 3, 1};
-  layout.elements.push_back(tonLabel);
-
-  UIElement tonalityBox;
-  tonalityBox.type = UIElementType::ComboBox;
-  tonalityBox.options = {
-      "Lydian",           "Ionian",        "Mixolydian",
-      "Dorian",           "Aeolian",       "Phrygian",
-      "Locrian",          "Major",         "Minor",
-      "Harmonic Minor",   "Melodic Minor", "Major Pentatonic",
-      "Minor Pentatonic", "Whole Tone",    "Diminished"};
-  tonalityBox.valueRef = const_cast<int *>(&tonality);
-  tonalityBox.gridBounds = {3, 0, 4, 1};
-  layout.elements.push_back(tonalityBox);
-
-  UIElement rLabel;
-  rLabel.type = UIElementType::Label;
-  rLabel.label = "Root";
-  rLabel.gridBounds = {0, 1, 3, 1};
-  layout.elements.push_back(rLabel);
-
-  UIElement rootBox;
-  rootBox.type = UIElementType::ComboBox;
-  rootBox.options = {"C",  "C#", "D",  "D#", "E",  "F",
-                     "F#", "G",  "G#", "A",  "A#", "B"};
-  rootBox.valueRef = const_cast<int *>(&rootNote);
-  rootBox.gridBounds = {3, 1, 4, 1};
-  layout.elements.push_back(rootBox);
-
-  UIElement mLabel;
-  mLabel.type = UIElementType::Label;
-  mLabel.label = "Mode";
-  mLabel.gridBounds = {0, 2, 3, 1};
-  layout.elements.push_back(mLabel);
-
-  UIElement modeToggle;
-  modeToggle.type = UIElementType::Toggle;
-  modeToggle.label = mode == 0 ? "Filter" : "Snap";
-  modeToggle.valueRef = const_cast<int *>(&mode);
-  modeToggle.gridBounds = {3, 2, 4, 1};
-  layout.elements.push_back(modeToggle);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "tonality") {
+      el.valueRef = const_cast<int *>(&tonality);
+    }
+    else if (el.label == "rootNote") {
+      el.valueRef = const_cast<int *>(&rootNote);
+    }
+    else if (el.label == "mode") {
+      el.valueRef = const_cast<int *>(&mode);
+    }
+  }
 
   return layout;
 }

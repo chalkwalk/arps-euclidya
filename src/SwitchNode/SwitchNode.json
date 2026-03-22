@@ -1,0 +1,16 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "Toggle",
+      "label": "switchOn",
+      "gridBounds": [
+        0,
+        0,
+        3,
+        1
+      ]
+    }
+  ]
+}

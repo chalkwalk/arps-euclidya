@@ -1,4 +1,6 @@
 #include "OctaveTransposeNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
 #include <algorithm>
 
@@ -9,24 +11,16 @@ OctaveTransposeNode::OctaveTransposeNode(
     : macros(inMacros) {}
 
 NodeLayout OctaveTransposeNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::OctaveTransposeNode_json,
+                                            BinaryData::OctaveTransposeNode_jsonSize);
 
-  UIElement label;
-  label.type = UIElementType::Label;
-  label.label = "Octave";
-  label.gridBounds = {0, 0, 3, 1};
-  layout.elements.push_back(label);
-
-  UIElement slider;
-  slider.type = UIElementType::RotarySlider;
-  slider.minValue = -4;
-  slider.maxValue = 4;
-  slider.valueRef = const_cast<int *>(&octaves);
-  slider.macroIndexRef = const_cast<int *>(&macroOctaves);
-  slider.gridBounds = {0, 1, 3, 2};
-  layout.elements.push_back(slider);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "octaves") {
+      el.valueRef = const_cast<int *>(&octaves);
+      el.macroIndexRef = const_cast<int *>(&macroOctaves);
+    }
+  }
 
   return layout;
 }

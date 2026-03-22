@@ -1,4 +1,6 @@
 #include "SequenceNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
 #include "../SharedMacroUI.h"
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -217,15 +219,8 @@ SequenceNode::SequenceNode(std::array<std::atomic<float> *, 32> &m)
     : macros(m) {}
 
 NodeLayout SequenceNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 4;
-  layout.gridHeight = 2;
-
-  UIElement custom;
-  custom.type = UIElementType::Custom;
-  custom.customType = "Editor";
-  custom.gridBounds = {0, 0, 15, 7};
-  layout.elements.push_back(custom);
+  auto layout = LayoutParser::parseFromJSON(BinaryData::SequenceNode_json,
+                                            BinaryData::SequenceNode_jsonSize);
 
   return layout;
 }

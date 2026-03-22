@@ -1,4 +1,6 @@
 #include "TransposeNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <algorithm>
 
 // --- TransposeNode Impl
@@ -7,19 +9,16 @@ TransposeNode::TransposeNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout TransposeNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::TransposeNode_json,
+                                            BinaryData::TransposeNode_jsonSize);
 
-  UIElement slider;
-  slider.type = UIElementType::RotarySlider;
-  slider.label = "TRANSPOSE";
-  slider.valueRef = const_cast<int *>(&semitones);
-  slider.macroIndexRef = const_cast<int *>(&macroSemitones);
-  slider.minValue = -24;
-  slider.maxValue = 24;
-  slider.gridBounds = {0, 0, 3, 2};
-  layout.elements.push_back(slider);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "semitones") {
+      el.valueRef = const_cast<int *>(&semitones);
+      el.macroIndexRef = const_cast<int *>(&macroSemitones);
+    }
+  }
 
   return layout;
 }

@@ -1,0 +1,16 @@
+{
+  "gridWidth": 4,
+  "gridHeight": 2,
+  "elements": [
+    {
+      "type": "Custom",
+      "customType": "Editor",
+      "gridBounds": [
+        0,
+        0,
+        15,
+        7
+      ]
+    }
+  ]
+}

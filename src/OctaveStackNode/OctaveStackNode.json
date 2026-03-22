@@ -1,0 +1,38 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "Label",
+      "label": "Octaves",
+      "gridBounds": [
+        0,
+        0,
+        2,
+        1
+      ]
+    },
+    {
+      "type": "RotarySlider",
+      "minValue": 1,
+      "maxValue": 4,
+      "gridBounds": [
+        0,
+        1,
+        2,
+        1
+      ],
+      "label": "octaves"
+    },
+    {
+      "type": "Toggle",
+      "label": "uniqueOnly",
+      "gridBounds": [
+        0,
+        2,
+        2,
+        1
+      ]
+    }
+  ]
+}

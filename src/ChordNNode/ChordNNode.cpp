@@ -1,4 +1,6 @@
 #include "ChordNNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <algorithm>
 #include <set>
 
@@ -8,19 +10,16 @@ ChordNNode::ChordNNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout ChordNNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::ChordNNode_json,
+                                            BinaryData::ChordNNode_jsonSize);
 
-  UIElement slider;
-  slider.type = UIElementType::RotarySlider;
-  slider.label = "CHORD N";
-  slider.valueRef = const_cast<int *>(&nValue);
-  slider.macroIndexRef = const_cast<int *>(&macroNValue);
-  slider.minValue = 1;
-  slider.maxValue = 16;
-  slider.gridBounds = {0, 0, 3, 2};
-  layout.elements.push_back(slider);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "nValue") {
+      el.valueRef = const_cast<int *>(&nValue);
+      el.macroIndexRef = const_cast<int *>(&macroNValue);
+    }
+  }
 
   return layout;
 }

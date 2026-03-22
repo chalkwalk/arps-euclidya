@@ -65,7 +65,24 @@ target_sources(ArpsEuclidya
         NodeEditorPanel.cpp)
 
 juce_add_binary_data(NodeLayoutData SOURCES
-    MultiplyNode/MultiplyNode.json)
+    AllNotesNode/AllNotesNode.json
+    ChordNNode/ChordNNode.json
+    ChordSplitNode/ChordSplitNode.json
+    DiagnosticNode/DiagnosticNode.json
+    FoldNode/FoldNode.json
+    MidiInNode/MidiInNode.json
+    MultiplyNode/MultiplyNode.json
+    OctaveStackNode/OctaveStackNode.json
+    OctaveTransposeNode/OctaveTransposeNode.json
+    QuantizerNode/QuantizerNode.json
+    RouteNode/RouteNode.json
+    SelectNode/SelectNode.json
+    SequenceNode/SequenceNode.json
+    SplitNode/SplitNode.json
+    SwitchNode/SwitchNode.json
+    TransposeNode/TransposeNode.json
+    UnfoldNode/UnfoldNode.json
+    WalkNode/WalkNode.json)
 
 clap_juce_extensions_plugin(TARGET ArpsEuclidya CLAP_ID "com.ChalkWalkMusic.ArpsEuclidya" CLAP_FEATURES "note-effect" "tool")
 

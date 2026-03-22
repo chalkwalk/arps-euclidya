@@ -1,4 +1,6 @@
 #include "ChordSplitNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <algorithm>
 
 void ChordSplitNode::process() {
@@ -74,16 +76,15 @@ void ChordSplitNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 NodeLayout ChordSplitNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::ChordSplitNode_json,
+                                            BinaryData::ChordSplitNode_jsonSize);
 
-  UIElement toggle;
-  toggle.type = UIElementType::Toggle;
-  toggle.label = splitMode == 0 ? "TOP" : "BOTTOM";
-  toggle.valueRef = const_cast<int *>(&splitMode);
-  toggle.gridBounds = {0, 1, 3, 1};
-  layout.elements.push_back(toggle);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "splitMode") {
+      el.valueRef = const_cast<int *>(&splitMode);
+    }
+  }
 
   return layout;
 }

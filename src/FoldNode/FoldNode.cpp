@@ -1,4 +1,6 @@
 #include "FoldNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
 #include <algorithm>
 
@@ -8,24 +10,16 @@ FoldNode::FoldNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout FoldNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 2;
-  layout.gridHeight = 2;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::FoldNode_json,
+                                            BinaryData::FoldNode_jsonSize);
 
-  UIElement label;
-  label.type = UIElementType::Label;
-  label.label = "N Value";
-  label.gridBounds = {0, 0, 6, 1};
-  layout.elements.push_back(label);
-
-  UIElement slider;
-  slider.type = UIElementType::RotarySlider;
-  slider.minValue = 1;
-  slider.maxValue = 16;
-  slider.valueRef = const_cast<int *>(&nValue);
-  slider.macroIndexRef = const_cast<int *>(&macroNValue);
-  slider.gridBounds = {1, 1, 4, 4};
-  layout.elements.push_back(slider);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "nValue") {
+      el.valueRef = const_cast<int *>(&nValue);
+      el.macroIndexRef = const_cast<int *>(&macroNValue);
+    }
+  }
 
   return layout;
 }

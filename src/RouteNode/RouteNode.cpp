@@ -1,4 +1,6 @@
 #include "RouteNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 // --- RouteNode Impl
@@ -7,17 +9,16 @@ RouteNode::RouteNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout RouteNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::RouteNode_json,
+                                            BinaryData::RouteNode_jsonSize);
 
-  UIElement button;
-  button.type = UIElementType::PushButton;
-  button.label = (routeDest == 0) ? "OUT 0" : "OUT 1";
-  button.valueRef = const_cast<int *>(&routeDest);
-  button.macroIndexRef = const_cast<int *>(&macroRouteDest);
-  button.gridBounds = {0, 0, 3, 1};
-  layout.elements.push_back(button);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "routeDest") {
+      el.valueRef = const_cast<int *>(&routeDest);
+      el.macroIndexRef = const_cast<int *>(&macroRouteDest);
+    }
+  }
 
   return layout;
 }

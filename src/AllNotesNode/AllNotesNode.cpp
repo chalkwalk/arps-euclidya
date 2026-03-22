@@ -1,26 +1,21 @@
 #include "AllNotesNode.h"
 
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 // --- AllNotesNode Impl
 
 AllNotesNode::AllNotesNode() {}
 
 NodeLayout AllNotesNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::AllNotesNode_json,
+                                            BinaryData::AllNotesNode_jsonSize);
 
-  UIElement label;
-  label.type = UIElementType::Label;
-  label.label = "Octave";
-  label.gridBounds = {0, 0, 3, 1};
-  layout.elements.push_back(label);
-
-  UIElement combo;
-  combo.type = UIElementType::ComboBox;
-  combo.options = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
-  combo.valueRef = const_cast<int *>(&baseOctave);
-  combo.gridBounds = {0, 1, 3, 1};
-  layout.elements.push_back(combo);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "baseOctave") {
+      el.valueRef = const_cast<int *>(&baseOctave);
+    }
+  }
 
   return layout;
 }

@@ -1,4 +1,6 @@
 #include "OctaveStackNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
 #include <algorithm>
 #include <set>
@@ -9,31 +11,19 @@ OctaveStackNode::OctaveStackNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout OctaveStackNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::OctaveStackNode_json,
+                                            BinaryData::OctaveStackNode_jsonSize);
 
-  UIElement label;
-  label.type = UIElementType::Label;
-  label.label = "Octaves";
-  label.gridBounds = {0, 0, 2, 1};
-  layout.elements.push_back(label);
-
-  UIElement slider;
-  slider.type = UIElementType::RotarySlider;
-  slider.minValue = 1;
-  slider.maxValue = 4;
-  slider.valueRef = const_cast<int *>(&octaves);
-  slider.macroIndexRef = const_cast<int *>(&macroOctaves);
-  slider.gridBounds = {0, 1, 2, 1};
-  layout.elements.push_back(slider);
-
-  UIElement uniqueToggle;
-  uniqueToggle.type = UIElementType::Toggle;
-  uniqueToggle.label = "Unique";
-  uniqueToggle.valueRef = const_cast<int *>(&uniqueOnly);
-  uniqueToggle.gridBounds = {0, 2, 2, 1};
-  layout.elements.push_back(uniqueToggle);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "octaves") {
+      el.valueRef = const_cast<int *>(&octaves);
+      el.macroIndexRef = const_cast<int *>(&macroOctaves);
+    }
+    else if (el.label == "uniqueOnly") {
+      el.valueRef = const_cast<int *>(&uniqueOnly);
+    }
+  }
 
   return layout;
 }

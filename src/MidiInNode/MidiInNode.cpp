@@ -1,4 +1,6 @@
 #include "MidiInNode.h"
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 #include <algorithm>
 #include <cmath>
 
@@ -9,26 +11,19 @@ MidiInNode::MidiInNode(MidiHandler &handler,
     : midiHandler(handler), macros(macrosArray) {}
 
 NodeLayout MidiInNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 1;
-  layout.gridHeight = 1;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::MidiInNode_json,
+                                            BinaryData::MidiInNode_jsonSize);
 
-  UIElement slider;
-  slider.type = UIElementType::RotarySlider;
-  slider.label = "CHANNEL";
-  slider.valueRef = const_cast<int *>(&channelFilter);
-  slider.macroIndexRef = const_cast<int *>(&macroChannelFilter);
-  slider.minValue = 0;
-  slider.maxValue = 16;
-  slider.gridBounds = {0, 0, 3, 2};
-  layout.elements.push_back(slider);
-
-  UIElement toggle;
-  toggle.type = UIElementType::Toggle;
-  toggle.label = "LEGACY";
-  toggle.valueRef = const_cast<int *>(&legacyMode);
-  toggle.gridBounds = {0, 2, 3, 1};
-  layout.elements.push_back(toggle);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "channelFilter") {
+      el.valueRef = const_cast<int *>(&channelFilter);
+      el.macroIndexRef = const_cast<int *>(&macroChannelFilter);
+    }
+    else if (el.label == "legacyMode") {
+      el.valueRef = const_cast<int *>(&legacyMode);
+    }
+  }
 
   return layout;
 }

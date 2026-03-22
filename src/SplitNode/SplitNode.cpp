@@ -1,5 +1,7 @@
 #include "SplitNode.h"
 
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 void SplitNode::process() {
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty()) {
@@ -87,30 +89,18 @@ void SplitNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 NodeLayout SplitNode::getLayout() const {
-  NodeLayout layout;
-  layout.gridWidth = 2;
-  layout.gridHeight = 2;
+  auto layout = LayoutParser::parseFromJSON(BinaryData::SplitNode_json,
+                                            BinaryData::SplitNode_jsonSize);
 
-  UIElement modeBox;
-  modeBox.type = UIElementType::ComboBox;
-  modeBox.options = {"Alternating", "Random", "Probability"};
-  modeBox.valueRef = const_cast<int *>(&splitMode);
-  modeBox.gridBounds = {0, 0, 6, 1};
-  layout.elements.push_back(modeBox);
-
-  UIElement pLabel;
-  pLabel.type = UIElementType::Label;
-  pLabel.label = "Prob %";
-  pLabel.gridBounds = {0, 1, 3, 1};
-  layout.elements.push_back(pLabel);
-
-  UIElement pSlider;
-  pSlider.type = UIElementType::RotarySlider;
-  pSlider.minValue = 1;
-  pSlider.maxValue = 99;
-  pSlider.valueRef = const_cast<int *>(&splitPercent);
-  pSlider.gridBounds = {0, 2, 3, 4};
-  layout.elements.push_back(pSlider);
+  // Bind runtime pointers by matching element labels
+  for (auto &el : layout.elements) {
+   if (el.label == "splitMode") {
+      el.valueRef = const_cast<int *>(&splitMode);
+    }
+    else if (el.label == "splitPercent") {
+      el.valueRef = const_cast<int *>(&splitPercent);
+    }
+  }
 
   return layout;
 }

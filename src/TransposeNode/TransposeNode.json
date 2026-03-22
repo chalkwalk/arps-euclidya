@@ -1,0 +1,18 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "RotarySlider",
+      "label": "semitones",
+      "minValue": -24,
+      "maxValue": 24,
+      "gridBounds": [
+        0,
+        0,
+        3,
+        2
+      ]
+    }
+  ]
+}
