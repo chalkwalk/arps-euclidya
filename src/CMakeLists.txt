@@ -64,6 +64,9 @@ target_sources(ArpsEuclidya
     PUBLIC
         NodeEditorPanel.cpp)
 
+juce_add_binary_data(NodeLayoutData SOURCES
+    MultiplyNode/MultiplyNode.json)
+
 clap_juce_extensions_plugin(TARGET ArpsEuclidya CLAP_ID "com.ChalkWalkMusic.ArpsEuclidya" CLAP_FEATURES "note-effect" "tool")
 
 target_compile_definitions(ArpsEuclidya
@@ -74,6 +77,7 @@ target_compile_definitions(ArpsEuclidya
 
 target_link_libraries(ArpsEuclidya
     PRIVATE
+        NodeLayoutData
         juce::juce_audio_utils
         juce::juce_audio_plugin_client
         juce::juce_opengl
