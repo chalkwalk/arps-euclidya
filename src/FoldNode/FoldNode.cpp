@@ -1,7 +1,7 @@
 #include "FoldNode.h"
 #include "../LayoutParser.h"
-#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
+#include "BinaryData.h"
 #include <algorithm>
 
 // --- FoldNode Impl
@@ -15,9 +15,11 @@ NodeLayout FoldNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "nValue") {
+    if (el.label == "nValue") {
       el.valueRef = const_cast<int *>(&nValue);
       el.macroIndexRef = const_cast<int *>(&macroNValue);
+    } else if (el.label == "mode") {
+      el.valueRef = const_cast<int *>(&mode);
     }
   }
 
@@ -28,6 +30,7 @@ void FoldNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("nValue", nValue);
     xml->setAttribute("macroNValue", macroNValue);
+    xml->setAttribute("mode", mode);
   }
 }
 
@@ -35,6 +38,7 @@ void FoldNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     nValue = xml->getIntAttribute("nValue", 2);
     macroNValue = xml->getIntAttribute("macroNValue", -1);
+    mode = xml->getIntAttribute("mode", 0);
   }
 }
 
@@ -51,21 +55,43 @@ void FoldNode::process() {
         it != inputSequences.end() ? it->second : NoteSequence();
   } else {
     NoteSequence outSeq;
-    std::vector<HeldNote> currentAggregatedStep;
-    int itemsInCurrentStep = 0;
 
-    for (const auto &step : it->second) {
-      if (step.empty())
-        continue; // Skip resting steps during fold? Or fold them? Let's skip
-                  // for now to compact notes.
+    if (mode == 0) { // Chunked
+      std::vector<HeldNote> currentAggregatedStep;
+      int itemsInCurrentStep = 0;
 
-      for (const auto &note : step) {
-        currentAggregatedStep.push_back(note);
+      for (const auto &step : it->second) {
+        if (step.empty())
+          continue; // Skip resting steps during fold? Or fold them? Let's skip
+                    // for now to compact notes.
+
+        for (const auto &note : step) {
+          currentAggregatedStep.push_back(note);
+        }
+        itemsInCurrentStep++;
+
+        if (itemsInCurrentStep >= actualNValue) {
+          // Sort and dedup before pushing the folded step
+          std::sort(currentAggregatedStep.begin(), currentAggregatedStep.end(),
+                    [](const HeldNote &a, const HeldNote &b) {
+                      return a.noteNumber < b.noteNumber;
+                    });
+
+          auto last = std::unique(currentAggregatedStep.begin(),
+                                  currentAggregatedStep.end(),
+                                  [](const HeldNote &a, const HeldNote &b) {
+                                    return a.noteNumber == b.noteNumber;
+                                  });
+          currentAggregatedStep.erase(last, currentAggregatedStep.end());
+
+          outSeq.push_back(currentAggregatedStep);
+          currentAggregatedStep.clear();
+          itemsInCurrentStep = 0;
+        }
       }
-      itemsInCurrentStep++;
 
-      if (itemsInCurrentStep >= actualNValue) {
-        // Sort and dedup before pushing the folded step
+      // Push any remaining aggregated notes as the final step
+      if (!currentAggregatedStep.empty()) {
         std::sort(currentAggregatedStep.begin(), currentAggregatedStep.end(),
                   [](const HeldNote &a, const HeldNote &b) {
                     return a.noteNumber < b.noteNumber;
@@ -79,26 +105,37 @@ void FoldNode::process() {
         currentAggregatedStep.erase(last, currentAggregatedStep.end());
 
         outSeq.push_back(currentAggregatedStep);
-        currentAggregatedStep.clear();
-        itemsInCurrentStep = 0;
       }
-    }
+    } else { // Rolling
+      const auto &inSeq = it->second;
+      int seqSize = (int)inSeq.size();
 
-    // Push any remaining aggregated notes as the final step
-    if (!currentAggregatedStep.empty()) {
-      std::sort(currentAggregatedStep.begin(), currentAggregatedStep.end(),
-                [](const HeldNote &a, const HeldNote &b) {
-                  return a.noteNumber < b.noteNumber;
-                });
+      for (int i = 0; i < seqSize; ++i) {
+        std::vector<HeldNote> rollingStep;
 
-      auto last = std::unique(currentAggregatedStep.begin(),
-                              currentAggregatedStep.end(),
-                              [](const HeldNote &a, const HeldNote &b) {
-                                return a.noteNumber == b.noteNumber;
-                              });
-      currentAggregatedStep.erase(last, currentAggregatedStep.end());
+        for (int j = 0; j < actualNValue; ++j) {
+          const auto &sourceStep = inSeq[(size_t)((i + j) % seqSize)];
+          for (const auto &note : sourceStep) {
+            rollingStep.push_back(note);
+          }
+        }
 
-      outSeq.push_back(currentAggregatedStep);
+        if (!rollingStep.empty()) {
+          std::sort(rollingStep.begin(), rollingStep.end(),
+                    [](const HeldNote &a, const HeldNote &b) {
+                      return a.noteNumber < b.noteNumber;
+                    });
+
+          auto last = std::unique(rollingStep.begin(), rollingStep.end(),
+                                  [](const HeldNote &a, const HeldNote &b) {
+                                    return a.noteNumber == b.noteNumber;
+                                  });
+          rollingStep.erase(last, rollingStep.end());
+          outSeq.push_back(rollingStep);
+        } else {
+          outSeq.push_back({});
+        }
+      }
     }
 
     outputSequences[0] = outSeq;
