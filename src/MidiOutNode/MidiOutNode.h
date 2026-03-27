@@ -118,6 +118,8 @@ public:
   std::atomic<bool> lastTickPlayedNote{false};
 
 private:
+  void flushPlayingNotes(juce::MidiBuffer &buffer, int samplePosition);
+
   MidiHandler &midiHandler;
   ClockManager &clockManager;
   std::array<std::atomic<float> *, 32> macros;

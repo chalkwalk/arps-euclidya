@@ -94,6 +94,15 @@ void MidiOutNode::clampParameters() {
   ui_rOffsetMax = (rSteps + 1) / 2;
 }
 
+void MidiOutNode::flushPlayingNotes(juce::MidiBuffer &buffer,
+                                    int samplePosition) {
+  for (const auto &note : playingNotes) {
+    buffer.addEvent(juce::MidiMessage::noteOff(note.first, note.second),
+                    samplePosition);
+  }
+  playingNotes.clear();
+}
+
 void MidiOutNode::process() {
   clampParameters();
 
@@ -193,12 +202,14 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
   // Cleanup playing notes on every tick
   if (isTick) {
-    playingNotes.clear();
+    flushPlayingNotes(outputBuffer, samplePosition);
     lastTickPlayedNote = false;
   }
 
-  if (!holdingNotes)
+  if (!holdingNotes) {
+    flushPlayingNotes(outputBuffer, samplePosition);
     return;
+  }
 
   if (isTick) {
     const auto &sequence = it0->second;
