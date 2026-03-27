@@ -193,12 +193,8 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
   // Cleanup playing notes on every tick
   if (isTick) {
-    for (const auto &note : playingNotes) {
-      outputBuffer.addEvent(
-          juce::MidiMessage::noteOff(outputChannel, note.second),
-          samplePosition);
-    }
     playingNotes.clear();
+    lastTickPlayedNote = false;
   }
 
   if (!holdingNotes)
@@ -326,6 +322,10 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       const auto &step =
           sequence[(size_t)sequenceIndex % (size_t)sequence.size()];
       visualPatternIndex = patternIndex % (int)pattern.size();
+
+      if (!step.empty()) {
+        lastTickPlayedNote = true;
+      }
 
       for (const HeldNote &noteTrigger : step) {
         float currentPressure = 0.0f;

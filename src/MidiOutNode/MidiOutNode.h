@@ -115,6 +115,8 @@ public:
   int ui_rOffsetMin = -16;
   int ui_rOffsetMax = 16;
 
+  std::atomic<bool> lastTickPlayedNote{false};
+
 private:
   MidiHandler &midiHandler;
   ClockManager &clockManager;

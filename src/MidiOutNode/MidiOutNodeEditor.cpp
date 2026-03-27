@@ -17,7 +17,8 @@ public:
 
   void timerCallback() override {
     visualizer.update(midiOutNode.getPattern(), midiOutNode.getPatternIndex(),
-                      midiOutNode.getRhythm(), midiOutNode.getRhythmIndex());
+                      midiOutNode.getRhythm(), midiOutNode.getRhythmIndex(),
+                      midiOutNode.lastTickPlayedNote);
   }
 
   void resized() override { visualizer.setBounds(getLocalBounds()); }

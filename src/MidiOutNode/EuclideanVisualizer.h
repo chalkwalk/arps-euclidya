@@ -8,16 +8,18 @@ public:
   EuclideanVisualizer() = default;
 
   void update(const std::vector<bool> &pattern, int patternIdx,
-              const std::vector<bool> &rhythm, int rhythmIdx) {
+              const std::vector<bool> &rhythm, int rhythmIdx, bool notePlayed) {
     if (pattern != currentPattern || rhythm != currentRhythm) {
       currentPattern = pattern;
       currentRhythm = rhythm;
       pathsDirty = true;
     }
 
-    if (patternIdx != currentPatternIdx || rhythmIdx != currentRhythmIdx) {
+    if (patternIdx != currentPatternIdx || rhythmIdx != currentRhythmIdx ||
+        notePlayed != currentNotePlayed) {
       currentPatternIdx = patternIdx;
       currentRhythmIdx = rhythmIdx;
+      currentNotePlayed = notePlayed;
       repaint();
     }
   }
@@ -64,10 +66,18 @@ public:
                                       juce::PathStrokeType::rounded));
 
     // --- Draw Playheads (Instantaneous) ---
-    drawPlayhead(g, center, radius, 10.0f, (int)currentRhythm.size(),
-                 currentRhythmIdx);
-    drawPlayhead(g, center, radius - 16.0f, 6.0f, (int)currentPattern.size(),
-                 currentPatternIdx);
+    // User wants 2 tiers of brightness:
+    // 1. Note Played -> Bright (1.0 opacity, with aura)
+    // 2. Any Rest -> Dimmer (0.6 opacity)
+
+    // Rhythm Ring Playhead
+    drawPlayhead2Tier(g, center, radius, 10.0f, (int)currentRhythm.size(),
+                      currentRhythmIdx, currentNotePlayed, juce::Colours::cyan);
+
+    // Pattern Ring Playhead
+    drawPlayhead2Tier(g, center, radius - 16.0f, 6.0f,
+                      (int)currentPattern.size(), currentPatternIdx,
+                      currentNotePlayed, juce::Colours::magenta);
   }
 
 private:
@@ -105,8 +115,10 @@ private:
     }
   }
 
-  void drawPlayhead(juce::Graphics &g, juce::Point<float> center, float radius,
-                    float thickness, int numSteps, int activeIdx) {
+  void drawPlayhead2Tier(juce::Graphics &g, juce::Point<float> center,
+                         float radius, float thickness, int numSteps,
+                         int activeIdx, bool isNotePlayed,
+                         juce::Colour layerColor) {
     if (numSteps <= 0 || activeIdx < 0)
       return;
 
@@ -119,20 +131,34 @@ private:
     p.addCentredArc(center.x, center.y, radius, radius, 0.0f, angle + gap,
                     angle + angleStep - gap, true);
 
-    g.setColour(juce::Colours::white.withAlpha(0.4f));
-    g.strokePath(p, juce::PathStrokeType(thickness + 2.0f,
-                                         juce::PathStrokeType::curved,
-                                         juce::PathStrokeType::rounded));
-    g.setColour(juce::Colours::white);
-    g.strokePath(p,
-                 juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
-                                      juce::PathStrokeType::rounded));
+    if (isNotePlayed) {
+      // Note Played: Bright white with colored aura
+      g.setColour(layerColor.withAlpha(0.7f));
+      g.strokePath(p, juce::PathStrokeType(thickness + 4.0f,
+                                           juce::PathStrokeType::curved,
+                                           juce::PathStrokeType::rounded));
+      g.setColour(juce::Colours::white);
+      g.strokePath(p, juce::PathStrokeType(thickness + 1.0f,
+                                           juce::PathStrokeType::curved,
+                                           juce::PathStrokeType::rounded));
+    } else {
+      // Any Rest: Dimmer (0.6 opacity)
+      g.setColour(layerColor.withAlpha(0.4f));
+      g.strokePath(p,
+                   juce::PathStrokeType(thickness, juce::PathStrokeType::curved,
+                                        juce::PathStrokeType::rounded));
+      g.setColour(juce::Colours::white.withAlpha(0.6f));
+      g.strokePath(p, juce::PathStrokeType(thickness + 1.0f,
+                                           juce::PathStrokeType::curved,
+                                           juce::PathStrokeType::rounded));
+    }
   }
 
   std::vector<bool> currentPattern;
   int currentPatternIdx = -1;
   std::vector<bool> currentRhythm;
   int currentRhythmIdx = -1;
+  bool currentNotePlayed = false;
 
   bool pathsDirty = true;
   juce::Path rhythmBeatPath, rhythmRestPath;
