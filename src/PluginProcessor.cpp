@@ -188,6 +188,11 @@ juce::AudioProcessorEditor *ArpsEuclidyaProcessor::createEditor() {
 void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
   juce::XmlElement xmlRoot("ArpsEuclidyaState");
 
+  if (juce::PluginHostType().getPluginLoadedAs() ==
+      juce::AudioProcessor::wrapperType_Standalone) {
+    xmlRoot.setAttribute("standaloneBPM", clockManager.getBPM());
+  }
+
   // Save APVTS Macros
   auto state = apvts.copyState();
   std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
@@ -219,6 +224,11 @@ void ArpsEuclidyaProcessor::setStateInformation(const void *data,
 bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   juce::XmlElement xmlRoot("ArpsEuclidyaState");
   xmlRoot.setAttribute("version", CURRENT_PATCH_VERSION);
+
+  if (juce::PluginHostType().getPluginLoadedAs() ==
+      juce::AudioProcessor::wrapperType_Standalone) {
+    xmlRoot.setAttribute("standaloneBPM", clockManager.getBPM());
+  }
 
   // Save APVTS Macros
   auto state = apvts.copyState();
@@ -257,6 +267,12 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
 
   if (version < CURRENT_PATCH_VERSION) {
     upgradePatch(xmlState, version);
+  }
+
+  if (xmlState->hasAttribute("standaloneBPM") &&
+      juce::PluginHostType().getPluginLoadedAs() ==
+          juce::AudioProcessor::wrapperType_Standalone) {
+    clockManager.setBPM(xmlState->getDoubleAttribute("standaloneBPM"));
   }
 
   // Restore APVTS Macros

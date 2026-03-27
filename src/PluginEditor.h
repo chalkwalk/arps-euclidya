@@ -5,6 +5,7 @@
 #include "ModuleLibraryPanel.h"
 #include "PatchManagementPanel.h"
 #include "PluginProcessor.h"
+#include "TransportBar.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
@@ -37,6 +38,9 @@ private:
 
   // Graph canvas
   std::unique_ptr<GraphCanvas> graphCanvas;
+
+  // Standalone Transport
+  std::unique_ptr<TransportBar> transportBar;
 
   // Macros
   class MacroControl : public juce::Component {

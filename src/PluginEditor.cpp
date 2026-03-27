@@ -39,6 +39,13 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
 
   addAndMakeVisible(patchPanel);
 
+  // Standalone Transport (Only if running as standalone app)
+  if (juce::PluginHostType().getPluginLoadedAs() ==
+      juce::AudioProcessor::wrapperType_Standalone) {
+    transportBar = std::make_unique<TransportBar>(audioProcessor.clockManager);
+    addAndMakeVisible(transportBar.get());
+  }
+
   // Setup Graph Canvas
   graphCanvas = std::make_unique<GraphCanvas>(audioProcessor.graphEngine,
                                               audioProcessor.apvts,
@@ -166,6 +173,12 @@ void ArpsEuclidyaEditor::resized() {
   // Let's put it at the very top
   auto patchBounds = bounds.removeFromTop(40);
   patchPanel.setBounds(patchBounds);
+
+  // Standalone Transport Bar (only layout if present)
+  if (transportBar != nullptr) {
+    auto transportBounds = bounds.removeFromTop(40);
+    transportBar->setBounds(transportBounds);
+  }
 
   // Macro bar below patch panel
   auto macroBounds = bounds.removeFromTop(80);

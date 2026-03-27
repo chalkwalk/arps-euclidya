@@ -16,6 +16,7 @@ public:
 
   // Access current BPM
   double getBPM() const { return currentBPM; }
+  void setBPM(double bpm) { currentBPM = juce::jlimit(20.0, 300.0, bpm); }
 
   // A cumulative PPQ counter that always increments, regardless of host state.
   // When host is playing, mirrors host PPQ. When stopped, synthesizes PPQ
@@ -24,10 +25,20 @@ public:
 
   bool isHostPlaying() const { return hostPlaying; }
 
+  // Standalone Transport Controls
+  void setPlaying(bool playing) { standaloneRunning = playing; }
+  bool isStandaloneRunning() const { return standaloneRunning; }
+  void resetPhase() {
+    cumulativePpq = 0.0;
+    internalPhase = 0.0;
+    lastPpqPosition = -1.0;
+  }
+
 private:
   double currentBPM = 120.0;
   bool tickFlag = false;
   bool hostPlaying = false;
+  bool standaloneRunning = true;
 
   // Cumulative PPQ: always-incrementing, works in all modes
   double cumulativePpq = 0.0;
