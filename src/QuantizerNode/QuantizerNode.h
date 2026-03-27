@@ -19,4 +19,5 @@ public:
   int tonality = 0;
   int rootNote = 0;
   int mode = 0;
+  int restOnDrop = 1;
 };

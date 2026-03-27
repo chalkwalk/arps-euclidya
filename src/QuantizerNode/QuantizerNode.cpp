@@ -32,14 +32,14 @@ NodeLayout QuantizerNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "tonality") {
+    if (el.label == "tonality") {
       el.valueRef = const_cast<int *>(&tonality);
-    }
-    else if (el.label == "rootNote") {
+    } else if (el.label == "rootNote") {
       el.valueRef = const_cast<int *>(&rootNote);
-    }
-    else if (el.label == "mode") {
+    } else if (el.label == "mode") {
       el.valueRef = const_cast<int *>(&mode);
+    } else if (el.label == "restOnDrop") {
+      el.valueRef = const_cast<int *>(&restOnDrop);
     }
   }
 
@@ -51,6 +51,7 @@ void QuantizerNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("tonality", tonality);
     xml->setAttribute("rootNote", rootNote);
     xml->setAttribute("mode", mode);
+    xml->setAttribute("restOnDrop", restOnDrop);
   }
 }
 
@@ -59,6 +60,7 @@ void QuantizerNode::loadNodeState(juce::XmlElement *xml) {
     tonality = xml->getIntAttribute("tonality", 0);
     rootNote = xml->getIntAttribute("rootNote", 0);
     mode = xml->getIntAttribute("mode", 0);
+    restOnDrop = xml->getIntAttribute("restOnDrop", 1);
   }
 }
 
@@ -140,7 +142,7 @@ void QuantizerNode::process() {
                                 });
         processedStep.erase(last, processedStep.end());
         outSeq.push_back(processedStep);
-      } else if (mode == 0) {
+      } else if (mode == 0 && restOnDrop == 1) {
         outSeq.push_back({}); // Keep length if entirely filtered out
       }
     }

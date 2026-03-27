@@ -1,6 +1,6 @@
 {
   "gridWidth": 2,
-  "gridHeight": 2,
+  "gridHeight": 3,
   "elements": [
     {
       "type": "Label",
@@ -92,6 +92,26 @@
         13
       ],
       "label": "mode"
+    },
+    {
+      "type": "Label",
+      "label": "Rest",
+      "gridBounds": [
+        0,
+        40,
+        17,
+        13
+      ]
+    },
+    {
+      "type": "Toggle",
+      "gridBounds": [
+        17,
+        40,
+        23,
+        13
+      ],
+      "label": "restOnDrop"
     }
   ]
 }
