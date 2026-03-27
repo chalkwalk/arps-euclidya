@@ -25,6 +25,8 @@ public:
   void setMappingName(const juce::String &name) { mappingName = name; }
   void clearMapping() { mappingName = ""; }
 
+  bool isMapped() const { return mappingName.isNotEmpty(); }
+
   int getMacroIndex() const { return index; }
 
 private:

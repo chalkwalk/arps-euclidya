@@ -139,7 +139,7 @@ void ArpsEuclidyaEditor::timerCallback() {
             audioProcessor.macroParams[(size_t)i]->getName(100);
         macroControls[i]->label.setText(newName, juce::dontSendNotification);
 
-        bool mapped = !newName.startsWith("Macro ");
+        bool mapped = audioProcessor.macroParams[(size_t)i]->isMapped();
         if (macroControls[i]->isMapped != mapped) {
           macroControls[i]->isMapped = mapped;
           macroControls[i]->repaint();

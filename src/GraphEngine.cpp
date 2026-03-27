@@ -95,6 +95,26 @@ juce::Point<int> GraphEngine::findClosestFreeSpot(int startX, int startY,
           startY}; // Fallback (should be extremely rare to fill a 100x100 grid)
 }
 
+int GraphEngine::getNextFreeMacro() const {
+  std::set<int> usedMacros;
+  for (const auto &node : nodes) {
+    auto mappings = node->getMacroMappings();
+    for (const auto &mapping : mappings) {
+      if (mapping.second != nullptr && *mapping.second != -1) {
+        usedMacros.insert(*mapping.second);
+      }
+    }
+  }
+
+  for (int i = 0; i < 32; ++i) {
+    if (usedMacros.find(i) == usedMacros.end()) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
                                         GraphNode *target, int inPort) {

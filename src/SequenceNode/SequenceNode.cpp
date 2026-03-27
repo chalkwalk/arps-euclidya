@@ -1,8 +1,10 @@
 #include "SequenceNode.h"
+#include "../GraphCanvas.h"
 #include "../LayoutParser.h"
-#include "BinaryData.h"
 #include "../MacroMappingMenu.h"
+#include "../MacroParameter.h"
 #include "../SharedMacroUI.h"
+#include "BinaryData.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class SequenceNodeEditor : public juce::Component,
@@ -30,21 +32,34 @@ public:
     addAndMakeVisible(lengthLabel);
 
     lengthSlider.onRightClick = [this, &node, &apvts]() {
+      GraphCanvas *canvasPtr = findParentComponentOfClass<GraphCanvas>();
       MacroMappingMenu::showMenu(
           &lengthSlider, node.macroSeqLength,
-          [this, &node, &apvts](int macroIndex) {
-            node.macroSeqLength = macroIndex;
-            if (macroIndex == -1) {
-              lengthAttachment.reset();
-              lengthSlider.setTooltip("");
-            } else {
-              lengthAttachment = std::make_unique<MacroAttachment>(
-                  apvts, "macro_" + juce::String(macroIndex + 1), lengthSlider);
-              lengthSlider.setTooltip("Mapped to Macro " +
-                                      juce::String(macroIndex + 1));
-              if (node.onMappingChanged)
-                node.onMappingChanged();
+          [&node, canvasPtr, &apvts, this](int macroIndex) {
+            if (macroIndex == -2) {
+              if (canvasPtr != nullptr) {
+                macroIndex = canvasPtr->getEngine().getNextFreeMacro();
+              }
+              if (macroIndex < 0)
+                return;
             }
+
+            auto *param = dynamic_cast<MacroParameter *>(
+                apvts.getParameter("macro_" + juce::String(macroIndex + 1)));
+            if (param != nullptr && !param->isMapped()) {
+              float norm = (float)((lengthSlider.getValue() -
+                                    lengthSlider.getMinimum()) /
+                                   (lengthSlider.getMaximum() -
+                                    lengthSlider.getMinimum()));
+              param->setValueNotifyingHost(norm);
+            }
+
+            node.macroSeqLength = macroIndex;
+            if (node.onMappingChanged)
+              node.onMappingChanged();
+
+            if (canvasPtr != nullptr)
+              canvasPtr->rebuild();
           });
     };
 
@@ -52,6 +67,13 @@ public:
       lengthAttachment = std::make_unique<MacroAttachment>(
           apvts, "macro_" + juce::String(node.macroSeqLength + 1),
           lengthSlider);
+      lengthSlider.setColour(juce::Slider::rotarySliderFillColourId,
+                             juce::Colours::orange);
+      lengthSlider.setColour(juce::Slider::rotarySliderOutlineColourId,
+                             juce::Colours::orange.withAlpha(0.3f));
+    } else {
+      lengthSlider.removeColour(juce::Slider::rotarySliderFillColourId);
+      lengthSlider.removeColour(juce::Slider::rotarySliderOutlineColourId);
     }
 
     // Vertical scrollbar for note range

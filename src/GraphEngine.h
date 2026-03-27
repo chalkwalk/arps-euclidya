@@ -38,6 +38,8 @@ public:
                                        int gridH,
                                        GraphNode *ignoreNode = nullptr) const;
 
+  int getNextFreeMacro() const;
+
   std::function<void()> onGraphDirtied;
 
   // Occupancy checks

@@ -3,6 +3,7 @@
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
 #include "MacroMappingMenu.h"
+#include "MacroParameter.h"
 #include "SharedMacroUI.h"
 
 NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
@@ -86,17 +87,36 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
         updateSliderVisibility(*element.macroIndexRef);
 
-        slider->onRightClick = [this, node, slider,
-                                macroRef = element.macroIndexRef, &apvts,
-                                updateSliderVisibility]() {
-          MacroMappingMenu::showMenu(slider, *macroRef,
-                                     [this, node, macroRef, &apvts, slider,
-                                      updateSliderVisibility](int macroIndex) {
-                                       *macroRef = macroIndex;
-                                       node->parameterChanged();
-                                       if (node->onMappingChanged)
-                                         node->onMappingChanged();
-                                     });
+        GraphCanvas *canvasPtr = &parentCanvas;
+        slider->onRightClick = [node, slider, macroRef = element.macroIndexRef,
+                                canvasPtr, &apvts]() {
+          MacroMappingMenu::showMenu(
+              slider, *macroRef,
+              [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
+                if (macroIndex == -2) {
+                  macroIndex = canvasPtr->getEngine().getNextFreeMacro();
+                  if (macroIndex == -1)
+                    return;
+                }
+
+                auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
+                    "macro_" + juce::String(macroIndex + 1)));
+                if (param != nullptr && !param->isMapped()) {
+                  float norm =
+                      (float)((slider->getValue() - slider->getMinimum()) /
+                              (slider->getMaximum() - slider->getMinimum()));
+                  param->setValueNotifyingHost(norm);
+                }
+
+                *macroRef = macroIndex;
+                node->parameterChanged();
+                if (node->onMappingChanged)
+                  node->onMappingChanged();
+
+                // Rebuild the graph to ensure MacroAttachments are properly
+                // created for the new mapping
+                canvasPtr->rebuild();
+              });
         };
 
         if (*element.macroIndexRef != -1) {
@@ -152,15 +172,34 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
       }
 
       if (element.macroIndexRef != nullptr) {
-        button->onRightClick = [this, node, button,
-                                macroRef = element.macroIndexRef, &apvts]() {
-          MacroMappingMenu::showMenu(button, *macroRef,
-                                     [this, node, macroRef](int macroIndex) {
-                                       *macroRef = macroIndex;
-                                       node->parameterChanged();
-                                       if (node->onMappingChanged)
-                                         node->onMappingChanged();
-                                     });
+        GraphCanvas *canvasPtr = &parentCanvas;
+        button->onRightClick = [node, button, macroRef = element.macroIndexRef,
+                                canvasPtr, &apvts]() {
+          MacroMappingMenu::showMenu(
+              button, *macroRef,
+              [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
+                if (macroIndex == -2) {
+                  macroIndex = canvasPtr->getEngine().getNextFreeMacro();
+                  if (macroIndex == -1)
+                    return;
+                }
+
+                auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
+                    "macro_" + juce::String(macroIndex + 1)));
+                if (param != nullptr && !param->isMapped()) {
+                  float norm = button->getToggleState() ? 1.0f : 0.0f;
+                  param->setValueNotifyingHost(norm);
+                }
+
+                *macroRef = macroIndex;
+                node->parameterChanged();
+                if (node->onMappingChanged)
+                  node->onMappingChanged();
+
+                // Rebuild the graph to ensure ButtonAttachments are properly
+                // created for the new mapping
+                canvasPtr->rebuild();
+              });
         };
 
         if (*element.macroIndexRef != -1) {

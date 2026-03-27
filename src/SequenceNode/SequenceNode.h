@@ -23,6 +23,10 @@ public:
   int seqLength = 8;
   int macroSeqLength = -1;
 
+  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
+    return {{"Seq Length", &macroSeqLength}};
+  }
+
   // Full MIDI range grid: 128 notes × 16 steps
   bool grid[128][16] = {{false}};
 

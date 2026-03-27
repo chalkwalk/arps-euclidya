@@ -8,12 +8,15 @@ public:
                        std::function<void(int)> onMacroMapped) {
     juce::PopupMenu menu;
     menu.addItem(1, "Clear Mapping", true, currentMappedMacro == -1);
+    menu.addItem(35, "Map to Next Free Macro");
     menu.addSeparator();
 
+    juce::PopupMenu subMenu;
     for (int i = 1; i <= 32; ++i) {
-      menu.addItem(i + 1, "Map to Macro " + juce::String(i), true,
-                   currentMappedMacro == (i - 1));
+      subMenu.addItem(i + 1, "Macro " + juce::String(i), true,
+                      currentMappedMacro == (i - 1));
     }
+    menu.addSubMenu("Map to Specific Macro...", subMenu);
 
     // Use screen area for positioning instead of holding a component pointer,
     // since the component may be destroyed by rebuild() before the async
@@ -32,6 +35,9 @@ public:
       if (result == 1) {
         if (onMacroMapped)
           onMacroMapped(-1);
+      } else if (result == 35) {
+        if (onMacroMapped)
+          onMacroMapped(-2); // Sentinel for "Next Free"
       } else {
         int macroIndex = result - 2;
         if (onMacroMapped)
