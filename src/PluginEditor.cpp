@@ -169,9 +169,10 @@ void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
 void ArpsEuclidyaEditor::resized() {
   auto bounds = getLocalBounds();
 
-  // Patch Management Area (at the top, above macros or alongside)
-  // Let's put it at the very top
-  auto patchBounds = bounds.removeFromTop(40);
+  // Patch Browser (height is 40 when collapsed, 400 when browser is open)
+  int patchHeight =
+      patchBrowser.getHeight() > 0 ? patchBrowser.getHeight() : 40;
+  auto patchBounds = bounds.removeFromTop(patchHeight);
   patchBrowser.setBounds(patchBounds);
 
   // Standalone Transport Bar (only layout if present)

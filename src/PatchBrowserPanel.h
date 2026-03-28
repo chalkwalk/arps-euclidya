@@ -17,9 +17,15 @@ public:
                         bool rowIsSelected) override;
   void listBoxItemClicked(int row, const juce::MouseEvent &) override;
 
+  // Call after loading a patch externally (e.g. from state restore)
+  void refreshPatchName();
+
 private:
   void toggleBrowser();
   void updateList();
+  void loadPatchAtIndex(int index);
+  void prevPatch();
+  void nextPatch();
   void savePatch();
   void showMenu();
 
@@ -27,13 +33,14 @@ private:
   PatchLibrary &library;
 
   bool isBrowserOpen = false;
+  int currentPatchIndex = -1;
   std::vector<PatchLibrary::PatchInfo> currentResults;
 
   juce::TextButton prevButton{"<"};
   juce::TextButton nextButton{">"};
-  juce::TextButton currentPatchButton{"Default Patch"};
+  juce::TextButton currentPatchButton{"Init"};
   juce::TextButton saveButton{"Save"};
-  juce::TextButton menuButton{"..."};
+  juce::TextButton menuButton{juce::String::charToString(0x2261)}; // ≡
 
   juce::Component browserOverlay;
   juce::TextEditor searchBox;
