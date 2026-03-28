@@ -14,11 +14,13 @@ public:
 private:
   void savePatch();
   void loadPatch();
+  void showSettings();
 
   ArpsEuclidyaProcessor &processor;
 
   juce::TextButton saveButton{"Save Patch"};
   juce::TextButton loadButton{"Load Patch"};
+  juce::TextButton settingsButton{"..."};
 
   std::unique_ptr<juce::FileChooser> fileChooser;
 

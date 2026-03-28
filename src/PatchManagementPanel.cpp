@@ -1,4 +1,5 @@
 #include "PatchManagementPanel.h"
+#include "SettingsPanel.h"
 
 PatchManagementPanel::PatchManagementPanel(ArpsEuclidyaProcessor &p)
     : processor(p) {
@@ -7,6 +8,9 @@ PatchManagementPanel::PatchManagementPanel(ArpsEuclidyaProcessor &p)
 
   addAndMakeVisible(loadButton);
   loadButton.onClick = [this] { loadPatch(); };
+
+  addAndMakeVisible(settingsButton);
+  settingsButton.onClick = [this] { showSettings(); };
 }
 
 void PatchManagementPanel::paint(juce::Graphics &g) {
@@ -17,11 +21,14 @@ void PatchManagementPanel::paint(juce::Graphics &g) {
 
 void PatchManagementPanel::resized() {
   auto bounds = getLocalBounds().reduced(4);
-  int buttonWidth = bounds.getWidth() / 2 - 2;
+  int settingsWidth = 30;
+  int buttonWidth = (bounds.getWidth() - settingsWidth - 8) / 2;
 
   saveButton.setBounds(bounds.removeFromLeft(buttonWidth));
   bounds.removeFromLeft(4);
   loadButton.setBounds(bounds.removeFromLeft(buttonWidth));
+  bounds.removeFromLeft(4);
+  settingsButton.setBounds(bounds.removeFromLeft(settingsWidth));
 }
 
 void PatchManagementPanel::savePatch() {
@@ -57,4 +64,19 @@ void PatchManagementPanel::loadPatch() {
       processor.loadPatch(file);
     }
   });
+}
+
+void PatchManagementPanel::showSettings() {
+  juce::PopupMenu menu;
+  menu.addItem(1, "Settings...");
+
+  menu.showMenuAsync(
+      juce::PopupMenu::Options().withTargetComponent(settingsButton),
+      [this](int result) {
+        if (result == 1) {
+          auto panel = std::make_unique<SettingsPanel>();
+          juce::CallOutBox::launchAsynchronously(
+              std::move(panel), settingsButton.getScreenBounds(), nullptr);
+        }
+      });
 }

@@ -23,6 +23,7 @@ juce_generate_juce_header(ArpsEuclidya)
 target_sources(ArpsEuclidya
     PRIVATE
         AllNotesNode/AllNotesNode.cpp
+        AppSettings.cpp
         ArpsLookAndFeel.cpp
         ChordNNode/ChordNNode.cpp
         ChordSplitNode/ChordSplitNode.cpp
@@ -53,6 +54,7 @@ target_sources(ArpsEuclidya
         RouteNode/RouteNode.cpp
         SelectNode/SelectNode.cpp
         SequenceNode/SequenceNode.cpp
+        SettingsPanel.cpp
         SortNode/SortNode.cpp
         SplitNode/SplitNode.cpp
         SwitchNode/SwitchNode.cpp
