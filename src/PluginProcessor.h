@@ -78,8 +78,19 @@ public:
 
   std::atomic<bool> macrosDirty{true};
 
+  struct PatchMetadata {
+    juce::String name;
+    juce::String author;
+    juce::String description;
+    juce::String tags;
+    juce::String created;
+    juce::String modified;
+  };
+
+  PatchMetadata currentPatchMetadata;
+
   // Graph Editor methods
-  static constexpr int CURRENT_PATCH_VERSION = 1;
+  static constexpr int CURRENT_PATCH_VERSION = 2;
 
   bool savePatch(const juce::File &file);
   bool loadPatch(const juce::File &file);

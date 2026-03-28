@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "AppSettings.h"
 #include "MacroParameter.h"
 #include "MidiInNode/MidiInNode.h"
 #include "MidiOutNode/MidiOutNode.h"
@@ -208,6 +209,23 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
     graphEngine.saveState(graphXml);
   }
 
+  // Save Metadata
+  auto *metaXml = xmlRoot.createNewChildElement("Metadata");
+  if (currentPatchMetadata.author.isEmpty()) {
+    currentPatchMetadata.author = AppSettings::getInstance().getDefaultAuthor();
+  }
+  if (currentPatchMetadata.created.isEmpty()) {
+    currentPatchMetadata.created = juce::Time::getCurrentTime().toISO8601(true);
+  }
+  currentPatchMetadata.modified = juce::Time::getCurrentTime().toISO8601(true);
+
+  metaXml->setAttribute("name", currentPatchMetadata.name);
+  metaXml->setAttribute("author", currentPatchMetadata.author);
+  metaXml->setAttribute("description", currentPatchMetadata.description);
+  metaXml->setAttribute("tags", currentPatchMetadata.tags);
+  metaXml->setAttribute("created", currentPatchMetadata.created);
+  metaXml->setAttribute("modified", currentPatchMetadata.modified);
+
   copyXmlToBinary(xmlRoot, destData);
 }
 
@@ -244,6 +262,26 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
     const juce::ScopedLock sl(graphLock);
     graphEngine.saveState(graphXml);
   }
+
+  // Save Metadata
+  auto *metaXml = xmlRoot.createNewChildElement("Metadata");
+  if (currentPatchMetadata.author.isEmpty()) {
+    currentPatchMetadata.author = AppSettings::getInstance().getDefaultAuthor();
+  }
+  if (currentPatchMetadata.created.isEmpty()) {
+    currentPatchMetadata.created = juce::Time::getCurrentTime().toISO8601(true);
+  }
+  if (currentPatchMetadata.name.isEmpty()) {
+    currentPatchMetadata.name = file.getFileNameWithoutExtension();
+  }
+  currentPatchMetadata.modified = juce::Time::getCurrentTime().toISO8601(true);
+
+  metaXml->setAttribute("name", currentPatchMetadata.name);
+  metaXml->setAttribute("author", currentPatchMetadata.author);
+  metaXml->setAttribute("description", currentPatchMetadata.description);
+  metaXml->setAttribute("tags", currentPatchMetadata.tags);
+  metaXml->setAttribute("created", currentPatchMetadata.created);
+  metaXml->setAttribute("modified", currentPatchMetadata.modified);
 
   return xmlRoot.writeTo(file);
 }
@@ -298,6 +336,20 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
       editor->rebuildCanvas();
     }
   }
+
+  // Restore Metadata
+  auto *metaXml = xmlState->getChildByName("Metadata");
+  if (metaXml != nullptr) {
+    currentPatchMetadata.name = metaXml->getStringAttribute("name");
+    currentPatchMetadata.author = metaXml->getStringAttribute("author");
+    currentPatchMetadata.description =
+        metaXml->getStringAttribute("description");
+    currentPatchMetadata.tags = metaXml->getStringAttribute("tags");
+    currentPatchMetadata.created = metaXml->getStringAttribute("created");
+    currentPatchMetadata.modified = metaXml->getStringAttribute("modified");
+  } else {
+    currentPatchMetadata = PatchMetadata();
+  }
 }
 
 void ArpsEuclidyaProcessor::upgradePatch(juce::XmlElement *xml,
@@ -306,7 +358,8 @@ void ArpsEuclidyaProcessor::upgradePatch(juce::XmlElement *xml,
   for (int v = fromVersion; v < CURRENT_PATCH_VERSION; ++v) {
     if (v == 1) {
       // Example migration for v1 to v2
-      // upgradeV1toV2(xml);
+      // v1 patches have no metadata. We just let loadFromXml fill an empty
+      // PatchMetadata. But we update the version attribute.
     }
   }
   xml->setAttribute("version", CURRENT_PATCH_VERSION);
