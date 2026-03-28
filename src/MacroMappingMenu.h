@@ -29,15 +29,19 @@ class MacroMappingMenu {
     // Capture onMacroMapped by value (safe copy).
     // Do NOT capture targetComponent — it may be destroyed before callback.
     menu.showMenuAsync(options, [onMacroMapped](int result) {
-      if (result == 0) return;  // Dismissed
+      if (result == 0)
+        return;  // Dismissed
 
       if (result == 1) {
-        if (onMacroMapped) onMacroMapped(-1);
+        if (onMacroMapped)
+          onMacroMapped(-1);
       } else if (result == 35) {
-        if (onMacroMapped) onMacroMapped(-2);  // Sentinel for "Next Free"
+        if (onMacroMapped)
+          onMacroMapped(-2);  // Sentinel for "Next Free"
       } else {
         int macroIndex = result - 2;
-        if (onMacroMapped) onMacroMapped(macroIndex);
+        if (onMacroMapped)
+          onMacroMapped(macroIndex);
       }
     });
   }

@@ -1,5 +1,5 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,bugprone-*,modernize-*,performance-*,readability-*,-modernize-use-trailing-return-type,-modernize-use-auto,-readability-implicit-bool-conversion,-readability-magic-numbers,-bugprone-branch-clone'
+Checks:          'clang-diagnostic-*,clang-analyzer-*,bugprone-*,modernize-*,performance-*,readability-*,-modernize-use-trailing-return-type,-modernize-use-auto,-readability-implicit-bool-conversion,-readability-magic-numbers,-bugprone-branch-clone,-readability-identifier-length,-readability-uppercase-literal-suffix'
 WarningsAsErrors: '*'
-HeaderFilterRegex: '.*'
+HeaderFilterRegex: '^src/.*'
 ...

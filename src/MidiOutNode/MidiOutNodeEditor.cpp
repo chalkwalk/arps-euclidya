@@ -90,6 +90,8 @@ NodeLayout MidiOutNode::getLayout() const {
 std::unique_ptr<juce::Component> MidiOutNode::createCustomComponent(
     const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
   juce::ignoreUnused(apvts);
-  if (name == "Visualizer") return std::make_unique<MidiOutVisualizer>(*this);
+  if (name == "Visualizer") {
+    return std::make_unique<MidiOutVisualizer>(*this);
+  }
   return nullptr;
 }

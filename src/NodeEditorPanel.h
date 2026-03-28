@@ -6,7 +6,7 @@
 
 class NodeEditorPanel : public juce::Component {
  public:
-  NodeEditorPanel(std::shared_ptr<GraphNode> node,
+  NodeEditorPanel(const std::shared_ptr<GraphNode> &node,
                   juce::AudioProcessorValueTreeState &apvts);
   ~NodeEditorPanel() override;
 

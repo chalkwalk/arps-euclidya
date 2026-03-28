@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-void GraphEngine::addNode(std::shared_ptr<GraphNode> node) {
+void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
   if (onGraphDirtied) {
     node->onNodeDirtied = onGraphDirtied;
   }
@@ -47,7 +47,9 @@ void GraphEngine::removeNode(GraphNode *node) {
 bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
                                  GraphNode *ignoreNode) const {
   for (const auto &node : nodes) {
-    if (node.get() == ignoreNode) continue;
+    if (node.get() == ignoreNode) {
+      continue;
+    }
 
     int curX = node->gridX;
     int curY = node->gridY;
@@ -77,17 +79,21 @@ juce::Point<int> GraphEngine::findClosestFreeSpot(int startX, int startY,
        ++radius) {  // Arbitrary limit to prevent infinite loops
     // Top and Bottom rows of the ring
     for (int x = startX - radius; x <= startX + radius; ++x) {
-      if (!isAreaOccupied(x, startY - radius, gridW, gridH, ignoreNode))
+      if (!isAreaOccupied(x, startY - radius, gridW, gridH, ignoreNode)) {
         return {x, startY - radius};
-      if (!isAreaOccupied(x, startY + radius, gridW, gridH, ignoreNode))
+      }
+      if (!isAreaOccupied(x, startY + radius, gridW, gridH, ignoreNode)) {
         return {x, startY + radius};
+      }
     }
     // Left and Right columns of the ring (excluding corners already checked)
     for (int y = startY - radius + 1; y < startY + radius; ++y) {
-      if (!isAreaOccupied(startX - radius, y, gridW, gridH, ignoreNode))
+      if (!isAreaOccupied(startX - radius, y, gridW, gridH, ignoreNode)) {
         return {startX - radius, y};
-      if (!isAreaOccupied(startX + radius, y, gridW, gridH, ignoreNode))
+      }
+      if (!isAreaOccupied(startX + radius, y, gridW, gridH, ignoreNode)) {
         return {startX + radius, y};
+      }
     }
   }
 
@@ -119,15 +125,25 @@ int GraphEngine::getNextFreeMacro() const {
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
                                         GraphNode *target, int inPort) {
-  if (source == nullptr || target == nullptr) return false;
-  if (source == target) return false;
+  if (source == nullptr || target == nullptr) {
+    return false;
+  }
+  if (source == target) {
+    return false;
+  }
 
   // Cycle detection: would adding source→target create a cycle?
-  if (wouldCreateCycle(source, target)) return false;
+  if (wouldCreateCycle(source, target)) {
+    return false;
+  }
 
   // Check port bounds
-  if (outPort < 0 || outPort >= source->getNumOutputPorts()) return false;
-  if (inPort < 0 || inPort >= target->getNumInputPorts()) return false;
+  if (outPort < 0 || outPort >= source->getNumOutputPorts()) {
+    return false;
+  }
+  if (inPort < 0 || inPort >= target->getNumInputPorts()) {
+    return false;
+  }
 
   // Remove any existing connection to this specific input port
   // (an input port can only have one source)
@@ -153,7 +169,9 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
 void GraphEngine::removeConnection(GraphNode *source, int outPort,
                                    GraphNode *target, int inPort) {
-  if (source == nullptr) return;
+  if (source == nullptr) {
+    return;
+  }
 
   auto &conns = const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
       source->getConnections());
@@ -180,16 +198,17 @@ bool GraphEngine::isInputPortOccupied(GraphNode *targetNode, int inPort) const {
   for (const auto &n : nodes) {
     for (const auto &[port, connVec] : n->getConnections()) {
       for (const auto &conn : connVec) {
-        if (conn.targetNode == targetNode && conn.targetInputPort == inPort)
+        if (conn.targetNode == targetNode && conn.targetInputPort == inPort) {
           return true;
+        }
       }
     }
   }
   return false;
 }
 
-bool GraphEngine::isOutputPortOccupied(GraphNode *node, int portIndex) const {
-  auto &conns = node->getConnections();
+bool GraphEngine::isOutputPortOccupied(GraphNode *node, int portIndex) {
+  const auto &conns = node->getConnections();
   auto it = conns.find(portIndex);
   if (it != conns.end()) {
     return !it->second.empty();
@@ -203,8 +222,10 @@ bool GraphEngine::wouldCreateCycle(GraphNode *source, GraphNode *target) const {
   return isReachable(target, source);
 }
 
-bool GraphEngine::isReachable(GraphNode *from, GraphNode *to) const {
-  if (from == to) return true;
+bool GraphEngine::isReachable(GraphNode *from, GraphNode *to) {
+  if (from == to) {
+    return true;
+  }
 
   std::unordered_set<GraphNode *> visited;
   std::queue<GraphNode *> queue;
@@ -217,7 +238,9 @@ bool GraphEngine::isReachable(GraphNode *from, GraphNode *to) const {
 
     for (const auto &[port, connVec] : current->getConnections()) {
       for (const auto &conn : connVec) {
-        if (conn.targetNode == to) return true;
+        if (conn.targetNode == to) {
+          return true;
+        }
         if (visited.find(conn.targetNode) == visited.end()) {
           visited.insert(conn.targetNode);
           queue.push(conn.targetNode);
@@ -292,7 +315,9 @@ void GraphEngine::recalculate() {
 }
 
 void GraphEngine::saveState(juce::XmlElement *xmlRoot) {
-  if (xmlRoot == nullptr) return;
+  if (xmlRoot == nullptr) {
+    return;
+  }
 
   auto *nodesXml = xmlRoot->createNewChildElement("Nodes");
   for (const auto &node : nodes) {
@@ -323,7 +348,9 @@ void GraphEngine::saveState(juce::XmlElement *xmlRoot) {
 void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
                             ClockManager &clockCtx,
                             std::array<std::atomic<float> *, 32> &macros) {
-  if (xmlRoot == nullptr) return;
+  if (xmlRoot == nullptr) {
+    return;
+  }
 
   nodes.clear();
 
@@ -355,8 +382,12 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
       GraphNode *targetNode = nullptr;
 
       for (const auto &node : nodes) {
-        if (node->nodeId.toString() == sourceUuidStr) sourceNode = node.get();
-        if (node->nodeId.toString() == targetUuidStr) targetNode = node.get();
+        if (node->nodeId.toString() == sourceUuidStr) {
+          sourceNode = node.get();
+        }
+        if (node->nodeId.toString() == targetUuidStr) {
+          targetNode = node.get();
+        }
       }
 
       if (sourceNode && targetNode) {

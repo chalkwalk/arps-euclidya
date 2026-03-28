@@ -15,7 +15,7 @@ class ArpsLookAndFeel : public juce::LookAndFeel_V4 {
   // 4
 
   // Custom colors we can reference globally
-  static const juce::Colour getNeonColor();
-  static const juce::Colour getBackgroundCharcoal();
-  static const juce::Colour getForegroundSlate();
+  static juce::Colour getNeonColor();
+  static juce::Colour getBackgroundCharcoal();
+  static juce::Colour getForegroundSlate();
 };

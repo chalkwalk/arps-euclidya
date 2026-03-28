@@ -50,7 +50,10 @@ ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
 void ArpsEuclidyaProcessor::logMidiEvent(int type, int channel, int d1,
                                          float d2) {
   if (midiLogFifo.getFreeSpace() > 0) {
-    int start1, size1, start2, size2;
+    int start1;
+    int size1;
+    int start2;
+    int size2;
     midiLogFifo.prepareToWrite(1, start1, size1, start2, size2);
     if (size1 > 0) {
       midiLogBuffer[(size_t)start1] = {type, channel, d1, d2};
@@ -111,11 +114,9 @@ void ArpsEuclidyaProcessor::releaseResources() {}
 bool ArpsEuclidyaProcessor::isBusesLayoutSupported(
     const BusesLayout &layouts) const {
   // MIDI effect without audio in/out
-  if (layouts.getMainInputChannelSet() != juce::AudioChannelSet::disabled() ||
-      layouts.getMainOutputChannelSet() != juce::AudioChannelSet::disabled())
-    return false;
-
-  return true;
+  return !(
+      layouts.getMainInputChannelSet() != juce::AudioChannelSet::disabled() ||
+      layouts.getMainOutputChannelSet() != juce::AudioChannelSet::disabled());
 }
 
 void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
@@ -128,7 +129,7 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
   static bool hasLoggedParams = false;
   if (!hasLoggedParams) {
-    logMidiEvent(6, 0, buffer.getNumSamples(), getSampleRate());
+    logMidiEvent(6, 0, buffer.getNumSamples(), (float)getSampleRate());
     hasLoggedParams = true;
   }
 
@@ -190,7 +191,7 @@ juce::AudioProcessorEditor *ArpsEuclidyaProcessor::createEditor() {
 void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
   juce::XmlElement xmlRoot("ArpsEuclidyaState");
 
-  if (juce::PluginHostType().getPluginLoadedAs() ==
+  if (juce::PluginHostType::getPluginLoadedAs() ==
       juce::AudioProcessor::wrapperType_Standalone) {
     xmlRoot.setAttribute("standaloneBPM", clockManager.getBPM());
   }
@@ -244,7 +245,7 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   juce::XmlElement xmlRoot("ArpsEuclidyaState");
   xmlRoot.setAttribute("version", CURRENT_PATCH_VERSION);
 
-  if (juce::PluginHostType().getPluginLoadedAs() ==
+  if (juce::PluginHostType::getPluginLoadedAs() ==
       juce::AudioProcessor::wrapperType_Standalone) {
     xmlRoot.setAttribute("standaloneBPM", clockManager.getBPM());
   }
@@ -309,7 +310,7 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
   }
 
   if (xmlState->hasAttribute("standaloneBPM") &&
-      juce::PluginHostType().getPluginLoadedAs() ==
+      juce::PluginHostType::getPluginLoadedAs() ==
           juce::AudioProcessor::wrapperType_Standalone) {
     clockManager.setBPM(xmlState->getDoubleAttribute("standaloneBPM"));
   }
@@ -328,7 +329,7 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
   if (graphXml != nullptr) {
     const juce::ScopedLock sl(graphLock);
     graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
-    for (auto &node : graphEngine.getNodes()) {
+    for (const auto &node : graphEngine.getNodes()) {
       node->onMappingChanged = [this]() { updateMacroNames(); };
     }
     updateMacroNames();
@@ -370,7 +371,7 @@ ArpsEuclidyaEditor *ArpsEuclidyaProcessor::getEditor() {
   return dynamic_cast<ArpsEuclidyaEditor *>(getActiveEditor());
 }
 
-void ArpsEuclidyaProcessor::addNode(std::shared_ptr<GraphNode> node) {
+void ArpsEuclidyaProcessor::addNode(const std::shared_ptr<GraphNode> &node) {
   const juce::ScopedLock sl(graphLock);
   node->onMappingChanged = [this]() { updateMacroNames(); };
   graphEngine.addNode(node);
@@ -388,8 +389,8 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
   std::array<int, 32> mappingCount = {};
   std::array<juce::String, 32> mappingNames;
 
-  auto &nodes = graphEngine.getNodes();
-  for (auto &node : nodes) {
+  const auto &nodes = graphEngine.getNodes();
+  for (const auto &node : nodes) {
     auto mappings = node->getMacroMappings();
     for (auto &[paramName, macroIndexPtr] : mappings) {
       int idx = *macroIndexPtr;
@@ -405,21 +406,23 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
   bool namesChanged = false;
 
   // Update each MacroParameter's display name
-  for (int i = 0; i < 32; ++i) {
-    if (macroParams[(size_t)i] == nullptr) continue;
+  for (size_t i = 0; i < 32; ++i) {
+    if (macroParams[i] == nullptr) {
+      continue;
+    }
 
-    juce::String oldName = macroParams[(size_t)i]->getName(1024);
+    juce::String oldName = macroParams[i]->getName(1024);
 
-    if (mappingCount[(size_t)i] == 0) {
-      macroParams[(size_t)i]->clearMapping();
-    } else if (mappingCount[(size_t)i] == 1) {
-      macroParams[(size_t)i]->setMappingName(mappingNames[(size_t)i]);
+    if (mappingCount[i] == 0) {
+      macroParams[i]->clearMapping();
+    } else if (mappingCount[i] == 1) {
+      macroParams[i]->setMappingName(mappingNames[i]);
     } else {
-      macroParams[(size_t)i]->setMappingName("MULTIPLE");
+      macroParams[i]->setMappingName("MULTIPLE");
     }
 
     // Check if the resulting name is different
-    if (macroParams[(size_t)i]->getName(1024) != oldName) {
+    if (macroParams[i]->getName(1024) != oldName) {
       namesChanged = true;
     }
   }

@@ -15,7 +15,8 @@ class LayoutParser {
     auto jsonStr = juce::String::fromUTF8(data, size);
     auto parsed = juce::JSON::parse(jsonStr);
 
-    if (parsed.isVoid()) return layout;
+    if (parsed.isVoid())
+      return layout;
 
     if (auto *obj = parsed.getDynamicObject()) {
       layout.gridWidth = obj->getProperty("gridWidth");
@@ -59,7 +60,8 @@ class LayoutParser {
             if (elemObj->hasProperty("options")) {
               auto optVar = elemObj->getProperty("options");
               if (auto *optArray = optVar.getArray()) {
-                for (const auto &o : *optArray) el.options.add(o.toString());
+                for (const auto &o : *optArray)
+                  el.options.add(o.toString());
               }
             }
 
@@ -93,12 +95,18 @@ class LayoutParser {
 
  private:
   static UIElementType parseType(const juce::String &typeStr) {
-    if (typeStr == "RotarySlider") return UIElementType::RotarySlider;
-    if (typeStr == "Toggle") return UIElementType::Toggle;
-    if (typeStr == "Label") return UIElementType::Label;
-    if (typeStr == "ComboBox") return UIElementType::ComboBox;
-    if (typeStr == "PushButton") return UIElementType::PushButton;
-    if (typeStr == "Custom") return UIElementType::Custom;
+    if (typeStr == "RotarySlider")
+      return UIElementType::RotarySlider;
+    if (typeStr == "Toggle")
+      return UIElementType::Toggle;
+    if (typeStr == "Label")
+      return UIElementType::Label;
+    if (typeStr == "ComboBox")
+      return UIElementType::ComboBox;
+    if (typeStr == "PushButton")
+      return UIElementType::PushButton;
+    if (typeStr == "Custom")
+      return UIElementType::Custom;
 
     // Default fallback
     return UIElementType::Label;

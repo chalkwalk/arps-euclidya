@@ -63,9 +63,10 @@ void FoldNode::process() {
       int itemsInCurrentStep = 0;
 
       for (const auto &step : it->second) {
-        if (step.empty())
+        if (step.empty()) {
           continue;  // Skip resting steps during fold? Or fold them? Let's skip
-                     // for now to compact notes.
+        }
+        // for now to compact notes.
 
         for (const auto &note : step) {
           currentAggregatedStep.push_back(note);
@@ -135,7 +136,7 @@ void FoldNode::process() {
           rollingStep.erase(last, rollingStep.end());
           outSeq.push_back(rollingStep);
         } else {
-          outSeq.push_back({});
+          outSeq.emplace_back();
         }
       }
     }

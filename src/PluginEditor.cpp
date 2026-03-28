@@ -15,7 +15,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   // Setup Macros
   addAndMakeVisible(macroBar);
   for (int i = 0; i < 32; ++i) {
-    auto wrapper = new MacroControl();
+    auto *wrapper = new MacroControl();
     macroBar.addAndMakeVisible(wrapper);
     macroControls.add(wrapper);
 
@@ -42,7 +42,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   addAndMakeVisible(patchBrowser);
 
   // Standalone Transport (Only if running as standalone app)
-  if (juce::PluginHostType().getPluginLoadedAs() ==
+  if (juce::PluginHostType::getPluginLoadedAs() ==
       juce::AudioProcessor::wrapperType_Standalone) {
     transportBar = std::make_unique<TransportBar>(audioProcessor.clockManager);
     addAndMakeVisible(transportBar.get());
@@ -69,7 +69,9 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
 
   graphCanvas->onNodeCloneRequest = [this](GraphNode *original, int gridX,
                                            int gridY) {
-    if (original == nullptr) return;
+    if (original == nullptr) {
+      return;
+    }
 
     auto newNode = NodeFactory::createNode(
         original->getName(), audioProcessor.midiHandler,
@@ -102,7 +104,9 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
       // too? I'll skip it for clone for now as it's less common to clone *onto*
       // a node. But the library drop is critical.
 
-      if (graphCanvas->onGraphChanged) graphCanvas->onGraphChanged();
+      if (graphCanvas->onGraphChanged) {
+        graphCanvas->onGraphChanged();
+      }
     }
   };
 
@@ -110,7 +114,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   addAndMakeVisible(midiKeyboard);
   midiKeyboard.setMidiChannel(1);
   midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId,
-                         lookAndFeel.getNeonColor());
+                         ArpsLookAndFeel::getNeonColor());
   midiKeyboard.setKeyPressBaseOctave(-1);  // Disable computer keyboard input
   midiKeyboard.setWantsKeyboardFocus(false);
 
@@ -160,7 +164,9 @@ void ArpsEuclidyaEditor::timerCallback() {
 }
 
 void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
-  if (isSidebarExpanded) g.fillRect(libraryPanel.getBounds());
+  if (isSidebarExpanded) {
+    g.fillRect(libraryPanel.getBounds());
+  }
   g.fillRect(macroBar.getBounds());
   g.fillRect(patchBrowser.getBounds());
 }

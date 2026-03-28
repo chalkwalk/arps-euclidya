@@ -97,7 +97,8 @@ class EuclideanVisualizer : public juce::Component {
   void buildRingPaths(juce::Point<float> center, float radius,
                       const std::vector<bool> &pattern, juce::Path &beatPath,
                       juce::Path &restPath) {
-    if (pattern.empty()) return;
+    if (pattern.empty())
+      return;
 
     int numSteps = (int)pattern.size();
     float angleStep = juce::MathConstants<float>::twoPi / (float)numSteps;
@@ -119,7 +120,8 @@ class EuclideanVisualizer : public juce::Component {
                          float radius, float thickness, int numSteps,
                          int activeIdx, bool isNotePlayed,
                          juce::Colour layerColor) {
-    if (numSteps <= 0 || activeIdx < 0) return;
+    if (numSteps <= 0 || activeIdx < 0)
+      return;
 
     float angleStep = juce::MathConstants<float>::twoPi / (float)numSteps;
     float angle =

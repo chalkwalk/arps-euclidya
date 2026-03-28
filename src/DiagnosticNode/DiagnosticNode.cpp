@@ -29,7 +29,9 @@ class DiagnosticNodeCustomComponent : public juce::Component,
     juce::ignoreUnused(rowIsSelected);
 
     auto sequence = diagNode.getLatestSequence();
-    if (rowNumber >= (int)sequence.size()) return;
+    if (rowNumber >= (int)sequence.size()) {
+      return;
+    }
 
     const auto &step = sequence[(size_t)rowNumber];
 
@@ -50,7 +52,9 @@ class DiagnosticNodeCustomComponent : public juce::Component,
           text << " (Src: " << step[i].sourceChannel << "."
                << getNoteName(step[i].sourceNoteNumber) << ")";
         }
-        if (i < step.size() - 1) text << ", ";
+        if (i < step.size() - 1) {
+          text << ", ";
+        }
       }
     }
 
@@ -66,7 +70,7 @@ class DiagnosticNodeCustomComponent : public juce::Component,
     listBox.repaint();
   }
 
-  juce::String getNoteName(int noteNumber) {
+  static juce::String getNoteName(int noteNumber) {
     static const char *names[] = {"C",  "C#", "D",  "D#", "E",  "F",
                                   "F#", "G",  "G#", "A",  "A#", "B"};
     int octave = (noteNumber / 12) - 1;
@@ -79,7 +83,9 @@ class DiagnosticNodeCustomComponent : public juce::Component,
   struct Timer : public juce::Timer {
     std::function<void()> callback;
     void timerCallback() override {
-      if (callback) callback();
+      if (callback) {
+        callback();
+      }
     }
   };
   Timer refreshTimer;
@@ -119,7 +125,8 @@ NodeLayout DiagnosticNode::getLayout() const {
 std::unique_ptr<juce::Component> DiagnosticNode::createCustomComponent(
     const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
   juce::ignoreUnused(apvts);
-  if (name == "ListBox")
+  if (name == "ListBox") {
     return std::make_unique<DiagnosticNodeCustomComponent>(*this);
+  }
   return nullptr;
 }

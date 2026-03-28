@@ -36,9 +36,9 @@ void GraphCanvas::rebuild() {
   nodeBlocks.clear();
 
   const juce::ScopedLock sl(graphLock);
-  auto &nodes = graphEngine.getNodes();
+  const auto &nodes = graphEngine.getNodes();
 
-  for (auto &node : nodes) {
+  for (const auto &node : nodes) {
     auto *block = new NodeBlock(node, apvts, *this);
     // The bounds are set via updateTransforms later
     // block->setTopLeftPosition((int)node->nodeX, (int)node->nodeY);
@@ -47,7 +47,9 @@ void GraphCanvas::rebuild() {
       const juce::ScopedLock sl2(graphLock);
       graphEngine.removeNode(nodePtr);
       rebuild();
-      if (onGraphChanged) onGraphChanged();
+      if (onGraphChanged) {
+        onGraphChanged();
+      }
     };
 
     block->onPositionChanged = [this]() {
@@ -106,7 +108,8 @@ void GraphCanvas::updateTransforms() {
   updateScrollBars();
 }
 
-void GraphCanvas::addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node) {
+void GraphCanvas::addNodeAtDefaultPosition(
+    const std::shared_ptr<GraphNode> &node) {
   int startGridX = 0;
   int startGridY = 0;
 
@@ -146,9 +149,13 @@ void GraphCanvas::paint(juce::Graphics &g) {
       (Layout::GridPitchFloat - Layout::TramlineOffset) * zoomFactor;
 
   float offsetX = std::fmod(panX, scaledGrid);
-  if (offsetX > 0) offsetX -= scaledGrid;
+  if (offsetX > 0) {
+    offsetX -= scaledGrid;
+  }
   float offsetY = std::fmod(panY, scaledGrid);
-  if (offsetY > 0) offsetY -= scaledGrid;
+  if (offsetY > 0) {
+    offsetY -= scaledGrid;
+  }
 
   for (float x = offsetX; x < getWidth(); x += scaledGrid) {
     g.fillRect(x + scaledInner5, 0.0f, 1.0f, (float)getHeight());
@@ -208,9 +215,15 @@ void GraphCanvas::paint(juce::Graphics &g) {
 void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   g.saveState();
 
-  if (hScroll.isVisible()) g.excludeClipRegion(hScroll.getBounds());
-  if (vScroll.isVisible()) g.excludeClipRegion(vScroll.getBounds());
-  if (zoomFitButton.isVisible()) g.excludeClipRegion(zoomFitButton.getBounds());
+  if (hScroll.isVisible()) {
+    g.excludeClipRegion(hScroll.getBounds());
+  }
+  if (vScroll.isVisible()) {
+    g.excludeClipRegion(vScroll.getBounds());
+  }
+  if (zoomFitButton.isVisible()) {
+    g.excludeClipRegion(zoomFitButton.getBounds());
+  }
 
   g.addTransform(getCameraTransform());
 
@@ -285,16 +298,20 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 void GraphCanvas::refreshCableCache() {
   cachedCables.clear();
   const juce::ScopedLock sl(graphLock);
-  auto &nodes = graphEngine.getNodes();
+  const auto &nodes = graphEngine.getNodes();
 
-  for (auto &node : nodes) {
+  for (const auto &node : nodes) {
     auto *sourceBlock = findBlockForNode(node.get());
-    if (sourceBlock == nullptr) continue;
+    if (sourceBlock == nullptr) {
+      continue;
+    }
 
     for (const auto &[outPort, connVec] : node->getConnections()) {
       for (const auto &conn : connVec) {
         auto *targetBlock = findBlockForNode(conn.targetNode);
-        if (targetBlock == nullptr) continue;
+        if (targetBlock == nullptr) {
+          continue;
+        }
 
         CachedCable cable;
         cable.sourceNode = node.get();
@@ -310,7 +327,7 @@ void GraphCanvas::refreshCableCache() {
         cable.path.cubicTo(start.x + dx, (float)start.y, end.x - dx,
                            (float)end.y, (float)end.x, (float)end.y);
 
-        auto &outSeq = node->getOutputSequence(outPort);
+        const auto &outSeq = node->getOutputSequence(outPort);
         cable.isLarge = (outSeq.size() > 10000);
         cable.isSelected =
             (selectedNode != nullptr) &&
@@ -358,7 +375,9 @@ void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
   // 3. Main Cable Stroke
   g.setColour(baseColor);
   float strokeThickness = (isForeground || highlighted) ? 3.0f : 2.0f;
-  if (highlighted) strokeThickness = 3.5f;
+  if (highlighted) {
+    strokeThickness = 3.5f;
+  }
 
   g.strokePath(path, juce::PathStrokeType(strokeThickness));
 
@@ -370,7 +389,9 @@ void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
 }
 
 void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
-  if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) return;
+  if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) {
+    return;
+  }
 
   if (e.mods.isRightButtonDown()) {
     float mx = (float)e.getPosition().x;
@@ -398,7 +419,9 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
 }
 
 void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
-  if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) return;
+  if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) {
+    return;
+  }
 
   if (isPanning) {
     auto delta = e.getScreenPosition() - lastPanScreenPos;
@@ -412,7 +435,9 @@ void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
 
 void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
-  if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) return;
+  if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) {
+    return;
+  }
 
   if (isPanning) {
     isPanning = false;
@@ -421,12 +446,16 @@ void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
 
 void GraphCanvas::mouseWheelMove(const juce::MouseEvent &e,
                                  const juce::MouseWheelDetails &wheel) {
-  if (e.eventComponent != this) return;
+  if (e.eventComponent != this) {
+    return;
+  }
 
   // Semantic zoom natively mapping focal origin
   float wheelAmount =
       std::abs(wheel.deltaY) > 0.0001f ? wheel.deltaY : wheel.deltaX;
-  if (std::abs(wheelAmount) < 0.0001f) return;
+  if (std::abs(wheelAmount) < 0.0001f) {
+    return;
+  }
 
   float zoomDelta = wheelAmount > 0.0f ? 1.1f : 0.9f;
   auto mousePos = e.position;
@@ -463,13 +492,18 @@ void GraphCanvas::updateCableDrag(juce::Point<int> canvasPos) {
   }
 }
 
-void GraphCanvas::requestNodeClone(GraphNode *original, int gridX, int gridY) {
-  if (onNodeCloneRequest) onNodeCloneRequest(original, gridX, gridY);
+void GraphCanvas::requestNodeClone(GraphNode *original, int gridX,
+                                   int gridY) const {
+  if (onNodeCloneRequest) {
+    onNodeCloneRequest(original, gridX, gridY);
+  }
 }
 
 void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
                                              juce::Point<int> mousePos) {
-  if (droppedNode == nullptr) return;
+  if (droppedNode == nullptr) {
+    return;
+  }
 
   // Transform mouse position to world coordinates
   float fx = (float)mousePos.x;
@@ -480,7 +514,9 @@ void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
   NodeBlock *targetBlock = nullptr;
   for (auto *block : nodeBlocks) {
     auto *node = block->getNode().get();
-    if (node == droppedNode) continue;
+    if (node == droppedNode) {
+      continue;
+    }
 
     // Use world-space bounds from the node itself
     juce::Rectangle<float> worldBounds(node->nodeX, node->nodeY,
@@ -492,7 +528,9 @@ void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
     }
   }
 
-  if (targetBlock == nullptr) return;
+  if (targetBlock == nullptr) {
+    return;
+  }
 
   GraphNode *targetNode = targetBlock->getNode().get();
   float targetWidth = (float)targetBlock->getWidth();
@@ -526,13 +564,17 @@ void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
   if (connected) {
     refreshCableCache();
     repaint();
-    if (onGraphChanged) onGraphChanged();
+    if (onGraphChanged) {
+      onGraphChanged();
+    }
   }
 }
 
 bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
                                              juce::Point<int> mousePos) {
-  if (newNode == nullptr) return false;
+  if (newNode == nullptr) {
+    return false;
+  }
 
   // Transform screen to world
   float fx = (float)mousePos.x;
@@ -573,7 +615,9 @@ bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
     if (conn1 || conn2) {
       refreshCableCache();
       repaint();
-      if (onGraphChanged) onGraphChanged();
+      if (onGraphChanged) {
+        onGraphChanged();
+      }
       return true;
     }
   }
@@ -583,7 +627,9 @@ bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
 
 // Find target port under the release point
 void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
-  if (!isDraggingCable) return;
+  if (!isDraggingCable) {
+    return;
+  }
 
   isDraggingCable = false;
   repaint();
@@ -639,7 +685,9 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
 
 NodeBlock *GraphCanvas::findBlockForNode(GraphNode *node) const {
   for (auto *block : nodeBlocks) {
-    if (block->getNode().get() == node) return block;
+    if (block->getNode().get() == node) {
+      return block;
+    }
   }
   return nullptr;
 }
@@ -657,7 +705,9 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
       graphEngine.removeNode(selectedNode);
       selectedNode = nullptr;
       rebuild();
-      if (onGraphChanged) onGraphChanged();
+      if (onGraphChanged) {
+        onGraphChanged();
+      }
       return true;
     }
   }
@@ -691,9 +741,14 @@ void GraphCanvas::scrollBarMoved(juce::ScrollBar *scrollBar,
 }
 
 void GraphCanvas::updateScrollBars() {
-  if (getWidth() <= 0 || getHeight() <= 0) return;
+  if (getWidth() <= 0 || getHeight() <= 0) {
+    return;
+  }
 
-  float minX = 0.0f, minY = 0.0f, maxX = 0.0f, maxY = 0.0f;
+  float minX = 0.0f;
+  float minY = 0.0f;
+  float maxX = 0.0f;
+  float maxY = 0.0f;
   bool hasNodes = false;
 
   for (auto *block : nodeBlocks) {
@@ -764,7 +819,9 @@ void GraphCanvas::updateScrollBars() {
 }
 
 void GraphCanvas::zoomToFit() {
-  if (nodeBlocks.isEmpty()) return;
+  if (nodeBlocks.isEmpty()) {
+    return;
+  }
 
   float minX = nodeBlocks[0]->getNode()->nodeX;
   float minY = nodeBlocks[0]->getNode()->nodeY;
@@ -791,7 +848,9 @@ void GraphCanvas::zoomToFit() {
   float worldW = maxX - minX;
   float worldH = maxY - minY;
 
-  if (worldW <= 0.0f || worldH <= 0.0f) return;
+  if (worldW <= 0.0f || worldH <= 0.0f) {
+    return;
+  }
 
   float zoomX = (float)getWidth() / worldW;
   float zoomY = (float)getHeight() / worldH;
@@ -823,8 +882,9 @@ void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
           juce::String(
               cable.sourceNode->getOutputSequence(cable.sourcePort).size()) +
           " steps";
-      if (cable.isLarge)
+      if (cable.isLarge) {
         cableTooltipText += juce::String::fromUTF8(" \xe2\x9a\xa0");
+      }
       // position tooltip at actual cursor screen coordinate
       cableTooltipPos = e.getPosition();
       showCableTooltip = true;
@@ -840,7 +900,7 @@ void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
   repaint();
 }
 
-void GraphCanvas::mouseExit(const juce::MouseEvent &) {
+void GraphCanvas::mouseExit(const juce::MouseEvent & /*event*/) {
   if (showCableTooltip) {
     showCableTooltip = false;
     repaint();
@@ -850,17 +910,19 @@ void GraphCanvas::mouseExit(const juce::MouseEvent &) {
 void GraphCanvas::checkForLargeSequences() {
   bool foundLarge = false;
   const juce::ScopedLock sl(graphLock);
-  auto &nodes = graphEngine.getNodes();
+  const auto &nodes = graphEngine.getNodes();
 
-  for (auto &node : nodes) {
+  for (const auto &node : nodes) {
     for (const auto &[outPort, connVec] : node->getConnections()) {
-      auto &outSeq = node->getOutputSequence(outPort);
+      const auto &outSeq = node->getOutputSequence(outPort);
       if (outSeq.size() > 10000) {
         foundLarge = true;
         break;
       }
     }
-    if (foundLarge) break;
+    if (foundLarge) {
+      break;
+    }
   }
 
   if (foundLarge != hasLargeSequenceWarning) {
@@ -869,7 +931,7 @@ void GraphCanvas::checkForLargeSequences() {
   }
 }
 
-void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
+void GraphCanvas::addNodeAtPosition(const std::shared_ptr<GraphNode> &node,
                                     juce::Point<int> screenPos) {
   juce::ScopedLock l(graphLock);
 
@@ -878,7 +940,8 @@ void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
   float worldY = (float)screenPos.y;
   getCameraTransform().inverted().transformPoint(worldX, worldY);
 
-  int dropGridX, dropGridY;
+  int dropGridX;
+  int dropGridY;
 
   if (showGhostTarget && ghostIsValid) {
     dropGridX = ghostTargetX;
@@ -908,7 +971,9 @@ void GraphCanvas::addNodeAtPosition(std::shared_ptr<GraphNode> node,
   // Recalculate and apply scaled block bounds cleanly derived from nodeX/nodeY
   updateTransforms();
 
-  if (onGraphChanged) onGraphChanged();
+  if (onGraphChanged) {
+    onGraphChanged();
+  }
 }
 
 void GraphCanvas::updateProximityHighlight(juce::Point<int> mousePos,
@@ -940,7 +1005,9 @@ void GraphCanvas::updateProximityHighlight(juce::Point<int> mousePos,
   if (!bestCableID.isValid()) {
     for (auto *block : nodeBlocks) {
       auto *node = block->getNode().get();
-      if (node == draggingNode) continue;
+      if (node == draggingNode) {
+        continue;
+      }
 
       // Use world-space bounds from the node itself
       juce::Rectangle<float> worldBounds(node->nodeX, node->nodeY,
@@ -951,20 +1018,21 @@ void GraphCanvas::updateProximityHighlight(juce::Point<int> mousePos,
         float targetWidth = (float)block->getWidth();
         float localX = worldMousePos.x - node->nodeX;
 
-        if (localX < targetWidth * 0.25f)
+        if (localX < targetWidth * 0.25f) {
           newZone = ProximityZone::Left;
-        else if (localX > targetWidth * 0.75f)
+        } else if (localX > targetWidth * 0.75f) {
           newZone = ProximityZone::Right;
+        }
         break;
       }
     }
   }
 
   if (newTarget != proximityTargetNode || newZone != proximityZone ||
-      !(bestCableID.sourceNode == proximityCableID.sourceNode &&
-        bestCableID.sourcePort == proximityCableID.sourcePort &&
-        bestCableID.targetNode == proximityCableID.targetNode &&
-        bestCableID.targetPort == proximityCableID.targetPort)) {
+      bestCableID.sourceNode != proximityCableID.sourceNode ||
+      bestCableID.sourcePort != proximityCableID.sourcePort ||
+      bestCableID.targetNode != proximityCableID.targetNode ||
+      bestCableID.targetPort != proximityCableID.targetPort) {
     proximityTargetNode = newTarget;
     proximityZone = newZone;
     proximityCableID = bestCableID;

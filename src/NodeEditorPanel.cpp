@@ -1,6 +1,6 @@
 #include "NodeEditorPanel.h"
 
-NodeEditorPanel::NodeEditorPanel(std::shared_ptr<GraphNode> node,
+NodeEditorPanel::NodeEditorPanel(const std::shared_ptr<GraphNode> &node,
                                  juce::AudioProcessorValueTreeState &apvts)
     : targetNode(node) {
   titleLabel.setText(node->getName(), juce::dontSendNotification);
@@ -16,11 +16,13 @@ NodeEditorPanel::NodeEditorPanel(std::shared_ptr<GraphNode> node,
   }
 
   deleteButton.onClick = [this] {
-    if (onDelete) onDelete();
+    if (onDelete) {
+      onDelete();
+    }
   };
 }
 
-NodeEditorPanel::~NodeEditorPanel() {}
+NodeEditorPanel::~NodeEditorPanel() = default;
 
 void NodeEditorPanel::paint(juce::Graphics &g) {
   g.fillAll(juce::Colour(0xff222222));

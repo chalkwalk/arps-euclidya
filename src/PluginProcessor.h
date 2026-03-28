@@ -96,16 +96,17 @@ class ArpsEuclidyaProcessor
   bool savePatch(const juce::File &file);
   bool loadPatch(const juce::File &file);
 
-  void addNode(std::shared_ptr<GraphNode> node);
+  void addNode(const std::shared_ptr<GraphNode> &node);
   void removeNode(GraphNode *node);
 
   // Hardcoded Step 2 Nodes
   // Hardcoded Step 2 Nodes
 
  private:
-  void upgradePatch(juce::XmlElement *xml, int fromVersion);
+  static void upgradePatch(juce::XmlElement *xml, int fromVersion);
   void loadFromXml(juce::XmlElement *xmlState);
-  juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+  static juce::AudioProcessorValueTreeState::ParameterLayout
+  createParameterLayout();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArpsEuclidyaProcessor)
 };

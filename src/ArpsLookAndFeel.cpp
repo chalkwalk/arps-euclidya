@@ -1,12 +1,12 @@
 #include "ArpsLookAndFeel.h"
 
-const juce::Colour ArpsLookAndFeel::getNeonColor() {
+juce::Colour ArpsLookAndFeel::getNeonColor() {
   return juce::Colour(0xff0df0e3);  // Teal
 }
-const juce::Colour ArpsLookAndFeel::getBackgroundCharcoal() {
+juce::Colour ArpsLookAndFeel::getBackgroundCharcoal() {
   return juce::Colour(0xff0b1016);
 }
-const juce::Colour ArpsLookAndFeel::getForegroundSlate() {
+juce::Colour ArpsLookAndFeel::getForegroundSlate() {
   return juce::Colour(0xff121a24);
 }
 
@@ -45,12 +45,13 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                                        juce::Slider &slider) {
   auto bounds =
       juce::Rectangle<int>(x, y, width, height).toFloat().reduced(2.0f);
-  auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f - 2.0f;
+  auto radius =
+      (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) - 2.0f;
   auto centreX = bounds.getCentreX();
   auto centreY = bounds.getCentreY();
 
   auto angle =
-      rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+      rotaryStartAngle + (sliderPos * (rotaryEndAngle - rotaryStartAngle));
 
   // --- Background (Simple fill instead of gradient for performance) ---
   g.setColour(juce::Colours::black.withAlpha(0.1f));
@@ -92,8 +93,9 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
 
   // --- Indicator Dot ---
   juce::Point<float> thumbPoint(
-      centreX + radius * std::cos(angle - juce::MathConstants<float>::halfPi),
-      centreY + radius * std::sin(angle - juce::MathConstants<float>::halfPi));
+      centreX + (radius * std::cos(angle - juce::MathConstants<float>::halfPi)),
+      centreY +
+          (radius * std::sin(angle - juce::MathConstants<float>::halfPi)));
 
   g.setColour(juce::Colours::white);
   g.fillEllipse(thumbPoint.x - 3.0f, thumbPoint.y - 3.0f, 6.0f, 6.0f);

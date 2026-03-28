@@ -1,5 +1,7 @@
 #include "NodeBlock.h"
 
+#include <utility>
+
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
@@ -7,7 +9,7 @@
 #include "MacroParameter.h"
 #include "SharedMacroUI.h"
 
-NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
+NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                      juce::AudioProcessorValueTreeState &apvts,
                      GraphCanvas &canvas)
     : targetNode(node), parentCanvas(canvas) {
@@ -30,7 +32,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
     // Defer deletion: rebuild() destroys nodeBlocks (including this NodeBlock)
     // so we must not do it while this button's click handler is on the stack.
     juce::MessageManager::callAsync([cb = onDelete]() {
-      if (cb) cb();
+      if (cb) {
+        cb();
+      }
     });
   };
 
@@ -43,7 +47,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
       slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
       slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
-      if (element.bipolar) slider->getProperties().set("bipolar", true);
+      if (element.bipolar) {
+        slider->getProperties().set("bipolar", true);
+      }
 
       if (element.floatValueRef != nullptr) {
         // Float-valued slider
@@ -53,7 +59,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                                  valRef = element.floatValueRef]() {
           *valRef = (float)slider->getValue();
           node->parameterChanged();
-          if (node->onNodeDirtied) node->onNodeDirtied();
+          if (node->onNodeDirtied) {
+            node->onNodeDirtied();
+          }
         };
       } else {
         // Int-valued slider
@@ -63,7 +71,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
           slider->onValueChange = [node, slider, valRef = element.valueRef]() {
             *valRef = (int)slider->getValue();
             node->parameterChanged();
-            if (node->onNodeDirtied) node->onNodeDirtied();
+            if (node->onNodeDirtied) {
+              node->onNodeDirtied();
+            }
           };
         }
       }
@@ -91,7 +101,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
               [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
                 if (macroIndex == -2) {
                   macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (macroIndex == -1) return;
+                  if (macroIndex == -1) {
+                    return;
+                  }
                 }
 
                 auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
@@ -105,7 +117,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
                 *macroRef = macroIndex;
                 node->parameterChanged();
-                if (node->onMappingChanged) node->onMappingChanged();
+                if (node->onMappingChanged) {
+                  node->onMappingChanged();
+                }
 
                 // Rebuild the graph to ensure MacroAttachments are properly
                 // created for the new mapping
@@ -149,8 +163,10 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                                juce::dontSendNotification);
 
         button->onClick = [node, button, valRef = element.valueRef, element]() {
-          if (element.macroIndexRef != nullptr && *element.macroIndexRef != -1)
+          if (element.macroIndexRef != nullptr &&
+              *element.macroIndexRef != -1) {
             return;
+          }
 
           if (element.type == UIElementType::Toggle) {
             *valRef = button->getToggleState() ? 1 : 0;
@@ -160,7 +176,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
           }
 
           node->parameterChanged();
-          if (node->onNodeDirtied) node->onNodeDirtied();
+          if (node->onNodeDirtied) {
+            node->onNodeDirtied();
+          }
         };
       }
 
@@ -173,7 +191,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
               [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
                 if (macroIndex == -2) {
                   macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (macroIndex == -1) return;
+                  if (macroIndex == -1) {
+                    return;
+                  }
                 }
 
                 auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
@@ -185,7 +205,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
                 *macroRef = macroIndex;
                 node->parameterChanged();
-                if (node->onMappingChanged) node->onMappingChanged();
+                if (node->onMappingChanged) {
+                  node->onMappingChanged();
+                }
 
                 // Rebuild the graph to ensure ButtonAttachments are properly
                 // created for the new mapping
@@ -213,7 +235,9 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
         combo->onChange = [node, combo, valRef = element.valueRef]() {
           *valRef = combo->getSelectedId() - 1;
           node->parameterChanged();
-          if (node->onNodeDirtied) node->onNodeDirtied();
+          if (node->onNodeDirtied) {
+            node->onNodeDirtied();
+          }
         };
       }
       comp = combo;
@@ -325,12 +349,13 @@ void NodeBlock::paint(juce::Graphics &g) {
   if (parentCanvas.getProximityTargetNode() == targetNode.get()) {
     auto zone = parentCanvas.getProximityZone();
     g.setColour(juce::Colour(0x600df0e3));  // Semi-transparent neon
-    if (zone == GraphCanvas::ProximityZone::Left)
+    if (zone == GraphCanvas::ProximityZone::Left) {
       g.fillRoundedRectangle(
           getLocalBounds().removeFromLeft(getWidth() / 4).toFloat(), 6.0f);
-    else if (zone == GraphCanvas::ProximityZone::Right)
+    } else if (zone == GraphCanvas::ProximityZone::Right) {
       g.fillRoundedRectangle(
           getLocalBounds().removeFromRight(getWidth() / 4).toFloat(), 6.0f);
+    }
   } else {
     g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
@@ -401,7 +426,7 @@ void NodeBlock::resized() {
   int startY = HEADER_HEIGHT;
 
   // Available body area for placing controls
-  int bodyWidth = getWidth() - PORT_MARGIN * 2;  // margins on both sides
+  int bodyWidth = getWidth() - (PORT_MARGIN * 2);  // margins on both sides
   int bodyHeight =
       getHeight() - HEADER_HEIGHT - 4;  // header + small bottom pad
 
@@ -437,7 +462,9 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
   }
 
   // Notify canvas of selection (for z-ordering and cable highlighting)
-  if (onSelected) onSelected();
+  if (onSelected) {
+    onSelected();
+  }
 
   auto pos = e.getPosition();
 
@@ -526,7 +553,9 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     targetNode->nodeY = dragStartGridY * Layout::GridPitchFloat +
                         Layout::TramlineOffset + deltaY;
 
-    if (onPositionChanged) onPositionChanged();
+    if (onPositionChanged) {
+      onPositionChanged();
+    }
 
     parentCanvas.updateProximityHighlight(
         e.getEventRelativeTo(&parentCanvas).getPosition(), targetNode.get());
@@ -575,7 +604,9 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
 
     parentCanvas.clearGhostTarget();
 
-    if (onPositionChanged) onPositionChanged();
+    if (onPositionChanged) {
+      onPositionChanged();
+    }
 
     if (!parentCanvas.attemptSignalPathInsertion(targetNode.get(),
                                                  mousePosOnCanvas)) {
@@ -596,23 +627,25 @@ void NodeBlock::cancelDrag() {
     targetNode->nodeX = dragStartWorldX;
     targetNode->nodeY = dragStartWorldY;
     parentCanvas.clearGhostTarget();
-    if (onPositionChanged) onPositionChanged();
+    if (onPositionChanged) {
+      onPositionChanged();
+    }
   }
   isDraggingNode = false;
   isDraggingCable = false;
 }
 
-juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
-  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
+juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) {
+  int y = HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
   // Flush with the left edge. Width is RADIUS. Height is 2*RADIUS.
-  return juce::Rectangle<int>(0, y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2);
+  return {0, y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2};
 }
 
 juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
-  int y = HEADER_HEIGHT + 10 + portIndex * PORT_SPACING;
+  int y = HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
   // Flush with the right edge. Width is RADIUS. Height is 2*RADIUS.
-  return juce::Rectangle<int>(getWidth() - PORT_RADIUS, y - PORT_RADIUS,
-                              PORT_RADIUS, PORT_RADIUS * 2);
+  return {getWidth() - PORT_RADIUS, y - PORT_RADIUS, PORT_RADIUS,
+          PORT_RADIUS * 2};
 }
 
 juce::Point<int> NodeBlock::getInputPortCentre(int portIndex) const {
@@ -631,7 +664,9 @@ int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
   for (int i = 0; i < numIn; ++i) {
     auto rect = getInputPortRect(i);
     auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) return i;
+    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) {
+      return i;
+    }
   }
   return -1;
 }
@@ -642,14 +677,20 @@ int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
   for (int i = 0; i < numOut; ++i) {
     auto rect = getOutputPortRect(i);
     auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) return i;
+    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) {
+      return i;
+    }
   }
   return -1;
 }
 
-NodeDragPreview::NodeDragPreview(const juce::String &nodeType, int gridW,
-                                 int gridH, int numIn, int numOut)
-    : type(nodeType), gridW(gridW), gridH(gridH), numIn(numIn), numOut(numOut) {
+NodeDragPreview::NodeDragPreview(juce::String nodeType, int gridW, int gridH,
+                                 int numIn, int numOut)
+    : type(std::move(nodeType)),
+      gridW(gridW),
+      gridH(gridH),
+      numIn(numIn),
+      numOut(numOut) {
   int width = (gridW * Layout::GridPitch) - Layout::TramlineMargin;
   int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
   setSize(width, height);
@@ -676,13 +717,13 @@ void NodeDragPreview::paint(juce::Graphics &g) {
   // Ports
   g.setColour(ArpsLookAndFeel::getBackgroundCharcoal().withAlpha(0.8f));
   for (int i = 0; i < numIn; ++i) {
-    int py = NodeBlock::HEADER_HEIGHT + 10 + i * NodeBlock::PORT_SPACING;
+    int py = NodeBlock::HEADER_HEIGHT + 10 + (i * NodeBlock::PORT_SPACING);
     g.fillEllipse(0.0f, (float)(py - NodeBlock::PORT_RADIUS),
                   (float)NodeBlock::PORT_RADIUS,
                   (float)(NodeBlock::PORT_RADIUS * 2));
   }
   for (int i = 0; i < numOut; ++i) {
-    int py = NodeBlock::HEADER_HEIGHT + 10 + i * NodeBlock::PORT_SPACING;
+    int py = NodeBlock::HEADER_HEIGHT + 10 + (i * NodeBlock::PORT_SPACING);
     g.fillEllipse((float)(getWidth() - NodeBlock::PORT_RADIUS),
                   (float)(py - NodeBlock::PORT_RADIUS),
                   (float)NodeBlock::PORT_RADIUS,

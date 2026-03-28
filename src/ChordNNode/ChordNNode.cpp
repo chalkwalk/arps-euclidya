@@ -74,14 +74,19 @@ void ChordNNode::process() {
 
     // 3. Generate N-note combinations from the flat unique pool
     if (n > 0 && n <= uniqueNotes.size()) {
-      auto cmb = [&](auto &self, std::vector<HeldNote> cur, size_t sI) -> void {
+      auto cmb = [&](auto &self, const std::vector<HeldNote> &cur,
+                     size_t sI) -> void {
         if (cur.size() == n) {
           sortedSeq.push_back(cur);
           return;
         }
-        if (sI >= uniqueNotes.size()) return;
+        if (sI >= uniqueNotes.size()) {
+          return;
+        }
         for (size_t i = sI; i < uniqueNotes.size(); ++i) {
-          if (cur.size() + (uniqueNotes.size() - i) < n) break;
+          if (cur.size() + (uniqueNotes.size() - i) < n) {
+            break;
+          }
 
           std::vector<HeldNote> nextCur = cur;
           nextCur.push_back(uniqueNotes[i]);

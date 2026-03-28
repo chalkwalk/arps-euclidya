@@ -7,7 +7,7 @@
 
 // --- UnfoldNode Impl
 
-UnfoldNode::UnfoldNode() {}
+UnfoldNode::UnfoldNode() = default;
 
 NodeLayout UnfoldNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::UnfoldNode_json,
@@ -44,7 +44,7 @@ void UnfoldNode::process() {
 
     for (const auto &step : it->second) {
       if (step.empty()) {
-        outSeq.push_back({});  // preserve rest
+        outSeq.emplace_back();  // preserve rest
         continue;
       }
 

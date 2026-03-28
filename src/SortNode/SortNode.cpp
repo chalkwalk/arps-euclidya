@@ -10,9 +10,13 @@ void SortNode::process() {
     NoteSequence steps = it->second;
 
     auto getMeanValue = [](const std::vector<HeldNote> &chord) {
-      if (chord.empty()) return 0.0f;
+      if (chord.empty()) {
+        return 0.0f;
+      }
       float sum = 0.0f;
-      for (const auto &n : chord) sum += n.noteNumber;
+      for (const auto &n : chord) {
+        sum += n.noteNumber;
+      }
       return sum / (float)chord.size();
     };
 

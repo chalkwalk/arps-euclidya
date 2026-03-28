@@ -26,7 +26,7 @@ const std::vector<std::vector<int>> SCALES = {
 
 // --- QuantizerNode Impl
 
-QuantizerNode::QuantizerNode() {}
+QuantizerNode::QuantizerNode() = default;
 
 NodeLayout QuantizerNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::QuantizerNode_json,
@@ -76,7 +76,7 @@ void QuantizerNode::process() {
 
     for (const auto &step : it->second) {
       if (step.empty()) {
-        outSeq.push_back({});
+        outSeq.emplace_back();
         continue;
       }
 
@@ -87,7 +87,9 @@ void QuantizerNode::process() {
 
         // Find interval relative to root
         int pitchClass = (originalNote.noteNumber - rootNote) % 12;
-        if (pitchClass < 0) pitchClass += 12;  // Handle negative modulo
+        if (pitchClass < 0) {
+          pitchClass += 12;  // Handle negative modulo
+        }
 
         bool inScale = std::find(scalePattern.begin(), scalePattern.end(),
                                  pitchClass) != scalePattern.end();
@@ -106,8 +108,12 @@ void QuantizerNode::process() {
             for (int scalePitch : scalePattern) {
               int diff = scalePitch - pitchClass;
 
-              if (diff > 6) diff -= 12;
-              if (diff < -6) diff += 12;
+              if (diff > 6) {
+                diff -= 12;
+              }
+              if (diff < -6) {
+                diff += 12;
+              }
 
               if (std::abs(diff) < std::abs(minDiff)) {
                 minDiff = diff;
@@ -142,7 +148,7 @@ void QuantizerNode::process() {
         processedStep.erase(last, processedStep.end());
         outSeq.push_back(processedStep);
       } else if (mode == 0 && restOnDrop == 1) {
-        outSeq.push_back({});  // Keep length if entirely filtered out
+        outSeq.emplace_back();  // Keep length if entirely filtered out
       }
     }
 

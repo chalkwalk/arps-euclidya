@@ -14,7 +14,7 @@ class GraphEngine {
   GraphEngine() = default;
   ~GraphEngine() = default;
 
-  void addNode(std::shared_ptr<GraphNode> node);
+  void addNode(const std::shared_ptr<GraphNode> &node);
   void removeNode(GraphNode *node);
 
   // Explicit connection management (replaces implicit linear chain)
@@ -44,8 +44,8 @@ class GraphEngine {
   std::function<void()> onGraphDirtied;
 
   // Occupancy checks
-  bool isInputPortOccupied(GraphNode *node, int portIndex) const;
-  bool isOutputPortOccupied(GraphNode *node, int portIndex) const;
+  bool isInputPortOccupied(GraphNode *node, int inPort) const;
+  static bool isOutputPortOccupied(GraphNode *node, int portIndex);
 
   // Check if adding a connection would create a cycle
   bool wouldCreateCycle(GraphNode *source, GraphNode *target) const;
@@ -62,5 +62,5 @@ class GraphEngine {
   std::vector<GraphNode *> topologicalSort() const;
 
   // Helper: check if 'target' is reachable from 'source' via connections
-  bool isReachable(GraphNode *source, GraphNode *target) const;
+  static bool isReachable(GraphNode *from, GraphNode *to);
 };

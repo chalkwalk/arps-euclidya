@@ -9,7 +9,8 @@ class CustomMacroSlider : public juce::Slider {
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isPopupMenu()) {
-      if (onRightClick) onRightClick();
+      if (onRightClick)
+        onRightClick();
     } else {
       juce::Slider::mouseDown(e);
     }
@@ -22,7 +23,8 @@ class CustomMacroButton : public juce::TextButton {
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isPopupMenu()) {
-      if (onRightClick) onRightClick();
+      if (onRightClick)
+        onRightClick();
     } else {
       juce::TextButton::mouseDown(e);
     }

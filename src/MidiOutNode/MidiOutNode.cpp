@@ -9,9 +9,13 @@ MidiOutNode::MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
 namespace {
 bool stepsAreEqual(const std::vector<HeldNote> &a,
                    const std::vector<HeldNote> &b) {
-  if (a.size() != b.size()) return false;
+  if (a.size() != b.size()) {
+    return false;
+  }
   for (size_t i = 0; i < a.size(); ++i) {
-    if (!(a[i] == b[i])) return false;
+    if (!(a[i] == b[i])) {
+      return false;
+    }
   }
   return true;
 }
@@ -19,17 +23,23 @@ bool stepsAreEqual(const std::vector<HeldNote> &a,
 int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
                          const NoteSequence &oldSequence,
                          const NoteSequence &newSequence, int previousIndex) {
-  if (newSequence.empty()) return 0;
+  if (newSequence.empty()) {
+    return 0;
+  }
 
   int nL = newSequence.size();
 
   for (int i = 0; i < nL; ++i) {
-    int cI = (int)((previousIndex + i) % nL);
-    if (stepsAreEqual(newSequence[(size_t)cI], stepToFind)) return cI;
+    int cI = ((previousIndex + i) % nL);
+    if (stepsAreEqual(newSequence[(size_t)cI], stepToFind)) {
+      return cI;
+    }
   }
 
   for (int i = 0; i < nL; ++i) {
-    if (stepsAreEqual(newSequence[(size_t)i], stepToFind)) return i;
+    if (stepsAreEqual(newSequence[(size_t)i], stepToFind)) {
+      return i;
+    }
   }
 
   int oL = std::max(1, (int)oldSequence.size());
@@ -44,7 +54,9 @@ constexpr int NUM_DIVISIONS = 8;
 int countOnes(const std::vector<bool> &pattern, int upTo) {
   int count = 0;
   for (int i = 0; i < upTo && i < (int)pattern.size(); ++i) {
-    if (pattern[static_cast<size_t>(i)]) count++;
+    if (pattern[static_cast<size_t>(i)]) {
+      count++;
+    }
   }
   return count;
 }
@@ -53,7 +65,9 @@ int findIndexOfNote(const std::vector<bool> &pattern, int n) {
   int seen = 0;
   for (int i = 0; i < (int)pattern.size(); ++i) {
     if (pattern[static_cast<size_t>(i)]) {
-      if (seen == n) return i;
+      if (seen == n) {
+        return i;
+      }
       seen++;
     }
   }
@@ -132,7 +146,9 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
   // --- Compute current division ---
   int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
   double division = DIVISIONS[divIdx];
-  if (triplet) division *= (2.0 / 3.0);
+  if (triplet) {
+    division *= (2.0 / 3.0);
+  }
 
   // --- Reset/Sync State Tracking ---
   if (wasHoldingNotes && !holdingNotes) {
@@ -234,7 +250,9 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     std::vector<bool> rhythmPattern = EuclideanMath::generatePattern(
         actualRSteps, actualRBeats, actualROffset);
 
-    if (rhythmPattern.empty()) return;
+    if (rhythmPattern.empty()) {
+      return;
+    }
 
     // --- Pattern Logic ---
     int actualPSteps =
@@ -263,7 +281,9 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     std::vector<bool> pattern = EuclideanMath::generatePattern(
         actualPSteps, actualPBeats, actualPOffset);
 
-    if (pattern.empty()) return;
+    if (pattern.empty()) {
+      return;
+    }
 
     // --- Mode-Specific Index Calculation ---
     if (syncMode == SyncMode::Deterministic) {
@@ -282,7 +302,7 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
           long long pCycles = k / (long long)actualPBeats;
           int pNoteIdx = (int)(k % (long long)actualPBeats);
           long long pos = (pCycles * (long long)actualPSteps) +
-                          (long long)findIndexOfNote(pattern, (int)pNoteIdx);
+                          (long long)findIndexOfNote(pattern, pNoteIdx);
 
           patternIndex = (int)(pos % (long long)actualPSteps);
           sequenceIndex = (int)(pos % (long long)sequence.size());
@@ -302,10 +322,12 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
     visualRhythmIndex = rhythmIndex % (int)rhythmPattern.size();
 
     if (syncMode != SyncMode::Deterministic) {
-      rhythmIndex = (int)((rhythmIndex + 1) % (int)rhythmPattern.size());
+      rhythmIndex = ((rhythmIndex + 1) % (int)rhythmPattern.size());
     }
 
-    if (!isRhythmBeat) return;
+    if (!isRhythmBeat) {
+      return;
+    }
 
     // --- Note Triggering & Advance ---
     if (syncMode != SyncMode::Deterministic) {
@@ -313,8 +335,8 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
         // Skip over rests instantaneously
         int limit = (int)pattern.size();
         while (!pattern[(size_t)patternIndex % pattern.size()] && limit-- > 0) {
-          patternIndex = (int)((patternIndex + 1) % (int)actualPSteps);
-          sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
+          patternIndex = ((patternIndex + 1) % actualPSteps);
+          sequenceIndex = ((sequenceIndex + 1) % (int)sequence.size());
         }
       }
     }
@@ -353,8 +375,8 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
         float finalVelocity = std::clamp(
             noteTrigger.velocity +
-                actualPressMod * (currentPressure - noteTrigger.velocity) +
-                actualTimbMod * (currentTimbre - noteTrigger.velocity),
+                (actualPressMod * (currentPressure - noteTrigger.velocity)) +
+                (actualTimbMod * (currentTimbre - noteTrigger.velocity)),
             0.0f, 1.0f);
 
         outputBuffer.addEvent(
@@ -362,14 +384,14 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                                       finalVelocity),
             samplePosition);
 
-        playingNotes.push_back({outputChannel, noteTrigger.noteNumber});
+        playingNotes.emplace_back(outputChannel, noteTrigger.noteNumber);
       }
     }
 
     if (syncMode != SyncMode::Deterministic) {
       // Advance to prepare for next rhythm beat
-      patternIndex = (int)((patternIndex + 1) % (int)actualPSteps);
-      sequenceIndex = (int)((sequenceIndex + 1) % (int)sequence.size());
+      patternIndex = ((patternIndex + 1) % actualPSteps);
+      sequenceIndex = ((sequenceIndex + 1) % (int)sequence.size());
     }
   }
 }
@@ -377,7 +399,9 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 juce::String MidiOutNode::getCycleLengthInfo() const {
   // Get input sequence length
   auto it = inputSequences.find(0);
-  if (it == inputSequences.end() || it->second.empty()) return "No input";
+  if (it == inputSequences.end() || it->second.empty()) {
+    return "No input";
+  }
 
   int L = (int)it->second.size();
 
@@ -420,7 +444,9 @@ juce::String MidiOutNode::getCycleLengthInfo() const {
   // Convert to quarter beats using clock division
   int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
   double divisionPpq = DIVISIONS[divIdx];
-  if (triplet) divisionPpq *= (2.0 / 3.0);
+  if (triplet) {
+    divisionPpq *= (2.0 / 3.0);
+  }
 
   double quarterBeats = totalTicks * divisionPpq;
   double bars = quarterBeats / 4.0;
@@ -430,17 +456,19 @@ juce::String MidiOutNode::getCycleLengthInfo() const {
   info << totalTicks << " ticks = ";
 
   // Show quarter beats as fraction if not whole
-  if (std::abs(quarterBeats - std::round(quarterBeats)) < 0.001)
+  if (std::abs(quarterBeats - std::round(quarterBeats)) < 0.001) {
     info << (int)quarterBeats;
-  else
+  } else {
     info << juce::String(quarterBeats, 1);
+  }
   info << " beats";
 
   // Show bars
-  if (std::abs(bars - std::round(bars)) < 0.001)
+  if (std::abs(bars - std::round(bars)) < 0.001) {
     info << " (" << (int)bars << " bar" << ((int)bars != 1 ? "s" : "") << ")";
-  else
+  } else {
     info << " (" << juce::String(bars, 2) << " bars)";
+  }
 
   return info;
 }

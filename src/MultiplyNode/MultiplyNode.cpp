@@ -23,15 +23,18 @@ void MultiplyNode::process() {
   } else {
     NoteSequence out;
     for (const auto &step : it->second) {
-      for (int r = 0; r < actualRepeat; ++r) out.push_back(step);
+      for (int r = 0; r < actualRepeat; ++r) {
+        out.push_back(step);
+      }
     }
     outputSequences[0] = out;
   }
 
   auto conn = connections.find(0);
   if (conn != connections.end()) {
-    for (const auto &c : conn->second)
+    for (const auto &c : conn->second) {
       c.targetNode->setInputSequence(c.targetInputPort, outputSequences[0]);
+    }
   }
 }
 

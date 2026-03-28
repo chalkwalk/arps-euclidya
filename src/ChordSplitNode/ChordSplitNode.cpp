@@ -14,13 +14,14 @@ void ChordSplitNode::process() {
   }
 
   const auto &seq = it->second;
-  NoteSequence out0, out1;
+  NoteSequence out0;
+  NoteSequence out1;
 
   for (const auto &step : seq) {
     if (step.empty()) {
       // Rest: both outputs get a rest
-      out0.push_back({});
-      out1.push_back({});
+      out0.emplace_back();
+      out1.emplace_back();
       continue;
     }
 
@@ -29,11 +30,11 @@ void ChordSplitNode::process() {
       if (splitMode == 0) {
         // Top mode: the single note IS the highest, so it goes to out0 (Top)
         out0.push_back(step);
-        out1.push_back({});
+        out1.emplace_back();
       } else {
         // Bottom mode: the single note IS the lowest, so it goes to out1
         // (Bottom)
-        out0.push_back({});
+        out0.emplace_back();
         out1.push_back(step);
       }
       continue;

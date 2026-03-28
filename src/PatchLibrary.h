@@ -31,7 +31,7 @@ class PatchLibrary {
 
   // Extract embedded factory patches to the factory directory if needed.
   // Returns true if any patches were (re)installed.
-  bool installFactoryPatches();
+  bool installFactoryPatches() const;
 
   // Get all patches, optionally filtered by bank
   std::vector<PatchInfo> getPatches(Bank bank = Bank::All) const;
@@ -48,16 +48,16 @@ class PatchLibrary {
                                        Bank bank = Bank::All) const;
 
   // Resolved directory accessors
-  juce::File getFactoryPatchDirectory() const;
-  juce::File getUserPatchDirectory() const;
+  static juce::File getFactoryPatchDirectory();
+  static juce::File getUserPatchDirectory();
 
   int getCount() const { return (int)allPatches.size(); }
 
  private:
   void scanDirectory(const juce::File &dir, Bank bank,
                      const juce::String &rootPath);
-  PatchInfo parsePatchFile(const juce::File &file, Bank bank,
-                           const juce::String &rootPath) const;
+  static PatchInfo parsePatchFile(const juce::File &file, Bank bank,
+                                  const juce::String &rootPath);
 
   std::vector<PatchInfo> allPatches;
 };

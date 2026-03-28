@@ -43,10 +43,10 @@ class GraphCanvas : public juce::Component,
   GraphEngine &getEngine() const { return graphEngine; }
 
   // Add a node and place it at a default position
-  void addNodeAtDefaultPosition(std::shared_ptr<GraphNode> node);
+  void addNodeAtDefaultPosition(const std::shared_ptr<GraphNode> &node);
 
   // Add a node explicitly converting screen coordinates to world position
-  void addNodeAtPosition(std::shared_ptr<GraphNode> node,
+  void addNodeAtPosition(const std::shared_ptr<GraphNode> &node,
                          juce::Point<int> screenPos);
 
   // DragAndDropTarget overrides
@@ -63,7 +63,7 @@ class GraphCanvas : public juce::Component,
   void endCableDrag(juce::Point<int> canvasPos);
 
   // Called by NodeBlock to request a clone
-  void requestNodeClone(GraphNode *original, int gridX, int gridY);
+  void requestNodeClone(GraphNode *original, int gridX, int gridY) const;
 
   // Check if any cable carries a sequence >10K steps
   void checkForLargeSequences();
@@ -118,8 +118,8 @@ class GraphCanvas : public juce::Component,
   juce::Point<int> cableDragEnd;
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
-  void drawCable(juce::Graphics &g, const juce::Path &path, bool isDragging,
-                 bool isHighlighted, bool isOutputPortConnected);
+  void drawCable(juce::Graphics &g, const juce::Path &path, bool highlighted,
+                 bool warning, bool isForeground);
   void updateCanvasSize();
 
   // Cable tooltip state

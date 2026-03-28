@@ -10,7 +10,7 @@ class GraphCanvas;  // forward declaration
 
 class NodeBlock : public juce::Component, private juce::Timer {
  public:
-  NodeBlock(std::shared_ptr<GraphNode> node,
+  NodeBlock(const std::shared_ptr<GraphNode> &node,
             juce::AudioProcessorValueTreeState &apvts, GraphCanvas &canvas);
   ~NodeBlock() override = default;
 
@@ -77,7 +77,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
   bool isDraggingCable = false;
 
   // Calculate the port rectangles for hit testing
-  juce::Rectangle<int> getInputPortRect(int portIndex) const;
+  static juce::Rectangle<int> getInputPortRect(int portIndex);
   juce::Rectangle<int> getOutputPortRect(int portIndex) const;
   int hitTestInputPort(juce::Point<int> localPoint) const;
   int hitTestOutputPort(juce::Point<int> localPoint) const;
@@ -91,7 +91,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
  */
 class NodeDragPreview : public juce::Component {
  public:
-  NodeDragPreview(const juce::String &nodeType, int gridW, int gridH, int numIn,
+  NodeDragPreview(juce::String nodeType, int gridW, int gridH, int numIn,
                   int numOut);
 
   void paint(juce::Graphics &g) override;

@@ -16,8 +16,8 @@ void UnzipNode::process() {
 
   for (const auto &step : seq) {
     if (step.empty()) {
-      out0.push_back({});
-      out1.push_back({});
+      out0.emplace_back();
+      out1.emplace_back();
       continue;
     }
 
@@ -30,7 +30,7 @@ void UnzipNode::process() {
     size_t half = sortedStep.size() / 2;
     if (sortedStep.size() == 1) {
       out0.push_back(sortedStep);
-      out1.push_back({});
+      out1.emplace_back();
     } else {
       std::vector<HeldNote> lower(
           sortedStep.begin(),

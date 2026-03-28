@@ -4,7 +4,7 @@
 #include "BinaryData.h"
 // --- AllNotesNode Impl
 
-AllNotesNode::AllNotesNode() {}
+AllNotesNode::AllNotesNode() = default;
 
 NodeLayout AllNotesNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::AllNotesNode_json,
