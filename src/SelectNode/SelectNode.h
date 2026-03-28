@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class SelectNode : public GraphNode {
-public:
+ public:
   SelectNode(std::array<std::atomic<float> *, 32> &macros);
   ~SelectNode() override = default;
 
@@ -24,6 +24,6 @@ public:
   int selectSource = 0;
   int macroSelectSource = -1;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

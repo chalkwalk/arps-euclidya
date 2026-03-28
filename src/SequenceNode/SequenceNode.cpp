@@ -1,19 +1,20 @@
 #include "SequenceNode.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include "../GraphCanvas.h"
 #include "../LayoutParser.h"
 #include "../MacroMappingMenu.h"
 #include "../MacroParameter.h"
 #include "../SharedMacroUI.h"
 #include "BinaryData.h"
-#include <juce_gui_basics/juce_gui_basics.h>
 
 class SequenceNodeEditor : public juce::Component,
                            public juce::ScrollBar::Listener {
-public:
+ public:
   SequenceNodeEditor(SequenceNode &node,
                      juce::AudioProcessorValueTreeState &apvts)
       : seqNode(node) {
-
     // Length slider
     lengthSlider.setRange(1, 16, 1);
     lengthSlider.setValue(node.seqLength, juce::dontSendNotification);
@@ -21,8 +22,7 @@ public:
     lengthSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     lengthSlider.onValueChange = [this]() {
       seqNode.seqLength = (int)lengthSlider.getValue();
-      if (seqNode.onNodeDirtied)
-        seqNode.onNodeDirtied();
+      if (seqNode.onNodeDirtied) seqNode.onNodeDirtied();
       repaint();
     };
     addAndMakeVisible(lengthSlider);
@@ -40,8 +40,7 @@ public:
               if (canvasPtr != nullptr) {
                 macroIndex = canvasPtr->getEngine().getNextFreeMacro();
               }
-              if (macroIndex < 0)
-                return;
+              if (macroIndex < 0) return;
             }
 
             auto *param = dynamic_cast<MacroParameter *>(
@@ -55,11 +54,9 @@ public:
             }
 
             node.macroSeqLength = macroIndex;
-            if (node.onMappingChanged)
-              node.onMappingChanged();
+            if (node.onMappingChanged) node.onMappingChanged();
 
-            if (canvasPtr != nullptr)
-              canvasPtr->rebuild();
+            if (canvasPtr != nullptr) canvasPtr->rebuild();
           });
     };
 
@@ -107,8 +104,7 @@ public:
       // Scroll is inverted: higher offset = lower notes visible
       // Top of grid = highest visible note
       int noteNum = 127 - scrollOffset - i;
-      if (noteNum < 0 || noteNum > 127)
-        continue;
+      if (noteNum < 0 || noteNum > 127) continue;
 
       auto rowLabel =
           labelArea.withY(gridArea.getY() + i * cellH).withHeight(cellH);
@@ -128,8 +124,7 @@ public:
 
     for (int i = 0; i < visibleRows; ++i) {
       int noteNum = 127 - scrollOffset - i;
-      if (noteNum < 0 || noteNum > 127)
-        continue;
+      if (noteNum < 0 || noteNum > 127) continue;
 
       bool isC = (noteNum % 12) == 0;
 
@@ -174,8 +169,7 @@ public:
 
   void handleGridClick(const juce::MouseEvent &e) {
     auto b = getGridBounds();
-    if (!b.contains(e.getPosition()))
-      return;
+    if (!b.contains(e.getPosition())) return;
 
     int cellW = b.getWidth() / 16;
     int cellH = b.getHeight() / visibleRows;
@@ -190,8 +184,7 @@ public:
       } else if (e.mods.isRightButtonDown()) {
         seqNode.grid[noteNum][c] = false;
       }
-      if (seqNode.onNodeDirtied)
-        seqNode.onNodeDirtied();
+      if (seqNode.onNodeDirtied) seqNode.onNodeDirtied();
       repaint();
     }
   }
@@ -211,7 +204,7 @@ public:
         4);
   }
 
-private:
+ private:
   // ScrollBar::Listener
   void scrollBarMoved(juce::ScrollBar *, double newRange) override {
     scrollOffset = (int)newRange;
@@ -223,15 +216,15 @@ private:
   juce::Label lengthLabel;
   std::unique_ptr<MacroAttachment> lengthAttachment;
 
-  static constexpr int visibleRows = 13; // Just over one octave
-  int scrollOffset = 128 - 13 - 60;      // Start around C4 area
+  static constexpr int visibleRows = 13;  // Just over one octave
+  int scrollOffset = 128 - 13 - 60;       // Start around C4 area
 
-  juce::ScrollBar scrollbar{true}; // vertical
+  juce::ScrollBar scrollbar{true};  // vertical
 };
 
 // Wrap ScrollBar::Listener properly
 class SequenceNodeCustomComponent : public SequenceNodeEditor {
-public:
+ public:
   SequenceNodeCustomComponent(SequenceNode &node,
                               juce::AudioProcessorValueTreeState &apvts)
       : SequenceNodeEditor(node, apvts) {}
@@ -247,9 +240,8 @@ NodeLayout SequenceNode::getLayout() const {
   return layout;
 }
 
-std::unique_ptr<juce::Component>
-SequenceNode::createCustomComponent(const juce::String &name,
-                                    juce::AudioProcessorValueTreeState *apvts) {
+std::unique_ptr<juce::Component> SequenceNode::createCustomComponent(
+    const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
   juce::ignoreUnused(name);
   if (apvts != nullptr)
     return std::make_unique<SequenceNodeCustomComponent>(*this, *apvts);
@@ -281,8 +273,7 @@ void SequenceNode::loadNodeState(juce::XmlElement *xml) {
 
     // Clear grid
     for (int n = 0; n < 128; ++n)
-      for (int c = 0; c < 16; ++c)
-        grid[n][c] = false;
+      for (int c = 0; c < 16; ++c) grid[n][c] = false;
 
     // Load sparse format
     juce::String activeStr = xml->getStringAttribute("activeGrid");
@@ -290,14 +281,12 @@ void SequenceNode::loadNodeState(juce::XmlElement *xml) {
       juce::StringArray pairs;
       pairs.addTokens(activeStr, ";", "");
       for (const auto &pair : pairs) {
-        if (pair.isEmpty())
-          continue;
+        if (pair.isEmpty()) continue;
         int comma = pair.indexOfChar(',');
         if (comma > 0) {
           int n = pair.substring(0, comma).getIntValue();
           int c = pair.substring(comma + 1).getIntValue();
-          if (n >= 0 && n < 128 && c >= 0 && c < 16)
-            grid[n][c] = true;
+          if (n >= 0 && n < 128 && c >= 0 && c < 16) grid[n][c] = true;
         }
       }
     } else {
@@ -334,7 +323,8 @@ void SequenceNode::process() {
         hn.noteNumber = n;
         hn.channel = 1;
         hn.velocity = 100;
-        hn.sourceNoteNumber = n; // For manual steps, the note is its own source
+        hn.sourceNoteNumber =
+            n;  // For manual steps, the note is its own source
         hn.sourceChannel = 1;
         stepNotes.push_back(hn);
       }

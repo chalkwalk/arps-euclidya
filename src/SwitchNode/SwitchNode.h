@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class SwitchNode : public GraphNode {
-public:
+ public:
   SwitchNode(std::array<std::atomic<float> *, 32> &macros);
   ~SwitchNode() override = default;
 
@@ -24,6 +24,6 @@ public:
   int switchOn = 1;
   int macroSwitch = -1;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

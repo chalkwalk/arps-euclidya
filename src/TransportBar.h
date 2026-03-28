@@ -1,10 +1,11 @@
 #pragma once
 
-#include "ClockManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "ClockManager.h"
+
 class TransportBar : public juce::Component, private juce::Timer {
-public:
+ public:
   TransportBar(ClockManager &clockManager);
   ~TransportBar() override;
 
@@ -12,7 +13,7 @@ public:
   void resized() override;
   void timerCallback() override;
 
-private:
+ private:
   ClockManager &clock;
 
   juce::TextButton playStopButton;

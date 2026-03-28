@@ -1,8 +1,10 @@
 #include "MidiInNode.h"
-#include "../LayoutParser.h"
-#include "BinaryData.h"
+
 #include <algorithm>
 #include <cmath>
+
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 
 // --- MidiInNode Impl
 
@@ -16,11 +18,10 @@ NodeLayout MidiInNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "channelFilter") {
+    if (el.label == "channelFilter") {
       el.valueRef = const_cast<int *>(&channelFilter);
       el.macroIndexRef = const_cast<int *>(&macroChannelFilter);
-    }
-    else if (el.label == "legacyMode") {
+    } else if (el.label == "legacyMode") {
       el.valueRef = const_cast<int *>(&legacyMode);
     }
   }

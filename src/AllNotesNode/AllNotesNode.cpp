@@ -12,7 +12,7 @@ NodeLayout AllNotesNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "baseOctave") {
+    if (el.label == "baseOctave") {
       el.valueRef = const_cast<int *>(&baseOctave);
     }
   }
@@ -42,8 +42,8 @@ void AllNotesNode::process() {
     if (currentNote <= 127) {
       HeldNote hn;
       hn.noteNumber = currentNote;
-      hn.channel = 1;    // Default
-      hn.velocity = 100; // Default
+      hn.channel = 1;     // Default
+      hn.velocity = 100;  // Default
       outSeq.push_back({hn});
     }
   }

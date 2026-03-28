@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../GraphNode.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../GraphNode.h"
+
 class QuantizerNode : public GraphNode {
-public:
+ public:
   QuantizerNode();
   ~QuantizerNode() override = default;
 

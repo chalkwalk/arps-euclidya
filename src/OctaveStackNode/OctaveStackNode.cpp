@@ -1,9 +1,11 @@
 #include "OctaveStackNode.h"
-#include "../LayoutParser.h"
-#include "BinaryData.h"
-#include "../MacroMappingMenu.h"
+
 #include <algorithm>
 #include <set>
+
+#include "../LayoutParser.h"
+#include "../MacroMappingMenu.h"
+#include "BinaryData.h"
 
 // --- OctaveStackNode Impl
 
@@ -11,16 +13,15 @@ OctaveStackNode::OctaveStackNode(std::array<std::atomic<float> *, 32> &inMacros)
     : macros(inMacros) {}
 
 NodeLayout OctaveStackNode::getLayout() const {
-  auto layout = LayoutParser::parseFromJSON(BinaryData::OctaveStackNode_json,
-                                            BinaryData::OctaveStackNode_jsonSize);
+  auto layout = LayoutParser::parseFromJSON(
+      BinaryData::OctaveStackNode_json, BinaryData::OctaveStackNode_jsonSize);
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "octaves") {
+    if (el.label == "octaves") {
       el.valueRef = const_cast<int *>(&octaves);
       el.macroIndexRef = const_cast<int *>(&macroOctaves);
-    }
-    else if (el.label == "uniqueOnly") {
+    } else if (el.label == "uniqueOnly") {
       el.valueRef = const_cast<int *>(&uniqueOnly);
     }
   }

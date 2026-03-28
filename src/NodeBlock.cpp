@@ -1,4 +1,5 @@
 #include "NodeBlock.h"
+
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
@@ -10,7 +11,6 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                      juce::AudioProcessorValueTreeState &apvts,
                      GraphCanvas &canvas)
     : targetNode(node), parentCanvas(canvas) {
-
   titleLabel.setText(node->getName(), juce::dontSendNotification);
   titleLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   titleLabel.setJustificationType(juce::Justification::centredLeft);
@@ -30,8 +30,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
     // Defer deletion: rebuild() destroys nodeBlocks (including this NodeBlock)
     // so we must not do it while this button's click handler is on the stack.
     juce::MessageManager::callAsync([cb = onDelete]() {
-      if (cb)
-        cb();
+      if (cb) cb();
     });
   };
 
@@ -44,8 +43,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
       slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
       slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
-      if (element.bipolar)
-        slider->getProperties().set("bipolar", true);
+      if (element.bipolar) slider->getProperties().set("bipolar", true);
 
       if (element.floatValueRef != nullptr) {
         // Float-valued slider
@@ -55,8 +53,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
                                  valRef = element.floatValueRef]() {
           *valRef = (float)slider->getValue();
           node->parameterChanged();
-          if (node->onNodeDirtied)
-            node->onNodeDirtied();
+          if (node->onNodeDirtied) node->onNodeDirtied();
         };
       } else {
         // Int-valued slider
@@ -66,8 +63,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
           slider->onValueChange = [node, slider, valRef = element.valueRef]() {
             *valRef = (int)slider->getValue();
             node->parameterChanged();
-            if (node->onNodeDirtied)
-              node->onNodeDirtied();
+            if (node->onNodeDirtied) node->onNodeDirtied();
           };
         }
       }
@@ -95,8 +91,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
               [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
                 if (macroIndex == -2) {
                   macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (macroIndex == -1)
-                    return;
+                  if (macroIndex == -1) return;
                 }
 
                 auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
@@ -110,8 +105,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
                 *macroRef = macroIndex;
                 node->parameterChanged();
-                if (node->onMappingChanged)
-                  node->onMappingChanged();
+                if (node->onMappingChanged) node->onMappingChanged();
 
                 // Rebuild the graph to ensure MacroAttachments are properly
                 // created for the new mapping
@@ -166,8 +160,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
           }
 
           node->parameterChanged();
-          if (node->onNodeDirtied)
-            node->onNodeDirtied();
+          if (node->onNodeDirtied) node->onNodeDirtied();
         };
       }
 
@@ -180,8 +173,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
               [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
                 if (macroIndex == -2) {
                   macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (macroIndex == -1)
-                    return;
+                  if (macroIndex == -1) return;
                 }
 
                 auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
@@ -193,8 +185,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
 
                 *macroRef = macroIndex;
                 node->parameterChanged();
-                if (node->onMappingChanged)
-                  node->onMappingChanged();
+                if (node->onMappingChanged) node->onMappingChanged();
 
                 // Rebuild the graph to ensure ButtonAttachments are properly
                 // created for the new mapping
@@ -222,8 +213,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
         combo->onChange = [node, combo, valRef = element.valueRef]() {
           *valRef = combo->getSelectedId() - 1;
           node->parameterChanged();
-          if (node->onNodeDirtied)
-            node->onNodeDirtied();
+          if (node->onNodeDirtied) node->onNodeDirtied();
         };
       }
       comp = combo;
@@ -256,7 +246,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
   int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
 
   setSize(width, height);
-  startTimerHz(12); // Steady UI sync
+  startTimerHz(12);  // Steady UI sync
 }
 
 void NodeBlock::timerCallback() {
@@ -334,7 +324,7 @@ void NodeBlock::paint(juce::Graphics &g) {
   // Highlight for proximity auto-connection
   if (parentCanvas.getProximityTargetNode() == targetNode.get()) {
     auto zone = parentCanvas.getProximityZone();
-    g.setColour(juce::Colour(0x600df0e3)); // Semi-transparent neon
+    g.setColour(juce::Colour(0x600df0e3));  // Semi-transparent neon
     if (zone == GraphCanvas::ProximityZone::Left)
       g.fillRoundedRectangle(
           getLocalBounds().removeFromLeft(getWidth() / 4).toFloat(), 6.0f);
@@ -359,7 +349,7 @@ void NodeBlock::paint(juce::Graphics &g) {
                           rect.getHeight() * 0.5f);
 
     g.saveState();
-    g.reduceClipRegion(rect.toNearestInt()); // Clip to just the right half
+    g.reduceClipRegion(rect.toNearestInt());  // Clip to just the right half
 
     g.setColour(juce::Colour(0xff44cc44));
     g.fillPath(p);
@@ -380,7 +370,7 @@ void NodeBlock::paint(juce::Graphics &g) {
                           rect.getHeight(), rect.getHeight() * 0.5f);
 
     g.saveState();
-    g.reduceClipRegion(rect.toNearestInt()); // Clip to just the left half
+    g.reduceClipRegion(rect.toNearestInt());  // Clip to just the left half
 
     g.setColour(juce::Colour(0xff4499ff));
     g.fillPath(p);
@@ -411,8 +401,9 @@ void NodeBlock::resized() {
   int startY = HEADER_HEIGHT;
 
   // Available body area for placing controls
-  int bodyWidth = getWidth() - PORT_MARGIN * 2;     // margins on both sides
-  int bodyHeight = getHeight() - HEADER_HEIGHT - 4; // header + small bottom pad
+  int bodyWidth = getWidth() - PORT_MARGIN * 2;  // margins on both sides
+  int bodyHeight =
+      getHeight() - HEADER_HEIGHT - 4;  // header + small bottom pad
 
   // Uniform grid: 20 subdivisions per module grid unit
   constexpr int SUBS_PER_UNIT = 20;
@@ -446,8 +437,7 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
   }
 
   // Notify canvas of selection (for z-ordering and cable highlighting)
-  if (onSelected)
-    onSelected();
+  if (onSelected) onSelected();
 
   auto pos = e.getPosition();
 
@@ -536,8 +526,7 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     targetNode->nodeY = dragStartGridY * Layout::GridPitchFloat +
                         Layout::TramlineOffset + deltaY;
 
-    if (onPositionChanged)
-      onPositionChanged();
+    if (onPositionChanged) onPositionChanged();
 
     parentCanvas.updateProximityHighlight(
         e.getEventRelativeTo(&parentCanvas).getPosition(), targetNode.get());
@@ -558,7 +547,7 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     if (e.mods.isCtrlDown()) {
       int finalX = parentCanvas.getGhostX();
       int finalY = parentCanvas.getGhostY();
-      cancelDrag(); // Revert original
+      cancelDrag();  // Revert original
       parentCanvas.requestNodeClone(targetNode.get(), finalX, finalY);
       return;
     }
@@ -586,8 +575,7 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
 
     parentCanvas.clearGhostTarget();
 
-    if (onPositionChanged)
-      onPositionChanged();
+    if (onPositionChanged) onPositionChanged();
 
     if (!parentCanvas.attemptSignalPathInsertion(targetNode.get(),
                                                  mousePosOnCanvas)) {
@@ -608,8 +596,7 @@ void NodeBlock::cancelDrag() {
     targetNode->nodeX = dragStartWorldX;
     targetNode->nodeY = dragStartWorldY;
     parentCanvas.clearGhostTarget();
-    if (onPositionChanged)
-      onPositionChanged();
+    if (onPositionChanged) onPositionChanged();
   }
   isDraggingNode = false;
   isDraggingCable = false;
@@ -644,8 +631,7 @@ int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
   for (int i = 0; i < numIn; ++i) {
     auto rect = getInputPortRect(i);
     auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS)
-      return i;
+    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) return i;
   }
   return -1;
 }
@@ -656,8 +642,7 @@ int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
   for (int i = 0; i < numOut; ++i) {
     auto rect = getOutputPortRect(i);
     auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS)
-      return i;
+    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) return i;
   }
   return -1;
 }

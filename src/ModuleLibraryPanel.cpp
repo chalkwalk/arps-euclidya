@@ -1,4 +1,5 @@
 #include "ModuleLibraryPanel.h"
+
 #include "ArpsLookAndFeel.h"
 #include "NodeFactory.h"
 
@@ -34,11 +35,9 @@ int ModuleLibraryPanel::getNumRows() { return (int)filteredNodeTypes.size(); }
 void ModuleLibraryPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
                                           int width, int height,
                                           bool rowIsSelected) {
-  if (rowNumber < 0 || rowNumber >= (int)filteredNodeTypes.size())
-    return;
+  if (rowNumber < 0 || rowNumber >= (int)filteredNodeTypes.size()) return;
 
-  if (rowIsSelected)
-    g.fillAll(ArpsLookAndFeel::getBackgroundCharcoal());
+  if (rowIsSelected) g.fillAll(ArpsLookAndFeel::getBackgroundCharcoal());
 
   g.setColour(juce::Colours::white);
   g.setFont(14.0f);

@@ -1,4 +1,5 @@
 #include "ZipNode.h"
+
 #include <algorithm>
 
 void ZipNode::process() {

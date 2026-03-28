@@ -1,7 +1,9 @@
 #include "RouteNode.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include "../LayoutParser.h"
 #include "BinaryData.h"
-#include <juce_gui_basics/juce_gui_basics.h>
 
 // --- RouteNode Impl
 
@@ -14,7 +16,7 @@ NodeLayout RouteNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "routeDest") {
+    if (el.label == "routeDest") {
       el.valueRef = const_cast<int *>(&routeDest);
       el.macroIndexRef = const_cast<int *>(&macroRouteDest);
     }

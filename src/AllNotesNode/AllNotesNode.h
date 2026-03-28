@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../GraphNode.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../GraphNode.h"
+
 class AllNotesNode : public GraphNode {
-public:
+ public:
   AllNotesNode();
   ~AllNotesNode() override = default;
 

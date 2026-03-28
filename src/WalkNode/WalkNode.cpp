@@ -1,9 +1,11 @@
 #include "WalkNode.h"
-#include "../LayoutParser.h"
-#include "BinaryData.h"
-#include "../MacroMappingMenu.h"
+
 #include <algorithm>
 #include <random>
+
+#include "../LayoutParser.h"
+#include "../MacroMappingMenu.h"
+#include "BinaryData.h"
 
 // --- WalkNode Impl
 
@@ -16,11 +18,10 @@ NodeLayout WalkNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "walkLength") {
+    if (el.label == "walkLength") {
       el.valueRef = const_cast<int *>(&walkLength);
       el.macroIndexRef = const_cast<int *>(&macroWalkLength);
-    }
-    else if (el.label == "walkSkewInt") {
+    } else if (el.label == "walkSkewInt") {
       el.valueRef = const_cast<int *>(&walkSkewInt);
       el.macroIndexRef = const_cast<int *>(&macroWalkSkew);
     }
@@ -69,11 +70,9 @@ void WalkNode::process() {
     NoteSequence steps = it->second;
 
     auto getMeanValue = [](const std::vector<HeldNote> &chord) {
-      if (chord.empty())
-        return 0.0f;
+      if (chord.empty()) return 0.0f;
       float sum = 0.0f;
-      for (const auto &n : chord)
-        sum += n.noteNumber;
+      for (const auto &n : chord) sum += n.noteNumber;
       return sum / (float)chord.size();
     };
 

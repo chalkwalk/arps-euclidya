@@ -1,4 +1,5 @@
 #include "ClockManager.h"
+
 #include <cmath>
 
 void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
@@ -39,7 +40,7 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
   } else {
     hostPlaying = false;
     // Fallback: Free-sync internal clock when host is stopped or unavailable
-    lastPpqPosition = -1.0; // Reset host sync
+    lastPpqPosition = -1.0;  // Reset host sync
 
     if (standaloneRunning && sampleRate > 0) {
       double samplesPerBeat = (sampleRate * 60.0) / currentBPM;

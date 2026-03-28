@@ -2,10 +2,11 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+
 #include <memory>
 
 class AppSettings {
-public:
+ public:
   static AppSettings &getInstance() {
     static AppSettings instance;
     return instance;
@@ -24,7 +25,7 @@ public:
 
   juce::PropertiesFile *getPropertiesFile() { return propertiesFile.get(); }
 
-private:
+ private:
   AppSettings();
   ~AppSettings() = default;
 

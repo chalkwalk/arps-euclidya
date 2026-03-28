@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class SequenceNode : public GraphNode {
-public:
+ public:
   SequenceNode(std::array<std::atomic<float> *, 32> &macros);
   ~SequenceNode() override = default;
 
@@ -30,6 +30,6 @@ public:
   // Full MIDI range grid: 128 notes × 16 steps
   bool grid[128][16] = {{false}};
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

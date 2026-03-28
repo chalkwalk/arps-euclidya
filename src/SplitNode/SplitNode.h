@@ -7,7 +7,7 @@
 // Mode 1: Odd-indexed steps / Even-indexed steps
 // Mode 2: Percentage split (controlled by splitPoint)
 class SplitNode : public GraphNode {
-public:
+ public:
   SplitNode() = default;
   ~SplitNode() override = default;
 
@@ -22,6 +22,6 @@ public:
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  int splitMode = 0;     // 0=first/last, 1=odd/even, 2=percentage
-  int splitPercent = 50; // Used in percentage mode (1-99)
+  int splitMode = 0;      // 0=first/last, 1=odd/even, 2=percentage
+  int splitPercent = 50;  // Used in percentage mode (1-99)
 };

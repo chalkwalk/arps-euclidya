@@ -1,10 +1,11 @@
 #pragma once
 
-#include "NodeLayout.h"
 #include <juce_core/juce_core.h>
 
+#include "NodeLayout.h"
+
 class LayoutParser {
-public:
+ public:
   /// Parse a NodeLayout from a JSON byte buffer (e.g. BinaryData).
   /// Runtime pointers (valueRef, macroIndexRef) are left null;
   /// the caller must bind them after parsing.
@@ -14,8 +15,7 @@ public:
     auto jsonStr = juce::String::fromUTF8(data, size);
     auto parsed = juce::JSON::parse(jsonStr);
 
-    if (parsed.isVoid())
-      return layout;
+    if (parsed.isVoid()) return layout;
 
     if (auto *obj = parsed.getDynamicObject()) {
       layout.gridWidth = obj->getProperty("gridWidth");
@@ -59,8 +59,7 @@ public:
             if (elemObj->hasProperty("options")) {
               auto optVar = elemObj->getProperty("options");
               if (auto *optArray = optVar.getArray()) {
-                for (const auto &o : *optArray)
-                  el.options.add(o.toString());
+                for (const auto &o : *optArray) el.options.add(o.toString());
               }
             }
 
@@ -92,20 +91,14 @@ public:
     return layout;
   }
 
-private:
+ private:
   static UIElementType parseType(const juce::String &typeStr) {
-    if (typeStr == "RotarySlider")
-      return UIElementType::RotarySlider;
-    if (typeStr == "Toggle")
-      return UIElementType::Toggle;
-    if (typeStr == "Label")
-      return UIElementType::Label;
-    if (typeStr == "ComboBox")
-      return UIElementType::ComboBox;
-    if (typeStr == "PushButton")
-      return UIElementType::PushButton;
-    if (typeStr == "Custom")
-      return UIElementType::Custom;
+    if (typeStr == "RotarySlider") return UIElementType::RotarySlider;
+    if (typeStr == "Toggle") return UIElementType::Toggle;
+    if (typeStr == "Label") return UIElementType::Label;
+    if (typeStr == "ComboBox") return UIElementType::ComboBox;
+    if (typeStr == "PushButton") return UIElementType::PushButton;
+    if (typeStr == "Custom") return UIElementType::Custom;
 
     // Default fallback
     return UIElementType::Label;

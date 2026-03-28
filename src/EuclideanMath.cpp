@@ -1,12 +1,12 @@
 #include "EuclideanMath.h"
+
 #include <algorithm>
 
 std::vector<bool> EuclideanMath::generatePattern(int steps, int beats,
                                                  int offset) {
   std::vector<bool> pattern;
 
-  if (steps <= 0)
-    return pattern;
+  if (steps <= 0) return pattern;
   if (beats <= 0) {
     pattern.assign((size_t)steps, false);
     return pattern;
@@ -35,8 +35,7 @@ std::vector<bool> EuclideanMath::generatePattern(int steps, int beats,
   // Apply offset (positive offset shifts pattern right)
   if (!pattern.empty() && offset != 0) {
     int shift = offset % steps;
-    if (shift < 0)
-      shift += steps;
+    if (shift < 0) shift += steps;
 
     // Shift right means elements from the end move to the beginning
     std::rotate(pattern.rbegin(), pattern.rbegin() + shift, pattern.rend());

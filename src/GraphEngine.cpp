@@ -1,4 +1,5 @@
 #include "GraphEngine.h"
+
 #include <algorithm>
 #include <queue>
 #include <set>
@@ -46,8 +47,7 @@ void GraphEngine::removeNode(GraphNode *node) {
 bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
                                  GraphNode *ignoreNode) const {
   for (const auto &node : nodes) {
-    if (node.get() == ignoreNode)
-      continue;
+    if (node.get() == ignoreNode) continue;
 
     int curX = node->gridX;
     int curY = node->gridY;
@@ -74,7 +74,7 @@ juce::Point<int> GraphEngine::findClosestFreeSpot(int startX, int startY,
 
   // Expanding square ring search
   for (int radius = 1; radius < 50;
-       ++radius) { // Arbitrary limit to prevent infinite loops
+       ++radius) {  // Arbitrary limit to prevent infinite loops
     // Top and Bottom rows of the ring
     for (int x = startX - radius; x <= startX + radius; ++x) {
       if (!isAreaOccupied(x, startY - radius, gridW, gridH, ignoreNode))
@@ -91,8 +91,9 @@ juce::Point<int> GraphEngine::findClosestFreeSpot(int startX, int startY,
     }
   }
 
-  return {startX,
-          startY}; // Fallback (should be extremely rare to fill a 100x100 grid)
+  return {
+      startX,
+      startY};  // Fallback (should be extremely rare to fill a 100x100 grid)
 }
 
 int GraphEngine::getNextFreeMacro() const {
@@ -118,20 +119,15 @@ int GraphEngine::getNextFreeMacro() const {
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
                                         GraphNode *target, int inPort) {
-  if (source == nullptr || target == nullptr)
-    return false;
-  if (source == target)
-    return false;
+  if (source == nullptr || target == nullptr) return false;
+  if (source == target) return false;
 
   // Cycle detection: would adding source→target create a cycle?
-  if (wouldCreateCycle(source, target))
-    return false;
+  if (wouldCreateCycle(source, target)) return false;
 
   // Check port bounds
-  if (outPort < 0 || outPort >= source->getNumOutputPorts())
-    return false;
-  if (inPort < 0 || inPort >= target->getNumInputPorts())
-    return false;
+  if (outPort < 0 || outPort >= source->getNumOutputPorts()) return false;
+  if (inPort < 0 || inPort >= target->getNumInputPorts()) return false;
 
   // Remove any existing connection to this specific input port
   // (an input port can only have one source)
@@ -157,8 +153,7 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
 void GraphEngine::removeConnection(GraphNode *source, int outPort,
                                    GraphNode *target, int inPort) {
-  if (source == nullptr)
-    return;
+  if (source == nullptr) return;
 
   auto &conns = const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
       source->getConnections());
@@ -209,8 +204,7 @@ bool GraphEngine::wouldCreateCycle(GraphNode *source, GraphNode *target) const {
 }
 
 bool GraphEngine::isReachable(GraphNode *from, GraphNode *to) const {
-  if (from == to)
-    return true;
+  if (from == to) return true;
 
   std::unordered_set<GraphNode *> visited;
   std::queue<GraphNode *> queue;
@@ -223,8 +217,7 @@ bool GraphEngine::isReachable(GraphNode *from, GraphNode *to) const {
 
     for (const auto &[port, connVec] : current->getConnections()) {
       for (const auto &conn : connVec) {
-        if (conn.targetNode == to)
-          return true;
+        if (conn.targetNode == to) return true;
         if (visited.find(conn.targetNode) == visited.end()) {
           visited.insert(conn.targetNode);
           queue.push(conn.targetNode);
@@ -299,8 +292,7 @@ void GraphEngine::recalculate() {
 }
 
 void GraphEngine::saveState(juce::XmlElement *xmlRoot) {
-  if (xmlRoot == nullptr)
-    return;
+  if (xmlRoot == nullptr) return;
 
   auto *nodesXml = xmlRoot->createNewChildElement("Nodes");
   for (const auto &node : nodes) {
@@ -331,8 +323,7 @@ void GraphEngine::saveState(juce::XmlElement *xmlRoot) {
 void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
                             ClockManager &clockCtx,
                             std::array<std::atomic<float> *, 32> &macros) {
-  if (xmlRoot == nullptr)
-    return;
+  if (xmlRoot == nullptr) return;
 
   nodes.clear();
 
@@ -364,10 +355,8 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
       GraphNode *targetNode = nullptr;
 
       for (const auto &node : nodes) {
-        if (node->nodeId.toString() == sourceUuidStr)
-          sourceNode = node.get();
-        if (node->nodeId.toString() == targetUuidStr)
-          targetNode = node.get();
+        if (node->nodeId.toString() == sourceUuidStr) sourceNode = node.get();
+        if (node->nodeId.toString() == targetUuidStr) targetNode = node.get();
       }
 
       if (sourceNode && targetNode) {

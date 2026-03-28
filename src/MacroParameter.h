@@ -5,7 +5,7 @@
 // Custom AudioParameterFloat that supports dynamic naming based on macro
 // mappings. Always stays automatable (safe for VST3 hosts that cache metadata).
 class MacroParameter : public juce::AudioParameterFloat {
-public:
+ public:
   MacroParameter(int macroIndex)
       : juce::AudioParameterFloat(
             juce::ParameterID("macro_" + juce::String(macroIndex), 1),
@@ -29,7 +29,7 @@ public:
 
   int getMacroIndex() const { return index; }
 
-private:
+ private:
   int index;
   juce::String mappingName;
 };

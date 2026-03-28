@@ -3,7 +3,6 @@
 NodeEditorPanel::NodeEditorPanel(std::shared_ptr<GraphNode> node,
                                  juce::AudioProcessorValueTreeState &apvts)
     : targetNode(node) {
-
   titleLabel.setText(node->getName(), juce::dontSendNotification);
   titleLabel.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
   titleLabel.setJustificationType(juce::Justification::centredLeft);
@@ -17,8 +16,7 @@ NodeEditorPanel::NodeEditorPanel(std::shared_ptr<GraphNode> node,
   }
 
   deleteButton.onClick = [this] {
-    if (onDelete)
-      onDelete();
+    if (onDelete) onDelete();
   };
 }
 
@@ -38,7 +36,7 @@ void NodeEditorPanel::resized() {
   deleteButton.setBounds(topRow.removeFromLeft(24));
 
   if (customControls != nullptr) {
-    bounds.removeFromTop(5); // spacer
+    bounds.removeFromTop(5);  // spacer
     customControls->setBounds(bounds);
   }
 }

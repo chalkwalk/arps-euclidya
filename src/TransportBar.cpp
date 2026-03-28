@@ -1,4 +1,5 @@
 #include "TransportBar.h"
+
 #include "ArpsLookAndFeel.h"
 
 TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
@@ -66,7 +67,7 @@ void TransportBar::timerCallback() {
 void TransportBar::paint(juce::Graphics &g) {
   g.fillAll(juce::Colour(0xff1A1A1A));
   g.setColour(juce::Colour(0xff000000));
-  g.fillRect(0, getHeight() - 2, getWidth(), 2); // Bottom shadow border
+  g.fillRect(0, getHeight() - 2, getWidth(), 2);  // Bottom shadow border
 }
 
 void TransportBar::resized() {
@@ -76,7 +77,7 @@ void TransportBar::resized() {
   playStopButton.setBounds(buttonArea.removeFromLeft(36).reduced(2));
   resetButton.setBounds(buttonArea.removeFromLeft(36).reduced(2));
 
-  bounds.removeFromLeft(10); // Spacing
+  bounds.removeFromLeft(10);  // Spacing
 
   auto bpmArea = bounds.removeFromLeft(120);
   bpmSlider.setBounds(bpmArea.removeFromLeft(36).reduced(2));

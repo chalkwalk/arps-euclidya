@@ -1,14 +1,15 @@
 #pragma once
 
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include "GraphEngine.h"
 #include "NodeBlock.h"
-#include <juce_gui_basics/juce_gui_basics.h>
 
 class GraphCanvas : public juce::Component,
                     public juce::ScrollBar::Listener,
                     public juce::DragAndDropTarget,
                     public juce::KeyListener {
-public:
+ public:
   GraphCanvas(GraphEngine &engine, juce::AudioProcessorValueTreeState &apvts,
               juce::CriticalSection &lock);
   ~GraphCanvas() override = default;
@@ -48,8 +49,8 @@ public:
                          juce::Point<int> screenPos);
 
   // DragAndDropTarget overrides
-  bool
-  isInterestedInDragSource(const SourceDetails &dragSourceDetails) override;
+  bool isInterestedInDragSource(
+      const SourceDetails &dragSourceDetails) override;
   void itemDragMove(const SourceDetails &dragSourceDetails) override;
   void itemDragExit(const SourceDetails &dragSourceDetails) override;
   void itemDropped(const SourceDetails &dragSourceDetails) override;
@@ -101,7 +102,7 @@ public:
   // Refresh the cached cable paths
   void refreshCableCache();
 
-private:
+ private:
   GraphEngine &graphEngine;
   juce::AudioProcessorValueTreeState &apvts;
   juce::CriticalSection &graphLock;

@@ -1,8 +1,10 @@
 #include "ChordNNode.h"
-#include "../LayoutParser.h"
-#include "BinaryData.h"
+
 #include <algorithm>
 #include <set>
+
+#include "../LayoutParser.h"
+#include "BinaryData.h"
 
 // --- ChordNNode Impl
 
@@ -15,7 +17,7 @@ NodeLayout ChordNNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "nValue") {
+    if (el.label == "nValue") {
       el.valueRef = const_cast<int *>(&nValue);
       el.macroIndexRef = const_cast<int *>(&macroNValue);
     }
@@ -77,11 +79,9 @@ void ChordNNode::process() {
           sortedSeq.push_back(cur);
           return;
         }
-        if (sI >= uniqueNotes.size())
-          return;
+        if (sI >= uniqueNotes.size()) return;
         for (size_t i = sI; i < uniqueNotes.size(); ++i) {
-          if (cur.size() + (uniqueNotes.size() - i) < n)
-            break;
+          if (cur.size() + (uniqueNotes.size() - i) < n) break;
 
           std::vector<HeldNote> nextCur = cur;
           nextCur.push_back(uniqueNotes[i]);

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <array>
 #include <juce_audio_processors/juce_audio_processors.h>
+
+#include <array>
 
 class MacroParameter;
 
 struct MidiLogEvent {
-  int logType; // 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn, 5=ArpNoteOff
+  int logType;  // 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn, 5=ArpNoteOff
   int channel;
   int data1;
   float data2;
@@ -24,7 +25,7 @@ class ArpsEuclidyaEditor;
 class ArpsEuclidyaProcessor
     : public juce::AudioProcessor,
       public juce::AudioProcessorValueTreeState::Listener {
-public:
+ public:
   //==============================================================================
   ArpsEuclidyaProcessor();
   ~ArpsEuclidyaProcessor() override;
@@ -101,7 +102,7 @@ public:
   // Hardcoded Step 2 Nodes
   // Hardcoded Step 2 Nodes
 
-private:
+ private:
   void upgradePatch(juce::XmlElement *xml, int fromVersion);
   void loadFromXml(juce::XmlElement *xmlState);
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

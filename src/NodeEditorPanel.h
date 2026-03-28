@@ -1,10 +1,11 @@
 #pragma once
 
-#include "GraphNode.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "GraphNode.h"
+
 class NodeEditorPanel : public juce::Component {
-public:
+ public:
   NodeEditorPanel(std::shared_ptr<GraphNode> node,
                   juce::AudioProcessorValueTreeState &apvts);
   ~NodeEditorPanel() override;
@@ -16,7 +17,7 @@ public:
 
   std::function<void()> onDelete;
 
-private:
+ private:
   std::shared_ptr<GraphNode> targetNode;
 
   juce::Label titleLabel;

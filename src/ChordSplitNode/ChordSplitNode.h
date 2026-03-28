@@ -7,7 +7,7 @@
 // Mode 1 (Bottom): lowest note goes to Output 0, rest to Output 1.
 // Empty steps produce rests (empty chords) on both outputs.
 class ChordSplitNode : public GraphNode {
-public:
+ public:
   ChordSplitNode() = default;
   ~ChordSplitNode() override = default;
 
@@ -22,5 +22,5 @@ public:
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  int splitMode = 0; // 0 = Top (highest soloed), 1 = Bottom (lowest soloed)
+  int splitMode = 0;  // 0 = Top (highest soloed), 1 = Bottom (lowest soloed)
 };

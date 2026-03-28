@@ -1,4 +1,5 @@
 #include "ReverseNode.h"
+
 #include <algorithm>
 
 void ReverseNode::process() {

@@ -1,13 +1,15 @@
 #pragma once
 
-#include "DataModel.h"
 #include <juce_audio_processors/juce_audio_processors.h>
+
 #include <map>
 #include <mutex>
 #include <vector>
 
+#include "DataModel.h"
+
 class MidiHandler : public juce::MPEInstrument::Listener {
-public:
+ public:
   MidiHandler();
   ~MidiHandler() override;
 
@@ -34,7 +36,7 @@ public:
   void setLegacyMode(bool shouldEnable);
   bool isLegacyModeEnabled() const;
 
-private:
+ private:
   // MPEInstrument::Listener overrides
   void noteAdded(juce::MPENote newNote) override;
   void noteReleased(juce::MPENote finishedNote) override;

@@ -1,10 +1,12 @@
 #include "MultiplyNode.h"
+
+#include <algorithm>
+#include <cmath>
+
 #include "../LayoutParser.h"
 #include "../MacroMappingMenu.h"
 #include "../SharedMacroUI.h"
 #include "BinaryData.h"
-#include <algorithm>
-#include <cmath>
 
 // --- MultiplyNode Impl
 
@@ -21,8 +23,7 @@ void MultiplyNode::process() {
   } else {
     NoteSequence out;
     for (const auto &step : it->second) {
-      for (int r = 0; r < actualRepeat; ++r)
-        out.push_back(step);
+      for (int r = 0; r < actualRepeat; ++r) out.push_back(step);
     }
     outputSequences[0] = out;
   }

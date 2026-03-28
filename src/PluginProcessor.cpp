@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+
 #include "AppSettings.h"
 #include "MacroParameter.h"
 #include "MidiInNode/MidiInNode.h"
@@ -8,9 +9,8 @@
 #include "SortNode/SortNode.h"
 
 ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
-    : AudioProcessor(BusesProperties()), // No audio channels for MIDI effect
+    : AudioProcessor(BusesProperties()),  // No audio channels for MIDI effect
       apvts(*this, nullptr, "Parameters", createParameterLayout()) {
-
   // Fetch raw parameter pointers and MacroParameter* for RT thread
   for (int i = 0; i < 32; ++i) {
     macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
@@ -405,8 +405,7 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
 
   // Update each MacroParameter's display name
   for (int i = 0; i < 32; ++i) {
-    if (macroParams[i] == nullptr)
-      continue;
+    if (macroParams[i] == nullptr) continue;
 
     juce::String oldName = macroParams[i]->getName(1024);
 

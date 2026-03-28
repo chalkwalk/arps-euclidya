@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class SortNode : public GraphNode {
-public:
+ public:
   SortNode() = default;
   ~SortNode() override = default;
 

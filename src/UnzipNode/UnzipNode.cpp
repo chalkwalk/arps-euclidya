@@ -1,4 +1,5 @@
 #include "UnzipNode.h"
+
 #include <algorithm>
 
 void UnzipNode::process() {
@@ -31,9 +32,9 @@ void UnzipNode::process() {
       out0.push_back(sortedStep);
       out1.push_back({});
     } else {
-      std::vector<HeldNote> lower(sortedStep.begin(),
-                                  sortedStep.begin() +
-                                      static_cast<ptrdiff_t>(half));
+      std::vector<HeldNote> lower(
+          sortedStep.begin(),
+          sortedStep.begin() + static_cast<ptrdiff_t>(half));
       std::vector<HeldNote> higher(
           sortedStep.begin() + static_cast<ptrdiff_t>(half), sortedStep.end());
       out0.push_back(lower);

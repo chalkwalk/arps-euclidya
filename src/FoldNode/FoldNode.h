@@ -4,7 +4,7 @@
 #include "../SharedMacroUI.h"
 
 class FoldNode : public GraphNode {
-public:
+ public:
   FoldNode(std::array<std::atomic<float> *, 32> &macros);
   ~FoldNode() override = default;
 
@@ -24,6 +24,6 @@ public:
   int macroNValue = -1;
   int mode = 0;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

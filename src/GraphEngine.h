@@ -1,15 +1,16 @@
 // GraphEngine.h
 #pragma once
 
-#include "GraphNode.h"
 #include <memory>
 #include <vector>
+
+#include "GraphNode.h"
 
 class MidiHandler;
 class ClockManager;
 
 class GraphEngine {
-public:
+ public:
   GraphEngine() = default;
   ~GraphEngine() = default;
 
@@ -54,7 +55,7 @@ public:
                  ClockManager &clockCtx,
                  std::array<std::atomic<float> *, 32> &macros);
 
-private:
+ private:
   std::vector<std::shared_ptr<GraphNode>> nodes;
 
   // Compute a topological ordering of nodes based on connections

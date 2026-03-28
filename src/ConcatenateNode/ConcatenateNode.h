@@ -5,7 +5,7 @@
 // Concatenates two input sequences end-to-end.
 // Input 0's sequence is followed by Input 1's sequence.
 class ConcatenateNode : public GraphNode {
-public:
+ public:
   ConcatenateNode() = default;
   ~ConcatenateNode() override = default;
 

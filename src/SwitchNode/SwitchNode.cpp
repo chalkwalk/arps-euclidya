@@ -1,7 +1,9 @@
 #include "SwitchNode.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
+
 #include "../LayoutParser.h"
 #include "BinaryData.h"
-#include <juce_gui_basics/juce_gui_basics.h>
 
 // --- SwitchNode Impl
 
@@ -14,7 +16,7 @@ NodeLayout SwitchNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "switchOn") {
+    if (el.label == "switchOn") {
       el.valueRef = const_cast<int *>(&switchOn);
       el.macroIndexRef = const_cast<int *>(&macroSwitch);
     }

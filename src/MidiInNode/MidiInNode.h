@@ -4,7 +4,7 @@
 #include "../MidiHandler.h"
 
 class MidiInNode : public GraphNode {
-public:
+ public:
   MidiInNode(MidiHandler &handler,
              std::array<std::atomic<float> *, 32> macrosArray);
   ~MidiInNode() override = default;
@@ -15,7 +15,7 @@ public:
   void process() override;
   NodeLayout getLayout() const override;
 
-  int channelFilter = 0; // 0 means all channels
+  int channelFilter = 0;  // 0 means all channels
   int macroChannelFilter = -1;
   int legacyMode = 0;
 
@@ -28,7 +28,7 @@ public:
     return {{"Channel Filter", &macroChannelFilter}};
   }
 
-private:
+ private:
   MidiHandler &midiHandler;
   std::array<std::atomic<float> *, 32> macros;
 };

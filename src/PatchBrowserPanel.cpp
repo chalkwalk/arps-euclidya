@@ -1,11 +1,11 @@
 #include "PatchBrowserPanel.h"
+
 #include "AppSettings.h"
 #include "SettingsPanel.h"
 
 PatchBrowserPanel::PatchBrowserPanel(ArpsEuclidyaProcessor &p,
                                      PatchLibrary &lib)
     : processor(p), library(lib) {
-
   addAndMakeVisible(prevButton);
   addAndMakeVisible(nextButton);
   addAndMakeVisible(currentPatchButton);
@@ -102,10 +102,8 @@ void PatchBrowserPanel::toggleBrowser() {
 
 void PatchBrowserPanel::updateList() {
   PatchLibrary::Bank bank = PatchLibrary::Bank::All;
-  if (bankSelector.getSelectedId() == 2)
-    bank = PatchLibrary::Bank::Factory;
-  if (bankSelector.getSelectedId() == 3)
-    bank = PatchLibrary::Bank::User;
+  if (bankSelector.getSelectedId() == 2) bank = PatchLibrary::Bank::Factory;
+  if (bankSelector.getSelectedId() == 3) bank = PatchLibrary::Bank::User;
 
   juce::String query = searchBox.getText();
   if (query.isEmpty()) {
@@ -122,8 +120,7 @@ int PatchBrowserPanel::getNumRows() { return (int)currentResults.size(); }
 void PatchBrowserPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
                                          int width, int height,
                                          bool rowIsSelected) {
-  if (rowNumber < 0 || rowNumber >= (int)currentResults.size())
-    return;
+  if (rowNumber < 0 || rowNumber >= (int)currentResults.size()) return;
 
   if (rowIsSelected) {
     g.fillAll(juce::Colour(0xff00ffff).withAlpha(0.15f));
@@ -142,11 +139,9 @@ void PatchBrowserPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
   g.setColour(juce::Colours::grey);
   g.setFont(11.0f);
   juce::String subtitle;
-  if (patch.author.isNotEmpty())
-    subtitle = patch.author + "  ·  ";
+  if (patch.author.isNotEmpty()) subtitle = patch.author + "  ·  ";
   subtitle += patch.category;
-  if (patch.bank == PatchLibrary::Bank::Factory)
-    subtitle += "  [Factory]";
+  if (patch.bank == PatchLibrary::Bank::Factory) subtitle += "  [Factory]";
   g.drawText(subtitle, 8, 18, width - 16, 14, juce::Justification::centredLeft);
 }
 
@@ -167,24 +162,20 @@ void PatchBrowserPanel::loadPatchAtIndex(int index) {
 void PatchBrowserPanel::prevPatch() {
   if (currentResults.empty()) {
     updateList();
-    if (currentResults.empty())
-      return;
+    if (currentResults.empty()) return;
   }
   int newIndex = currentPatchIndex - 1;
-  if (newIndex < 0)
-    newIndex = (int)currentResults.size() - 1;
+  if (newIndex < 0) newIndex = (int)currentResults.size() - 1;
   loadPatchAtIndex(newIndex);
 }
 
 void PatchBrowserPanel::nextPatch() {
   if (currentResults.empty()) {
     updateList();
-    if (currentResults.empty())
-      return;
+    if (currentResults.empty()) return;
   }
   int newIndex = currentPatchIndex + 1;
-  if (newIndex >= (int)currentResults.size())
-    newIndex = 0;
+  if (newIndex >= (int)currentResults.size()) newIndex = 0;
   loadPatchAtIndex(newIndex);
 }
 

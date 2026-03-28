@@ -1,17 +1,18 @@
 #pragma once
 
-#include "AppSettings.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "AppSettings.h"
+
 class SettingsPanel : public juce::Component {
-public:
+ public:
   SettingsPanel();
   ~SettingsPanel() override = default;
 
   void paint(juce::Graphics &g) override;
   void resized() override;
 
-private:
+ private:
   juce::Label titleLabel{"title", "Settings"};
 
   juce::Label authorLabel{"authorLabel", "Default Author:"};

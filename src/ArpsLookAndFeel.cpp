@@ -1,7 +1,7 @@
 #include "ArpsLookAndFeel.h"
 
 const juce::Colour ArpsLookAndFeel::getNeonColor() {
-  return juce::Colour(0xff0df0e3); // Teal
+  return juce::Colour(0xff0df0e3);  // Teal
 }
 const juce::Colour ArpsLookAndFeel::getBackgroundCharcoal() {
   return juce::Colour(0xff0b1016);
@@ -62,7 +62,7 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                               rotaryStartAngle, rotaryEndAngle, true);
   g.setColour(slider.findColour(juce::Slider::rotarySliderOutlineColourId));
 
-  float trackWidth = radius * 0.4f; // Scale track width by radius (1/4)
+  float trackWidth = radius * 0.4f;  // Scale track width by radius (1/4)
   g.strokePath(backgroundArc,
                juce::PathStrokeType(trackWidth, juce::PathStrokeType::curved,
                                     juce::PathStrokeType::rounded));

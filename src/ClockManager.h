@@ -3,7 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class ClockManager {
-public:
+ public:
   ClockManager() = default;
   ~ClockManager() = default;
 
@@ -34,7 +34,7 @@ public:
     lastPpqPosition = -1.0;
   }
 
-private:
+ private:
   double currentBPM = 120.0;
   bool tickFlag = false;
   bool hostPlaying = false;

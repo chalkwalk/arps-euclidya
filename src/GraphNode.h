@@ -1,16 +1,18 @@
 #pragma once
 
-#include "DataModel.h"
-#include "LayoutConstants.h"
-#include "NodeLayout.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
 #include <map>
 #include <vector>
 
+#include "DataModel.h"
+#include "LayoutConstants.h"
+#include "NodeLayout.h"
+
 class GraphNode {
-public:
+ public:
   GraphNode() : nodeId(juce::Uuid()) {}
   virtual ~GraphNode() = default;
 
@@ -76,15 +78,15 @@ public:
   // Triggered when an upstream connection sets the dirty flag
   virtual void process() = 0;
 
-  virtual std::unique_ptr<juce::Component>
-  createEditorComponent(juce::AudioProcessorValueTreeState &apvts) {
+  virtual std::unique_ptr<juce::Component> createEditorComponent(
+      juce::AudioProcessorValueTreeState &apvts) {
     juce::ignoreUnused(apvts);
     return nullptr;
   }
 
-  virtual std::unique_ptr<juce::Component>
-  createCustomComponent(const juce::String &name,
-                        juce::AudioProcessorValueTreeState *apvts = nullptr) {
+  virtual std::unique_ptr<juce::Component> createCustomComponent(
+      const juce::String &name,
+      juce::AudioProcessorValueTreeState *apvts = nullptr) {
     juce::ignoreUnused(name, apvts);
     return nullptr;
   }
@@ -117,7 +119,7 @@ public:
   }
   void clearConnections();
 
-protected:
+ protected:
   std::map<int, NoteSequence> inputSequences;
   std::map<int, NoteSequence> outputSequences;
 

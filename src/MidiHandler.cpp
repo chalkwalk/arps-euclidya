@@ -3,7 +3,7 @@
 MidiHandler::MidiHandler() {
   mpeInstrument.addListener(this);
   juce::MPEZoneLayout layout;
-  layout.setLowerZone(15); // Standard MPE layout: Master Ch 1, Members 2-16
+  layout.setLowerZone(15);  // Standard MPE layout: Master Ch 1, Members 2-16
   mpeInstrument.setZoneLayout(layout);
 }
 
@@ -50,7 +50,7 @@ float MidiHandler::getMpeX(int channel, int noteNumber) const {
   std::lock_guard<std::mutex> lock(stateMutex);
   juce::MPENote note = mpeInstrument.getNote(channel, noteNumber);
   if (note.isValid()) {
-    return note.pitchbend.asSignedFloat(); // -1.0 to 1.0
+    return note.pitchbend.asSignedFloat();  // -1.0 to 1.0
   }
   return 0.0f;
 }
@@ -59,7 +59,7 @@ float MidiHandler::getMpeY(int channel, int noteNumber) const {
   std::lock_guard<std::mutex> lock(stateMutex);
   juce::MPENote note = mpeInstrument.getNote(channel, noteNumber);
   if (note.isValid()) {
-    return note.timbre.asUnsignedFloat(); // 0.0 to 1.0
+    return note.timbre.asUnsignedFloat();  // 0.0 to 1.0
   }
   return 0.0f;
 }
@@ -68,7 +68,7 @@ float MidiHandler::getMpeZ(int channel, int noteNumber) const {
   std::lock_guard<std::mutex> lock(stateMutex);
   juce::MPENote note = mpeInstrument.getNote(channel, noteNumber);
   if (note.isValid()) {
-    return note.pressure.asUnsignedFloat(); // 0.0 to 1.0
+    return note.pressure.asUnsignedFloat();  // 0.0 to 1.0
   }
   return 0.0f;
 }
@@ -98,7 +98,7 @@ void MidiHandler::setLegacyMode(bool shouldEnable) {
     mpeInstrument.enableLegacyMode(2, juce::Range<int>(1, 17));
   } else {
     juce::MPEZoneLayout layout;
-    layout.setLowerZone(15); // Standard MPE layout: Master Ch 1, Members 2-16
+    layout.setLowerZone(15);  // Standard MPE layout: Master Ch 1, Members 2-16
     mpeInstrument.setZoneLayout(layout);
   }
 }

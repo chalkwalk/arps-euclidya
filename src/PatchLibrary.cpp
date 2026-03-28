@@ -1,4 +1,5 @@
 #include "PatchLibrary.h"
+
 #include "AppSettings.h"
 
 // Forward-declare only the getNamedResource function from the FactoryPatchData
@@ -16,8 +17,8 @@ extern const char *getNamedResource(const char *name, int &size);
 // Add a new row here (and to patches/Factory/ + CMakeLists) for each new patch.
 // ─────────────────────────────────────────────────────────────────────────────
 struct FactoryPatchEntry {
-  const char *resourceName; // Key for FactoryPatches::getNamedResource
-  const char *relPath;      // Relative path within Factory/
+  const char *resourceName;  // Key for FactoryPatches::getNamedResource
+  const char *relPath;       // Relative path within Factory/
 };
 
 static const FactoryPatchEntry kFactoryPatches[] = {
@@ -30,8 +31,7 @@ PatchLibrary::PatchLibrary() { scan(); }
 
 bool PatchLibrary::installFactoryPatches() {
   auto factoryDir = getFactoryPatchDirectory();
-  if (!factoryDir.isDirectory())
-    factoryDir.createDirectory();
+  if (!factoryDir.isDirectory()) factoryDir.createDirectory();
 
   // Check version sentinel — skip if already at current version
   auto sentinelFile = factoryDir.getChildFile(".version");
@@ -78,10 +78,8 @@ void PatchLibrary::scan() {
   auto factoryDir = getFactoryPatchDirectory();
   auto userDir = getUserPatchDirectory();
 
-  if (!factoryDir.isDirectory())
-    factoryDir.createDirectory();
-  if (!userDir.isDirectory())
-    userDir.createDirectory();
+  if (!factoryDir.isDirectory()) factoryDir.createDirectory();
+  if (!userDir.isDirectory()) userDir.createDirectory();
 
   scanDirectory(factoryDir, Bank::Factory, factoryDir.getFullPathName());
   scanDirectory(userDir, Bank::User, userDir.getFullPathName());
@@ -100,9 +98,8 @@ void PatchLibrary::scanDirectory(const juce::File &dir, Bank bank,
   }
 }
 
-PatchLibrary::PatchInfo
-PatchLibrary::parsePatchFile(const juce::File &file, Bank bank,
-                             const juce::String &rootPath) const {
+PatchLibrary::PatchInfo PatchLibrary::parsePatchFile(
+    const juce::File &file, Bank bank, const juce::String &rootPath) const {
   PatchInfo info;
   info.file = file;
   info.bank = bank;
@@ -123,8 +120,7 @@ PatchLibrary::parsePatchFile(const juce::File &file, Bank bank,
     auto *metaXml = xml->getChildByName("Metadata");
     if (metaXml != nullptr) {
       juce::String metaName = metaXml->getStringAttribute("name");
-      if (metaName.isNotEmpty())
-        info.name = metaName;
+      if (metaName.isNotEmpty()) info.name = metaName;
       info.author = metaXml->getStringAttribute("author");
       info.description = metaXml->getStringAttribute("description");
       info.tags = metaXml->getStringAttribute("tags");
@@ -136,40 +132,35 @@ PatchLibrary::parsePatchFile(const juce::File &file, Bank bank,
 }
 
 std::vector<PatchLibrary::PatchInfo> PatchLibrary::getPatches(Bank bank) const {
-  if (bank == Bank::All)
-    return allPatches;
+  if (bank == Bank::All) return allPatches;
 
   std::vector<PatchInfo> result;
   for (const auto &p : allPatches)
-    if (p.bank == bank)
-      result.push_back(p);
+    if (p.bank == bank) result.push_back(p);
   return result;
 }
 
 std::vector<juce::String> PatchLibrary::getCategories(Bank bank) const {
   std::vector<juce::String> categories;
   for (const auto &p : allPatches) {
-    if (bank != Bank::All && p.bank != bank)
-      continue;
+    if (bank != Bank::All && p.bank != bank) continue;
     bool found = false;
     for (const auto &c : categories)
       if (c == p.category) {
         found = true;
         break;
       }
-    if (!found)
-      categories.push_back(p.category);
+    if (!found) categories.push_back(p.category);
   }
   return categories;
 }
 
-std::vector<PatchLibrary::PatchInfo>
-PatchLibrary::search(const juce::String &query, Bank bank) const {
+std::vector<PatchLibrary::PatchInfo> PatchLibrary::search(
+    const juce::String &query, Bank bank) const {
   std::vector<PatchInfo> results;
   juce::String lq = query.toLowerCase();
   for (const auto &p : allPatches) {
-    if (bank != Bank::All && p.bank != bank)
-      continue;
+    if (bank != Bank::All && p.bank != bank) continue;
     if (p.name.toLowerCase().contains(lq) ||
         p.author.toLowerCase().contains(lq) ||
         p.description.toLowerCase().contains(lq) ||
@@ -180,14 +171,12 @@ PatchLibrary::search(const juce::String &query, Bank bank) const {
   return results;
 }
 
-std::vector<PatchLibrary::PatchInfo>
-PatchLibrary::getByCategory(const juce::String &category, Bank bank) const {
+std::vector<PatchLibrary::PatchInfo> PatchLibrary::getByCategory(
+    const juce::String &category, Bank bank) const {
   std::vector<PatchInfo> results;
   for (const auto &p : allPatches) {
-    if (bank != Bank::All && p.bank != bank)
-      continue;
-    if (p.category == category)
-      results.push_back(p);
+    if (bank != Bank::All && p.bank != bank) continue;
+    if (p.category == category) results.push_back(p);
   }
   return results;
 }

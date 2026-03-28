@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class RouteNode : public GraphNode {
-public:
+ public:
   RouteNode(std::array<std::atomic<float> *, 32> &macros);
   ~RouteNode() override = default;
 
@@ -24,6 +24,6 @@ public:
   int routeDest = 0;
   int macroRouteDest = -1;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

@@ -1,12 +1,14 @@
 #include "PluginEditor.h"
+
 #include "MacroParameter.h"
 #include "NodeFactory.h"
 
 ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
-    : AudioProcessorEditor(p), audioProcessor(p), patchBrowser(p, patchLibrary),
+    : AudioProcessorEditor(p),
+      audioProcessor(p),
+      patchBrowser(p, patchLibrary),
       midiKeyboard(p.keyboardState,
                    juce::MidiKeyboardComponent::horizontalKeyboard) {
-
   // Apply custom Neon styling entirely
   juce::LookAndFeel::setDefaultLookAndFeel(&lookAndFeel);
 
@@ -67,8 +69,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
 
   graphCanvas->onNodeCloneRequest = [this](GraphNode *original, int gridX,
                                            int gridY) {
-    if (original == nullptr)
-      return;
+    if (original == nullptr) return;
 
     auto newNode = NodeFactory::createNode(
         original->getName(), audioProcessor.midiHandler,
@@ -93,7 +94,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
       // Attempt proximity connection at the new location
       juce::Point<int> screenPos(
           (int)(newNode->nodeX),
-          (int)(newNode->nodeY)); // Rough world to screen conversion
+          (int)(newNode->nodeY));  // Rough world to screen conversion
       // Actually we need the screen position.
       // But rebuild() might have changed the component positions.
       // Let's just use the grid coordinates to find the block...
@@ -101,8 +102,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
       // too? I'll skip it for clone for now as it's less common to clone *onto*
       // a node. But the library drop is critical.
 
-      if (graphCanvas->onGraphChanged)
-        graphCanvas->onGraphChanged();
+      if (graphCanvas->onGraphChanged) graphCanvas->onGraphChanged();
     }
   };
 
@@ -111,7 +111,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   midiKeyboard.setMidiChannel(1);
   midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId,
                          lookAndFeel.getNeonColor());
-  midiKeyboard.setKeyPressBaseOctave(-1); // Disable computer keyboard input
+  midiKeyboard.setKeyPressBaseOctave(-1);  // Disable computer keyboard input
   midiKeyboard.setWantsKeyboardFocus(false);
 
   addAndMakeVisible(clearNotesButton);
@@ -160,8 +160,7 @@ void ArpsEuclidyaEditor::timerCallback() {
 }
 
 void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
-  if (isSidebarExpanded)
-    g.fillRect(libraryPanel.getBounds());
+  if (isSidebarExpanded) g.fillRect(libraryPanel.getBounds());
   g.fillRect(macroBar.getBounds());
   g.fillRect(patchBrowser.getBounds());
 }

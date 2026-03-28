@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class DiagnosticNode : public GraphNode {
-public:
+ public:
   DiagnosticNode() = default;
   ~DiagnosticNode() override = default;
 
@@ -18,6 +18,6 @@ public:
 
   const NoteSequence &getLatestSequence() const { return latestSequence; }
 
-private:
+ private:
   NoteSequence latestSequence;
 };

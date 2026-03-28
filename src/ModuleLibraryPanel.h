@@ -1,14 +1,16 @@
 #pragma once
 
-#include "NodeBlock.h" // For NodeDragPreview
 #include <JuceHeader.h>
+
 #include <string>
 #include <vector>
+
+#include "NodeBlock.h"  // For NodeDragPreview
 
 class ModuleLibraryPanel : public juce::Component,
                            public juce::ListBoxModel,
                            private juce::TextEditor::Listener {
-public:
+ public:
   ModuleLibraryPanel();
   ~ModuleLibraryPanel() override;
 
@@ -26,15 +28,15 @@ public:
   void listBoxItemClicked(int rowNumber, const juce::MouseEvent &e) override;
   void listBoxItemDoubleClicked(int rowNumber,
                                 const juce::MouseEvent &e) override;
-  juce::var
-  getDragSourceDescription(const juce::SparseSet<int> &selectedRows) override;
+  juce::var getDragSourceDescription(
+      const juce::SparseSet<int> &selectedRows) override;
 
   // To allow the parent to focus the search bar directly (e.g., on a hotkey)
   void focusSearch();
 
-private:
+ private:
   class LibraryListBox : public juce::ListBox {
-  public:
+   public:
     LibraryListBox(const juce::String &name, juce::ListBoxModel *m);
     void mouseDrag(const juce::MouseEvent &e) override;
   };

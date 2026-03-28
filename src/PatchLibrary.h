@@ -1,13 +1,14 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+
 #include <vector>
 
 // Bump this string whenever factory patches change to force re-extraction.
 static constexpr const char *kFactoryPatchVersion = "1.0";
 
 class PatchLibrary {
-public:
+ public:
   enum class Bank { Factory, User, All };
 
   struct PatchInfo {
@@ -16,7 +17,7 @@ public:
     juce::String author;
     juce::String description;
     juce::String tags;
-    juce::String category; // derived from subdirectory path
+    juce::String category;  // derived from subdirectory path
     Bank bank;
     juce::String created;
     juce::String modified;
@@ -52,7 +53,7 @@ public:
 
   int getCount() const { return (int)allPatches.size(); }
 
-private:
+ private:
   void scanDirectory(const juce::File &dir, Bank bank,
                      const juce::String &rootPath);
   PatchInfo parsePatchFile(const juce::File &file, Bank bank,

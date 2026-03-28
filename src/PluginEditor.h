@@ -1,19 +1,20 @@
 #pragma once
 
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_opengl/juce_opengl.h>
+
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "ModuleLibraryPanel.h"
 #include "PatchBrowserPanel.h"
 #include "PluginProcessor.h"
 #include "TransportBar.h"
-#include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_opengl/juce_opengl.h>
 
 class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
                            public juce::DragAndDropContainer,
                            private juce::Timer {
-public:
+ public:
   ArpsEuclidyaEditor(ArpsEuclidyaProcessor &);
   ~ArpsEuclidyaEditor() override;
 
@@ -23,7 +24,7 @@ public:
 
   void rebuildCanvas();
 
-private:
+ private:
   void addNodeFromLibrary(const juce::String &nodeType);
 
   ArpsEuclidyaProcessor &audioProcessor;
@@ -45,7 +46,7 @@ private:
 
   // Macros
   class MacroControl : public juce::Component {
-  public:
+   public:
     MacroControl() {
       addAndMakeVisible(slider);
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -93,7 +94,7 @@ private:
   ArpsLookAndFeel lookAndFeel;
 
   class LatchingKeyboardComponent : public juce::MidiKeyboardComponent {
-  public:
+   public:
     LatchingKeyboardComponent(juce::MidiKeyboardState &state, Orientation o)
         : juce::MidiKeyboardComponent(state, o), keyboardState(state) {}
 
@@ -103,18 +104,18 @@ private:
       } else {
         keyboardState.noteOn(1, midiNoteNumber, 1.0f);
       }
-      return false; // Prevent default press/hold behaviour
+      return false;  // Prevent default press/hold behaviour
     }
 
     bool mouseDraggedToKey(int, const juce::MouseEvent &) override {
-      return false; // Prevent drag painting
+      return false;  // Prevent drag painting
     }
 
     void mouseUpOnKey(int, const juce::MouseEvent &) override {
       // Do nothing, releasing the mouse should not lift the latch
     }
 
-  private:
+   private:
     juce::MidiKeyboardState &keyboardState;
   };
 

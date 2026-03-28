@@ -4,7 +4,7 @@
 #include "BinaryData.h"
 class DiagnosticNodeCustomComponent : public juce::Component,
                                       public juce::ListBoxModel {
-public:
+ public:
   DiagnosticNodeCustomComponent(DiagnosticNode &node) : diagNode(node) {
     listBox.setModel(this);
     listBox.setRowHeight(20);
@@ -29,8 +29,7 @@ public:
     juce::ignoreUnused(rowIsSelected);
 
     auto sequence = diagNode.getLatestSequence();
-    if (rowNumber >= (int)sequence.size())
-      return;
+    if (rowNumber >= (int)sequence.size()) return;
 
     const auto &step = sequence[(size_t)rowNumber];
 
@@ -51,8 +50,7 @@ public:
           text << " (Src: " << step[i].sourceChannel << "."
                << getNoteName(step[i].sourceNoteNumber) << ")";
         }
-        if (i < step.size() - 1)
-          text << ", ";
+        if (i < step.size() - 1) text << ", ";
       }
     }
 
@@ -61,7 +59,7 @@ public:
                juce::Justification::centredLeft);
   }
 
-private:
+ private:
   void timerCallback() {
     // Periodic refresh to catch sequence changes
     listBox.updateContent();
@@ -81,8 +79,7 @@ private:
   struct Timer : public juce::Timer {
     std::function<void()> callback;
     void timerCallback() override {
-      if (callback)
-        callback();
+      if (callback) callback();
     }
   };
   Timer refreshTimer;
@@ -113,8 +110,8 @@ void DiagnosticNode::process() {
 }
 
 NodeLayout DiagnosticNode::getLayout() const {
-  auto layout = LayoutParser::parseFromJSON(BinaryData::DiagnosticNode_json,
-                                            BinaryData::DiagnosticNode_jsonSize);
+  auto layout = LayoutParser::parseFromJSON(
+      BinaryData::DiagnosticNode_json, BinaryData::DiagnosticNode_jsonSize);
 
   return layout;
 }

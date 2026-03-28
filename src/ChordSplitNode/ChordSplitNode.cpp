@@ -1,7 +1,9 @@
 #include "ChordSplitNode.h"
+
+#include <algorithm>
+
 #include "../LayoutParser.h"
 #include "BinaryData.h"
-#include <algorithm>
 
 void ChordSplitNode::process() {
   auto it = inputSequences.find(0);
@@ -76,12 +78,12 @@ void ChordSplitNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 NodeLayout ChordSplitNode::getLayout() const {
-  auto layout = LayoutParser::parseFromJSON(BinaryData::ChordSplitNode_json,
-                                            BinaryData::ChordSplitNode_jsonSize);
+  auto layout = LayoutParser::parseFromJSON(
+      BinaryData::ChordSplitNode_json, BinaryData::ChordSplitNode_jsonSize);
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "splitMode") {
+    if (el.label == "splitMode") {
       el.valueRef = const_cast<int *>(&splitMode);
     }
   }

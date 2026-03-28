@@ -4,7 +4,7 @@
 #include "../SharedMacroUI.h"
 
 class OctaveTransposeNode : public GraphNode {
-public:
+ public:
   OctaveTransposeNode(std::array<std::atomic<float> *, 32> &macros);
   ~OctaveTransposeNode() override = default;
 
@@ -23,6 +23,6 @@ public:
   int octaves = 0;
   int macroOctaves = -1;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

@@ -10,8 +10,7 @@ void GraphNode::clearInputSequence(int inputPort) {
 
 const NoteSequence &GraphNode::getOutputSequence(int outputPort) const {
   auto it = outputSequences.find(outputPort);
-  if (it != outputSequences.end())
-    return it->second;
+  if (it != outputSequences.end()) return it->second;
 
   static const NoteSequence emptySequence;
   return emptySequence;

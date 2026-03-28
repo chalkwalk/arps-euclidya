@@ -1,7 +1,9 @@
 #include "TransposeNode.h"
+
+#include <algorithm>
+
 #include "../LayoutParser.h"
 #include "BinaryData.h"
-#include <algorithm>
 
 // --- TransposeNode Impl
 
@@ -14,7 +16,7 @@ NodeLayout TransposeNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "semitones") {
+    if (el.label == "semitones") {
       el.valueRef = const_cast<int *>(&semitones);
       el.macroIndexRef = const_cast<int *>(&macroSemitones);
     }

@@ -1,8 +1,10 @@
 #include "OctaveTransposeNode.h"
-#include "../LayoutParser.h"
-#include "BinaryData.h"
-#include "../MacroMappingMenu.h"
+
 #include <algorithm>
+
+#include "../LayoutParser.h"
+#include "../MacroMappingMenu.h"
+#include "BinaryData.h"
 
 // --- OctaveTransposeNode Impl
 
@@ -11,12 +13,13 @@ OctaveTransposeNode::OctaveTransposeNode(
     : macros(inMacros) {}
 
 NodeLayout OctaveTransposeNode::getLayout() const {
-  auto layout = LayoutParser::parseFromJSON(BinaryData::OctaveTransposeNode_json,
-                                            BinaryData::OctaveTransposeNode_jsonSize);
+  auto layout =
+      LayoutParser::parseFromJSON(BinaryData::OctaveTransposeNode_json,
+                                  BinaryData::OctaveTransposeNode_jsonSize);
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "octaves") {
+    if (el.label == "octaves") {
       el.valueRef = const_cast<int *>(&octaves);
       el.macroIndexRef = const_cast<int *>(&macroOctaves);
     }

@@ -1,10 +1,11 @@
 #pragma once
-#include "../GraphNode.h"
 #include <array>
 #include <atomic>
 
+#include "../GraphNode.h"
+
 class ChordNNode : public GraphNode {
-public:
+ public:
   ChordNNode(std::array<std::atomic<float> *, 32> &macros);
   ~ChordNNode() override = default;
 
@@ -19,9 +20,9 @@ public:
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  int nValue = 2; // Default to 2
+  int nValue = 2;  // Default to 2
   int macroNValue = -1;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

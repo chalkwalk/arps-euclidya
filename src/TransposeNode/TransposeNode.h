@@ -4,7 +4,7 @@
 #include "../SharedMacroUI.h"
 
 class TransposeNode : public GraphNode {
-public:
+ public:
   TransposeNode(std::array<std::atomic<float> *, 32> &macros);
   ~TransposeNode() override = default;
 
@@ -23,6 +23,6 @@ public:
   int semitones = 0;
   int macroSemitones = -1;
 
-private:
+ private:
   std::array<std::atomic<float> *, 32> &macros;
 };

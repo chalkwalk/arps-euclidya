@@ -5,9 +5,9 @@ struct HeldNote {
   int noteNumber = 0;
   int channel = 1;
   float velocity = 0.0f;
-  float mpeX = 0.0f; // Pitch Bend
-  float mpeY = 0.0f; // CC74 / Timbre
-  float mpeZ = 0.0f; // Pressure
+  float mpeX = 0.0f;  // Pitch Bend
+  float mpeY = 0.0f;  // CC74 / Timbre
+  float mpeZ = 0.0f;  // Pressure
 
   // Canonical source tracking
   int sourceNoteNumber = -1;

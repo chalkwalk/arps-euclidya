@@ -1,10 +1,11 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+
 #include <vector>
 
 class EuclideanVisualizer : public juce::Component {
-public:
+ public:
   EuclideanVisualizer() = default;
 
   void update(const std::vector<bool> &pattern, int patternIdx,
@@ -80,7 +81,7 @@ public:
                       currentNotePlayed, juce::Colours::magenta);
   }
 
-private:
+ private:
   void rebuildPaths(juce::Point<float> center, float radius) {
     rhythmBeatPath.clear();
     rhythmRestPath.clear();
@@ -96,8 +97,7 @@ private:
   void buildRingPaths(juce::Point<float> center, float radius,
                       const std::vector<bool> &pattern, juce::Path &beatPath,
                       juce::Path &restPath) {
-    if (pattern.empty())
-      return;
+    if (pattern.empty()) return;
 
     int numSteps = (int)pattern.size();
     float angleStep = juce::MathConstants<float>::twoPi / (float)numSteps;
@@ -119,8 +119,7 @@ private:
                          float radius, float thickness, int numSteps,
                          int activeIdx, bool isNotePlayed,
                          juce::Colour layerColor) {
-    if (numSteps <= 0 || activeIdx < 0)
-      return;
+    if (numSteps <= 0 || activeIdx < 0) return;
 
     float angleStep = juce::MathConstants<float>::twoPi / (float)numSteps;
     float angle =

@@ -4,13 +4,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class CustomMacroSlider : public juce::Slider {
-public:
+ public:
   std::function<void()> onRightClick;
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isPopupMenu()) {
-      if (onRightClick)
-        onRightClick();
+      if (onRightClick) onRightClick();
     } else {
       juce::Slider::mouseDown(e);
     }
@@ -18,13 +17,12 @@ public:
 };
 
 class CustomMacroButton : public juce::TextButton {
-public:
+ public:
   std::function<void()> onRightClick;
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isPopupMenu()) {
-      if (onRightClick)
-        onRightClick();
+      if (onRightClick) onRightClick();
     } else {
       juce::TextButton::mouseDown(e);
     }
@@ -33,7 +31,7 @@ public:
 
 class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
                         public juce::Slider::Listener {
-public:
+ public:
   MacroAttachment(juce::AudioProcessorValueTreeState &s,
                   const juce::String &pID, juce::Slider &sl)
       : state(s), paramID(pID), slider(sl) {
@@ -62,7 +60,7 @@ public:
     }
   }
 
-private:
+ private:
   juce::AudioProcessorValueTreeState &state;
   juce::String paramID;
   juce::Slider &slider;
@@ -71,7 +69,7 @@ private:
 
 class ButtonAttachment : public juce::AudioProcessorValueTreeState::Listener,
                          private juce::Timer {
-public:
+ public:
   ButtonAttachment(juce::AudioProcessorValueTreeState &s,
                    const juce::String &pID, juce::Button &b)
       : state(s), paramID(pID), button(b) {
@@ -93,7 +91,7 @@ public:
     }
   }
 
-private:
+ private:
   juce::AudioProcessorValueTreeState &state;
   juce::String paramID;
   juce::Button &button;

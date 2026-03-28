@@ -3,7 +3,7 @@
 #include <JuceHeader.h>
 
 class ArpsLookAndFeel : public juce::LookAndFeel_V4 {
-public:
+ public:
   ArpsLookAndFeel();
 
   void drawRotarySlider(juce::Graphics &g, int x, int y, int width, int height,

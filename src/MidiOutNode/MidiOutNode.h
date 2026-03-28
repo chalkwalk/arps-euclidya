@@ -1,15 +1,17 @@
 #pragma once
 
-#include "../ClockManager.h"
-#include "../GraphNode.h"
-#include "../MidiHandler.h"
-#include <array>
-#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
+#include <array>
+#include <atomic>
+
+#include "../ClockManager.h"
+#include "../GraphNode.h"
+#include "../MidiHandler.h"
+
 class MidiOutNode : public GraphNode {
-public:
+ public:
   MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
               std::array<std::atomic<float> *, 32> macrosArray);
   ~MidiOutNode() override = default;
@@ -30,14 +32,14 @@ public:
   juce::String getCycleLengthInfo() const;
 
   enum class SyncMode {
-    Gestural = 0,     // Starts on key, relative phase
-    Synchronized = 1, // Interaction snapped to grid, incremental phase
-    Deterministic = 2 // Position bound to absolute DAW playhead
+    Gestural = 0,      // Starts on key, relative phase
+    Synchronized = 1,  // Interaction snapped to grid, incremental phase
+    Deterministic = 2  // Position bound to absolute DAW playhead
   };
 
   enum class PatternMode {
-    Gated = 0,  // Pattern acts as a filter (skips are rests)
-    Clocked = 1 // Pattern acts as a melodic map (skips are jumps)
+    Gated = 0,   // Pattern acts as a filter (skips are rests)
+    Clocked = 1  // Pattern acts as a melodic map (skips are jumps)
   };
 
   void saveNodeState(juce::XmlElement *xml) override;
@@ -89,12 +91,12 @@ public:
   // Sync & Reset Controls
   SyncMode syncMode = SyncMode::Synchronized;
   PatternMode patternMode = PatternMode::Gated;
-  int transportSyncMode = 0;         // DEPRECATED - replaced by syncMode
-  bool patternResetOnRelease = true; // Reset sequence + pattern on all-keys-up
-  bool rhythmResetOnRelease = true;  // Reset rhythm on all-keys-up
-  int clockDivisionIndex = 5;        // Index into division table (default: 1/8)
-  bool triplet = false;              // Triplet modifier
-  int outputChannel = 1;             // Output MIDI channel (1-16)
+  int transportSyncMode = 0;          // DEPRECATED - replaced by syncMode
+  bool patternResetOnRelease = true;  // Reset sequence + pattern on all-keys-up
+  bool rhythmResetOnRelease = true;   // Reset rhythm on all-keys-up
+  int clockDivisionIndex = 5;  // Index into division table (default: 1/8)
+  bool triplet = false;        // Triplet modifier
+  int outputChannel = 1;       // Output MIDI channel (1-16)
 
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;
@@ -117,7 +119,7 @@ public:
 
   std::atomic<bool> lastTickPlayedNote{false};
 
-private:
+ private:
   void flushPlayingNotes(juce::MidiBuffer &buffer, int samplePosition);
 
   MidiHandler &midiHandler;
@@ -133,11 +135,11 @@ private:
   NoteSequence previousSequence;
 
   // Timing state
-  bool wasHoldingNotes = false; // Detect transition to no notes
-  bool syncArmed = true;   // Waiting for first key press or transport start
-  bool forceTick = false;  // Fire immediately on next call
-  double anchorPpq = 0.0;  // Phase anchor for relative modes
-  bool wasPlaying = false; // Detect transport start/stop
+  bool wasHoldingNotes = false;  // Detect transition to no notes
+  bool syncArmed = true;    // Waiting for first key press or transport start
+  bool forceTick = false;   // Fire immediately on next call
+  double anchorPpq = 0.0;   // Phase anchor for relative modes
+  bool wasPlaying = false;  // Detect transport start/stop
 
   // Per-node tick tracking
   double lastTickPpq = -1.0;

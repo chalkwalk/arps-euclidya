@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class ReverseNode : public GraphNode {
-public:
+ public:
   ReverseNode() = default;
   ~ReverseNode() override = default;
 

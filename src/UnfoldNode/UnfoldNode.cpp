@@ -1,7 +1,9 @@
 #include "UnfoldNode.h"
+
+#include <algorithm>
+
 #include "../LayoutParser.h"
 #include "BinaryData.h"
-#include <algorithm>
 
 // --- UnfoldNode Impl
 
@@ -13,7 +15,7 @@ NodeLayout UnfoldNode::getLayout() const {
 
   // Bind runtime pointers by matching element labels
   for (auto &el : layout.elements) {
-   if (el.label == "ordering") {
+    if (el.label == "ordering") {
       el.valueRef = const_cast<int *>(&ordering);
     }
   }
@@ -42,7 +44,7 @@ void UnfoldNode::process() {
 
     for (const auto &step : it->second) {
       if (step.empty()) {
-        outSeq.push_back({}); // preserve rest
+        outSeq.push_back({});  // preserve rest
         continue;
       }
 

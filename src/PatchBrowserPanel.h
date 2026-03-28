@@ -1,11 +1,12 @@
 #pragma once
 
-#include "PatchLibrary.h"
-#include "PluginProcessor.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "PatchLibrary.h"
+#include "PluginProcessor.h"
+
 class PatchBrowserPanel : public juce::Component, public juce::ListBoxModel {
-public:
+ public:
   PatchBrowserPanel(ArpsEuclidyaProcessor &p, PatchLibrary &lib);
   ~PatchBrowserPanel() override = default;
 
@@ -20,7 +21,7 @@ public:
   // Call after loading a patch externally (e.g. from state restore)
   void refreshPatchName();
 
-private:
+ private:
   void toggleBrowser();
   void updateList();
   void loadPatchAtIndex(int index);
@@ -40,7 +41,7 @@ private:
   juce::TextButton nextButton{">"};
   juce::TextButton currentPatchButton{"Init"};
   juce::TextButton saveButton{"Save"};
-  juce::TextButton menuButton{juce::String::charToString(0x2261)}; // ≡
+  juce::TextButton menuButton{juce::String::charToString(0x2261)};  // ≡
 
   juce::Component browserOverlay;
   juce::TextEditor searchBox;

@@ -3,7 +3,7 @@
 #include "../GraphNode.h"
 
 class ZipNode : public GraphNode {
-public:
+ public:
   ZipNode() = default;
   ~ZipNode() override = default;
 

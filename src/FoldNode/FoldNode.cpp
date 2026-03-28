@@ -1,8 +1,10 @@
 #include "FoldNode.h"
+
+#include <algorithm>
+
 #include "../LayoutParser.h"
 #include "../MacroMappingMenu.h"
 #include "BinaryData.h"
-#include <algorithm>
 
 // --- FoldNode Impl
 
@@ -56,14 +58,14 @@ void FoldNode::process() {
   } else {
     NoteSequence outSeq;
 
-    if (mode == 0) { // Chunked
+    if (mode == 0) {  // Chunked
       std::vector<HeldNote> currentAggregatedStep;
       int itemsInCurrentStep = 0;
 
       for (const auto &step : it->second) {
         if (step.empty())
-          continue; // Skip resting steps during fold? Or fold them? Let's skip
-                    // for now to compact notes.
+          continue;  // Skip resting steps during fold? Or fold them? Let's skip
+                     // for now to compact notes.
 
         for (const auto &note : step) {
           currentAggregatedStep.push_back(note);
@@ -106,7 +108,7 @@ void FoldNode::process() {
 
         outSeq.push_back(currentAggregatedStep);
       }
-    } else { // Rolling
+    } else {  // Rolling
       const auto &inSeq = it->second;
       int seqSize = (int)inSeq.size();
 

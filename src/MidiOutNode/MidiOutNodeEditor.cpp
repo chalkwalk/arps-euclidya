@@ -7,7 +7,7 @@
 
 // --- Visualizer Component (the only custom component for MidiOutNode) ---
 class MidiOutVisualizer : public juce::Component, private juce::Timer {
-public:
+ public:
   MidiOutVisualizer(MidiOutNode &node) : midiOutNode(node) {
     addAndMakeVisible(visualizer);
     startTimerHz(30);
@@ -23,7 +23,7 @@ public:
 
   void resized() override { visualizer.setBounds(getLocalBounds()); }
 
-private:
+ private:
   MidiOutNode &midiOutNode;
   EuclideanVisualizer visualizer;
 };
@@ -87,11 +87,9 @@ NodeLayout MidiOutNode::getLayout() const {
   return layout;
 }
 
-std::unique_ptr<juce::Component>
-MidiOutNode::createCustomComponent(const juce::String &name,
-                                   juce::AudioProcessorValueTreeState *apvts) {
+std::unique_ptr<juce::Component> MidiOutNode::createCustomComponent(
+    const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
   juce::ignoreUnused(apvts);
-  if (name == "Visualizer")
-    return std::make_unique<MidiOutVisualizer>(*this);
+  if (name == "Visualizer") return std::make_unique<MidiOutVisualizer>(*this);
   return nullptr;
 }

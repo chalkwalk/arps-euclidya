@@ -1,13 +1,15 @@
 #pragma once
 
-#include "GraphNode.h"
-#include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class GraphCanvas; // forward declaration
+#include <functional>
+
+#include "GraphNode.h"
+
+class GraphCanvas;  // forward declaration
 
 class NodeBlock : public juce::Component, private juce::Timer {
-public:
+ public:
   NodeBlock(std::shared_ptr<GraphNode> node,
             juce::AudioProcessorValueTreeState &apvts, GraphCanvas &canvas);
   ~NodeBlock() override = default;
@@ -32,7 +34,7 @@ public:
 
   // Port geometry
   static constexpr int PORT_RADIUS = 8;
-  static constexpr int PORT_HIT_RADIUS = 14; // generous hit area
+  static constexpr int PORT_HIT_RADIUS = 14;  // generous hit area
   static constexpr int PORT_SPACING = 24;
   static constexpr int HEADER_HEIGHT = 28;
   static constexpr int PORT_MARGIN = 14;
@@ -50,7 +52,7 @@ public:
   // Called when the node is clicked/selected
   std::function<void()> onSelected;
 
-private:
+ private:
   std::shared_ptr<GraphNode> targetNode;
   GraphCanvas &parentCanvas;
 
@@ -88,7 +90,7 @@ private:
  * Mimics the NodeBlock visual style.
  */
 class NodeDragPreview : public juce::Component {
-public:
+ public:
   NodeDragPreview(const juce::String &nodeType, int gridW, int gridH, int numIn,
                   int numOut);
 
@@ -97,7 +99,7 @@ public:
   int getGridWidth() const { return gridW; }
   int getGridHeight() const { return gridH; }
 
-private:
+ private:
   juce::String type;
   int gridW, gridH, numIn, numOut;
 };
