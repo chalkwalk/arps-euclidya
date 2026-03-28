@@ -320,3 +320,13 @@ WhitespaceSensitiveMacros:
 WrapNamespaceBodyWithEmptyLines: Leave
 ...
 
+---
+Language: JavaScript
+BasedOnStyle: Google
+---
+Language: Json
+BasedOnStyle: Google
+---
+Language: ObjC
+BasedOnStyle: Google
+...
