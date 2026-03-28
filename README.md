@@ -44,7 +44,13 @@ git submodule update --init --recursive
 mkdir build && cd build
 
 # 4. Configure and build
-cmake ..
+# On Linux/macOS, we highly recommend using Clang to match the CI environment.
+# Note: On Linux, include llvm-ar/ranlib to avoid LTO plugin mismatches.
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_AR=llvm-ar -DCMAKE_RANLIB=llvm-ranlib ..
+
+# For Windows or default compiler:
+# cmake ..
+
 cmake --build . -j $(nproc)
 ```
 

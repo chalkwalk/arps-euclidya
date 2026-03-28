@@ -29,10 +29,14 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxcursor-dev libxinerama-dev libxrandr-dev libxrender-dev libfreetype6-dev libfontconfig1-dev libcurl4-openssl-dev libgl1-mesa-dev libglu1-mesa-dev ninja-build
+        sudo apt-get install -y libasound2-dev libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxcursor-dev libxinerama-dev libxrandr-dev libxrender-dev libfreetype6-dev libfontconfig1-dev libcurl4-openssl-dev libgl1-mesa-dev libglu1-mesa-dev ninja-build llvm lld
 
-    - name: Configure CMake (Linux/macOS)
-      if: runner.os != 'Windows'
+    - name: Configure CMake (Linux)
+      if: runner.os == 'Linux'
+      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_AR=llvm-ar -DCMAKE_RANLIB=llvm-ranlib
+
+    - name: Configure CMake (macOS)
+      if: runner.os == 'macOS'
       run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 
     - name: Configure CMake (Windows)
