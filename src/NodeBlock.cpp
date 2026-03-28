@@ -130,7 +130,7 @@ NodeBlock::NodeBlock(std::shared_ptr<GraphNode> node,
       if (element.colorHex.isNotEmpty()) {
         label->setColour(juce::Label::textColourId,
                          juce::Colour::fromString(element.colorHex));
-        label->setFont(juce::Font(13.0f, juce::Font::bold));
+        label->setFont(juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
       }
 
       comp = label;
@@ -253,7 +253,7 @@ void NodeBlock::timerCallback() {
   auto layout = targetNode->getLayout();
   for (int i = 0; i < dynamicComponents.size(); ++i) {
     if (i < (int)layout.elements.size()) {
-      auto &element = layout.elements[i];
+      auto &element = layout.elements[(size_t)i];
       auto *comp = dynamicComponents[i];
 
       if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
@@ -416,7 +416,7 @@ void NodeBlock::resized() {
 
   for (int i = 0; i < dynamicComponents.size(); ++i) {
     if (i < (int)layout.elements.size()) {
-      auto &element = layout.elements[i];
+      auto &element = layout.elements[(size_t)i];
       auto eb = element.gridBounds;
 
       dynamicComponents[i]->setBounds(startX + (int)(eb.getX() * subGridX),

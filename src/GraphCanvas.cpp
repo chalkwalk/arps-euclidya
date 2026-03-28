@@ -266,7 +266,8 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   // Draw cable hover tooltip
   if (showCableTooltip) {
     auto font = juce::Font(juce::FontOptions(12.0f));
-    int textW = font.getStringWidth(cableTooltipText) + 12;
+    int textW =
+        juce::GlyphArrangement::getStringWidthInt(font, cableTooltipText) + 12;
     int textH = 20;
     auto tooltipRect = juce::Rectangle<int>(
         cableTooltipPos.x + 10, cableTooltipPos.y - 25, textW, textH);

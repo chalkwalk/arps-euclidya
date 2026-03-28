@@ -54,7 +54,7 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
 
       addAndMakeVisible(label);
       label.setJustificationType(juce::Justification::centred);
-      label.setFont(juce::Font(10.0f));
+      label.setFont(juce::Font(juce::FontOptions(10.0f)));
       label.setColour(juce::Label::textColourId, juce::Colour(0xffaaaaaa));
     }
 

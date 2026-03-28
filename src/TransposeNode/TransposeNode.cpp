@@ -41,8 +41,9 @@ void TransposeNode::loadNodeState(juce::XmlElement *xml) {
 
 void TransposeNode::process() {
   int actualSemitones =
-      macroSemitones != -1 && macros[macroSemitones] != nullptr
-          ? -24 + (int)std::round(macros[macroSemitones]->load() * 48.0f)
+      macroSemitones != -1 && macros[(size_t)macroSemitones] != nullptr
+          ? -24 +
+                (int)std::round(macros[(size_t)macroSemitones]->load() * 48.0f)
           : semitones;
 
   auto it = inputSequences.find(0);

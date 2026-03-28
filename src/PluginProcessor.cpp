@@ -13,8 +13,9 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
       apvts(*this, nullptr, "Parameters", createParameterLayout()) {
   // Fetch raw parameter pointers and MacroParameter* for RT thread
   for (int i = 0; i < 32; ++i) {
-    macros[i] = apvts.getRawParameterValue("macro_" + juce::String(i + 1));
-    macroParams[i] = dynamic_cast<MacroParameter *>(
+    macros[(size_t)i] =
+        apvts.getRawParameterValue("macro_" + juce::String(i + 1));
+    macroParams[(size_t)i] = dynamic_cast<MacroParameter *>(
         apvts.getParameter("macro_" + juce::String(i + 1)));
     apvts.addParameterListener("macro_" + juce::String(i + 1), this);
   }
@@ -405,20 +406,20 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
 
   // Update each MacroParameter's display name
   for (int i = 0; i < 32; ++i) {
-    if (macroParams[i] == nullptr) continue;
+    if (macroParams[(size_t)i] == nullptr) continue;
 
-    juce::String oldName = macroParams[i]->getName(1024);
+    juce::String oldName = macroParams[(size_t)i]->getName(1024);
 
     if (mappingCount[(size_t)i] == 0) {
-      macroParams[i]->clearMapping();
+      macroParams[(size_t)i]->clearMapping();
     } else if (mappingCount[(size_t)i] == 1) {
-      macroParams[i]->setMappingName(mappingNames[(size_t)i]);
+      macroParams[(size_t)i]->setMappingName(mappingNames[(size_t)i]);
     } else {
-      macroParams[i]->setMappingName("MULTIPLE");
+      macroParams[(size_t)i]->setMappingName("MULTIPLE");
     }
 
     // Check if the resulting name is different
-    if (macroParams[i]->getName(1024) != oldName) {
+    if (macroParams[(size_t)i]->getName(1024) != oldName) {
       namesChanged = true;
     }
   }

@@ -40,13 +40,14 @@ TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
   bpmLabel.setText(juce::String(clock.getBPM(), 1) + " BPM",
                    juce::dontSendNotification);
   bpmLabel.setJustificationType(juce::Justification::centredLeft);
-  bpmLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+  bpmLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   bpmLabel.setColour(juce::Label::textColourId, juce::Colour(0xffdddddd));
 
   addAndMakeVisible(standaloneLabel);
   standaloneLabel.setText("STANDALONE TRANSPORT", juce::dontSendNotification);
   standaloneLabel.setJustificationType(juce::Justification::centredRight);
-  standaloneLabel.setFont(juce::Font(10.0f, juce::Font::bold));
+  standaloneLabel.setFont(
+      juce::Font(juce::FontOptions(10.0f, juce::Font::bold)));
   standaloneLabel.setColour(juce::Label::textColourId,
                             juce::Colour(0xff777777));
 

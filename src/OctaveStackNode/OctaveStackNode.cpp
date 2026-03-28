@@ -47,8 +47,8 @@ void OctaveStackNode::loadNodeState(juce::XmlElement *xml) {
 
 void OctaveStackNode::process() {
   int actualOctaves =
-      macroOctaves != -1 && macros[macroOctaves] != nullptr
-          ? 1 + (int)std::round(macros[macroOctaves]->load() * 3.0f)
+      macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroOctaves]->load() * 3.0f)
           : octaves;
 
   auto it = inputSequences.find(0);

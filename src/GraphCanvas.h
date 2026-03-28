@@ -29,6 +29,7 @@ class GraphCanvas : public juce::Component,
   void mouseWheelMove(const juce::MouseEvent &e,
                       const juce::MouseWheelDetails &wheel) override;
 
+  using juce::Component::keyPressed;
   bool keyPressed(const juce::KeyPress &key,
                   juce::Component *originatingComponent) override;
 

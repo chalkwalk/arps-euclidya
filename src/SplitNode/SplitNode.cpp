@@ -35,8 +35,9 @@ void SplitNode::process() {
       break;
     }
     case 2: {  // Percentage
-      size_t splitAt = std::max(
-          (size_t)1, (size_t)std::round(seq.size() * splitPercent / 100.0));
+      size_t splitAt =
+          std::max((size_t)1, (size_t)std::round((double)seq.size() *
+                                                 (double)splitPercent / 100.0));
       splitAt = std::min(splitAt, seq.size());
       for (size_t i = 0; i < seq.size(); ++i) {
         if (i < splitAt)

@@ -121,6 +121,7 @@ void PatchBrowserPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
                                          int width, int height,
                                          bool rowIsSelected) {
   if (rowNumber < 0 || rowNumber >= (int)currentResults.size()) return;
+  juce::ignoreUnused(height);
 
   if (rowIsSelected) {
     g.fillAll(juce::Colour(0xff00ffff).withAlpha(0.15f));

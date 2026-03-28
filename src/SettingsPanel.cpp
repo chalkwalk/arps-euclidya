@@ -2,7 +2,7 @@
 
 SettingsPanel::SettingsPanel() {
   addAndMakeVisible(titleLabel);
-  titleLabel.setFont(juce::Font(18.0f, juce::Font::bold));
+  titleLabel.setFont(juce::Font(juce::FontOptions(18.0f, juce::Font::bold)));
   titleLabel.setJustificationType(juce::Justification::centred);
 
   addAndMakeVisible(authorLabel);

@@ -1,0 +1,5 @@
+---
+Checks:          'clang-diagnostic-*,clang-analyzer-*,bugprone-*,modernize-*,performance-*,readability-*,-modernize-use-trailing-return-type,-modernize-use-auto,-readability-implicit-bool-conversion,-readability-magic-numbers,-bugprone-branch-clone'
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+...

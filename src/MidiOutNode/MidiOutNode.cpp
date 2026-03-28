@@ -29,7 +29,7 @@ int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
   }
 
   for (int i = 0; i < nL; ++i) {
-    if (stepsAreEqual(newSequence[i], stepToFind)) return i;
+    if (stepsAreEqual(newSequence[(size_t)i], stepToFind)) return i;
   }
 
   int oL = std::max(1, (int)oldSequence.size());

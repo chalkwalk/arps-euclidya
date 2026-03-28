@@ -72,7 +72,7 @@ void QuantizerNode::process() {
     outputSequences[0] = NoteSequence();
   } else {
     NoteSequence outSeq;
-    const auto &scalePattern = SCALES[tonality];
+    const auto &scalePattern = SCALES[(size_t)tonality];
 
     for (const auto &step : it->second) {
       if (step.empty()) {

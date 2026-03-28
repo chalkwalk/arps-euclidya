@@ -44,8 +44,8 @@ void OctaveTransposeNode::loadNodeState(juce::XmlElement *xml) {
 
 void OctaveTransposeNode::process() {
   int actualOctaves =
-      macroOctaves != -1 && macros[macroOctaves] != nullptr
-          ? -4 + (int)std::round(macros[macroOctaves]->load() * 8.0f)
+      macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr
+          ? -4 + (int)std::round(macros[(size_t)macroOctaves]->load() * 8.0f)
           : octaves;
 
   auto it = inputSequences.find(0);

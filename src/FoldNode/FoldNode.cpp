@@ -46,8 +46,8 @@ void FoldNode::loadNodeState(juce::XmlElement *xml) {
 
 void FoldNode::process() {
   int actualNValue =
-      macroNValue != -1 && macros[macroNValue] != nullptr
-          ? 1 + (int)std::round(macros[macroNValue]->load() * 15.0f)
+      macroNValue != -1 && macros[(size_t)macroNValue] != nullptr
+          ? 1 + (int)std::round(macros[(size_t)macroNValue]->load() * 15.0f)
           : nValue;
 
   auto it = inputSequences.find(0);

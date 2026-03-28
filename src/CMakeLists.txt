@@ -109,5 +109,13 @@ target_link_libraries(ArpsEuclidya
         juce::juce_opengl
     PUBLIC
         juce::juce_recommended_config_flags
-        juce::juce_recommended_lto_flags
-        juce::juce_recommended_warning_flags)
+        juce::juce_recommended_lto_flags)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(ArpsEuclidya PRIVATE
+        -Wall -Wextra -Wpedantic
+        -Wsign-conversion -Wfloat-conversion -Wshadow
+        -Werror)
+else()
+    target_link_libraries(ArpsEuclidya PUBLIC juce::juce_recommended_warning_flags)
+endif()
