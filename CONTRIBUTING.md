@@ -25,15 +25,17 @@ The project utilizes a standard Git workflow:
 
 ## 4. Coding Standards
 
-A rigid, automated formatting standard (e.g., `clang-format`) is not currently enforced but may be adopted in future revisions. 
+The project relies on strict compiler and tooling standards to maintain code quality:
 
-* Match the existing C++ and JUCE stylistic conventions present in the codebase.
+* **Formatting:** We enforce a strict, automated formatting standard using `clang-format` (configured via `.clang-format` in the root directory). All C++ code must be formatted using this configuration before submission.
+* **Linting:** We utilize `clang-tidy` (configured via `.clang-tidy` in the root directory) to enforce modern C++ practices and catch bugs. All code must pass these checks.
+* Match the existing C++ and JUCE stylistic conventions present in the codebase beyond automated tooling.
 * Adhere to the general principle of improving code readability and structure where modifications are made.
 
 ## 5. Testing Requirements
 
 Automated unit and integration testing pipelines are not yet implemented. Contributors must execute the following manual verification protocol prior to opening a pull request:
 
-1.  Ensure the project compiles without warnings in your local environment.
+1.  **Compilation & Strict Warnings:** Ensure the project compiles successfully. Note that when compiling with Clang, the project enforces strict scrutiny (including `-Wall`, `-Wextra`, `-Wpedantic`, `-Wsign-conversion`, `-Wfloat-conversion`, and `-Wshadow`) and treats all warnings as errors (`-Werror`). Your code must satisfy these checks.
 2.  Manually verify the intended functionality using the Standalone build.
 3.  Manually verify the intended functionality using at least one compiled plugin format. The CLAP architecture is the preferred test target, aligning with current project baselines.
