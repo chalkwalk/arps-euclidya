@@ -3,7 +3,7 @@
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "ModuleLibraryPanel.h"
-#include "PatchManagementPanel.h"
+#include "PatchBrowserPanel.h"
 #include "PluginProcessor.h"
 #include "TransportBar.h"
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -34,7 +34,8 @@ private:
   bool isSidebarExpanded = true;
 
   // Patch Management
-  PatchManagementPanel patchPanel;
+  PatchLibrary patchLibrary;
+  PatchBrowserPanel patchBrowser;
 
   // Graph canvas
   std::unique_ptr<GraphCanvas> graphCanvas;

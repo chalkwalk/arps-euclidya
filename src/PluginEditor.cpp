@@ -3,7 +3,7 @@
 #include "NodeFactory.h"
 
 ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
-    : AudioProcessorEditor(p), audioProcessor(p), patchPanel(p),
+    : AudioProcessorEditor(p), audioProcessor(p), patchBrowser(p, patchLibrary),
       midiKeyboard(p.keyboardState,
                    juce::MidiKeyboardComponent::horizontalKeyboard) {
 
@@ -37,7 +37,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     resized();
   };
 
-  addAndMakeVisible(patchPanel);
+  addAndMakeVisible(patchBrowser);
 
   // Standalone Transport (Only if running as standalone app)
   if (juce::PluginHostType().getPluginLoadedAs() ==
@@ -163,7 +163,7 @@ void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
   if (isSidebarExpanded)
     g.fillRect(libraryPanel.getBounds());
   g.fillRect(macroBar.getBounds());
-  g.fillRect(patchPanel.getBounds());
+  g.fillRect(patchBrowser.getBounds());
 }
 
 void ArpsEuclidyaEditor::resized() {
@@ -172,7 +172,7 @@ void ArpsEuclidyaEditor::resized() {
   // Patch Management Area (at the top, above macros or alongside)
   // Let's put it at the very top
   auto patchBounds = bounds.removeFromTop(40);
-  patchPanel.setBounds(patchBounds);
+  patchBrowser.setBounds(patchBounds);
 
   // Standalone Transport Bar (only layout if present)
   if (transportBar != nullptr) {
