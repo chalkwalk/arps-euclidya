@@ -1,21 +1,87 @@
 #include "PatchLibrary.h"
 #include "AppSettings.h"
 
+// Forward-declare only the getNamedResource function from the FactoryPatchData
+// binary target (built with NAMESPACE FactoryPatches in CMakeLists.txt).
+// We cannot forward-declare `const int Init_euclidyaSize` because JUCE defines
+// it as an inline constexpr in the generated header — not a separately-linked
+// symbol. The getNamedResource function IS a proper out-of-line definition.
+namespace FactoryPatches {
+extern const char *getNamedResource(const char *name, int &size);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Factory patch manifest: { resourceName, relativeDestPath }
+// relativeDestPath is relative to getFactoryPatchDirectory()
+// Add a new row here (and to patches/Factory/ + CMakeLists) for each new patch.
+// ─────────────────────────────────────────────────────────────────────────────
+struct FactoryPatchEntry {
+  const char *resourceName; // Key for FactoryPatches::getNamedResource
+  const char *relPath;      // Relative path within Factory/
+};
+
+static const FactoryPatchEntry kFactoryPatches[] = {
+    {"Init_euclidya", "Init.euclidya"},
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 PatchLibrary::PatchLibrary() { scan(); }
+
+bool PatchLibrary::installFactoryPatches() {
+  auto factoryDir = getFactoryPatchDirectory();
+  if (!factoryDir.isDirectory())
+    factoryDir.createDirectory();
+
+  // Check version sentinel — skip if already at current version
+  auto sentinelFile = factoryDir.getChildFile(".version");
+  if (sentinelFile.existsAsFile() &&
+      sentinelFile.loadFileAsString().trim() == kFactoryPatchVersion) {
+    return false;
+  }
+
+  DBG("PatchLibrary: installing/upgrading factory patches to v" +
+      juce::String(kFactoryPatchVersion));
+
+  int installed = 0;
+  for (const auto &entry : kFactoryPatches) {
+    int size = 0;
+    const char *data =
+        FactoryPatches::getNamedResource(entry.resourceName, size);
+    if (data == nullptr || size == 0) {
+      DBG("PatchLibrary: WARNING – resource not found: " +
+          juce::String(entry.resourceName));
+      continue;
+    }
+
+    auto dest = factoryDir.getChildFile(entry.relPath);
+    dest.getParentDirectory().createDirectory();
+
+    if (dest.replaceWithData(data, (size_t)size)) {
+      ++installed;
+    } else {
+      DBG("PatchLibrary: WARNING – failed to write " + dest.getFullPathName());
+    }
+  }
+
+  sentinelFile.replaceWithText(kFactoryPatchVersion);
+  DBG("PatchLibrary: installed " + juce::String(installed) +
+      " factory patch(es).");
+  return installed > 0;
+}
 
 void PatchLibrary::scan() {
   allPatches.clear();
 
+  installFactoryPatches();
+
   auto factoryDir = getFactoryPatchDirectory();
   auto userDir = getUserPatchDirectory();
 
-  // Ensure directories exist
-  if (!factoryDir.isDirectory()) {
+  if (!factoryDir.isDirectory())
     factoryDir.createDirectory();
-  }
-  if (!userDir.isDirectory()) {
+  if (!userDir.isDirectory())
     userDir.createDirectory();
-  }
 
   scanDirectory(factoryDir, Bank::Factory, factoryDir.getFullPathName());
   scanDirectory(userDir, Bank::User, userDir.getFullPathName());
@@ -41,26 +107,24 @@ PatchLibrary::parsePatchFile(const juce::File &file, Bank bank,
   info.file = file;
   info.bank = bank;
 
-  // Derive category from relative path
+  // Derive category from subdirectory relative to bank root
   juce::String relativePath =
       file.getParentDirectory().getFullPathName().substring(rootPath.length());
-  if (relativePath.startsWithChar('/') || relativePath.startsWithChar('\\')) {
+  if (relativePath.startsWithChar('/') || relativePath.startsWithChar('\\'))
     relativePath = relativePath.substring(1);
-  }
   info.category = relativePath.isEmpty() ? "Uncategorised" : relativePath;
 
   // Default name from filename
   info.name = file.getFileNameWithoutExtension();
 
-  // Try to read metadata from XML without loading the full patch
+  // Read metadata-only from XML
   auto xml = juce::XmlDocument::parse(file);
   if (xml != nullptr && xml->hasTagName("ArpsEuclidyaState")) {
     auto *metaXml = xml->getChildByName("Metadata");
     if (metaXml != nullptr) {
       juce::String metaName = metaXml->getStringAttribute("name");
-      if (metaName.isNotEmpty()) {
+      if (metaName.isNotEmpty())
         info.name = metaName;
-      }
       info.author = metaXml->getStringAttribute("author");
       info.description = metaXml->getStringAttribute("description");
       info.tags = metaXml->getStringAttribute("tags");
@@ -68,21 +132,17 @@ PatchLibrary::parsePatchFile(const juce::File &file, Bank bank,
       info.modified = metaXml->getStringAttribute("modified");
     }
   }
-
   return info;
 }
 
 std::vector<PatchLibrary::PatchInfo> PatchLibrary::getPatches(Bank bank) const {
-  if (bank == Bank::All) {
+  if (bank == Bank::All)
     return allPatches;
-  }
 
   std::vector<PatchInfo> result;
-  for (const auto &p : allPatches) {
-    if (p.bank == bank) {
+  for (const auto &p : allPatches)
+    if (p.bank == bank)
       result.push_back(p);
-    }
-  }
   return result;
 }
 
@@ -91,17 +151,14 @@ std::vector<juce::String> PatchLibrary::getCategories(Bank bank) const {
   for (const auto &p : allPatches) {
     if (bank != Bank::All && p.bank != bank)
       continue;
-
     bool found = false;
-    for (const auto &c : categories) {
+    for (const auto &c : categories)
       if (c == p.category) {
         found = true;
         break;
       }
-    }
-    if (!found) {
+    if (!found)
       categories.push_back(p.category);
-    }
   }
   return categories;
 }
@@ -109,19 +166,16 @@ std::vector<juce::String> PatchLibrary::getCategories(Bank bank) const {
 std::vector<PatchLibrary::PatchInfo>
 PatchLibrary::search(const juce::String &query, Bank bank) const {
   std::vector<PatchInfo> results;
-  juce::String lowerQuery = query.toLowerCase();
-
+  juce::String lq = query.toLowerCase();
   for (const auto &p : allPatches) {
     if (bank != Bank::All && p.bank != bank)
       continue;
-
-    if (p.name.toLowerCase().contains(lowerQuery) ||
-        p.author.toLowerCase().contains(lowerQuery) ||
-        p.description.toLowerCase().contains(lowerQuery) ||
-        p.tags.toLowerCase().contains(lowerQuery) ||
-        p.category.toLowerCase().contains(lowerQuery)) {
+    if (p.name.toLowerCase().contains(lq) ||
+        p.author.toLowerCase().contains(lq) ||
+        p.description.toLowerCase().contains(lq) ||
+        p.tags.toLowerCase().contains(lq) ||
+        p.category.toLowerCase().contains(lq))
       results.push_back(p);
-    }
   }
   return results;
 }
@@ -132,9 +186,8 @@ PatchLibrary::getByCategory(const juce::String &category, Bank bank) const {
   for (const auto &p : allPatches) {
     if (bank != Bank::All && p.bank != bank)
       continue;
-    if (p.category == category) {
+    if (p.category == category)
       results.push_back(p);
-    }
   }
   return results;
 }

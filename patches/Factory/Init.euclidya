@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2" standaloneBPM="120.0">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Sort" uuid="00000000000000000000000000000000" gridX="2"
+            gridY="0"/>
+      <Node type="Midi In" uuid="a3f3bb06eb394b6fbc7a2d27208a4f69" gridX="1"
+            gridY="0" channelFilter="0" macroChannelFilter="-1" legacyMode="0"/>
+      <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="3"
+            gridY="0" pSteps="8" pBeats="7" pOffset="-4" rSteps="12" rBeats="7"
+            rOffset="1" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
+            patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="5" triplet="0" outputChannel="1" pressureToVelocity="0.0"
+            timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="00000000000000000000000000000000" sourcePort="0"
+                  targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
+      <Connection sourceUuid="a3f3bb06eb394b6fbc7a2d27208a4f69" sourcePort="0"
+                  targetUuid="00000000000000000000000000000000" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="Init" author="ChalkWalkMusic" description="Default starting patch with a simple MIDI In to Sort to MIDI Out chain."
+            tags="init default" created="2026-03-28T00:00:00" modified="2026-03-27T23:24:15.690-07:00"/>
+</ArpsEuclidyaState>

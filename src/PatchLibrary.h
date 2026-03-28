@@ -3,6 +3,9 @@
 #include <juce_core/juce_core.h>
 #include <vector>
 
+// Bump this string whenever factory patches change to force re-extraction.
+static constexpr const char *kFactoryPatchVersion = "1.0";
+
 class PatchLibrary {
 public:
   enum class Bank { Factory, User, All };
@@ -13,7 +16,7 @@ public:
     juce::String author;
     juce::String description;
     juce::String tags;
-    juce::String category; // derived from subdirectory name
+    juce::String category; // derived from subdirectory path
     Bank bank;
     juce::String created;
     juce::String modified;
@@ -21,8 +24,13 @@ public:
 
   PatchLibrary();
 
-  // Re-scan the filesystem and rebuild the index
+  // Re-scan the filesystem and rebuild the index.
+  // Calls installFactoryPatches() first to ensure factory bank is up-to-date.
   void scan();
+
+  // Extract embedded factory patches to the factory directory if needed.
+  // Returns true if any patches were (re)installed.
+  bool installFactoryPatches();
 
   // Get all patches, optionally filtered by bank
   std::vector<PatchInfo> getPatches(Bank bank = Bank::All) const;

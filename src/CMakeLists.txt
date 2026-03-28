@@ -89,6 +89,9 @@ juce_add_binary_data(NodeLayoutData SOURCES
     UnfoldNode/UnfoldNode.json
     WalkNode/WalkNode.json)
 
+juce_add_binary_data(FactoryPatchData NAMESPACE FactoryPatches SOURCES
+    ../patches/Factory/Init.euclidya)
+
 clap_juce_extensions_plugin(TARGET ArpsEuclidya CLAP_ID "com.ChalkWalkMusic.ArpsEuclidya" CLAP_FEATURES "note-effect" "tool")
 
 target_compile_definitions(ArpsEuclidya
@@ -100,6 +103,7 @@ target_compile_definitions(ArpsEuclidya
 target_link_libraries(ArpsEuclidya
     PRIVATE
         NodeLayoutData
+        FactoryPatchData
         juce::juce_audio_utils
         juce::juce_audio_plugin_client
         juce::juce_opengl
