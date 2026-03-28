@@ -46,6 +46,7 @@ target_sources(ArpsEuclidya
         NodeBlock.cpp
         OctaveStackNode/OctaveStackNode.cpp
         OctaveTransposeNode/OctaveTransposeNode.cpp
+        PatchLibrary.cpp
         PatchManagementPanel.cpp
         PluginEditor.cpp
         PluginProcessor.cpp
