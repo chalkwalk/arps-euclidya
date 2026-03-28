@@ -348,10 +348,14 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
     }
   }
 
+  bool namesChanged = false;
+
   // Update each MacroParameter's display name
   for (int i = 0; i < 32; ++i) {
     if (macroParams[i] == nullptr)
       continue;
+
+    juce::String oldName = macroParams[i]->getName(1024);
 
     if (mappingCount[(size_t)i] == 0) {
       macroParams[i]->clearMapping();
@@ -360,8 +364,21 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
     } else {
       macroParams[i]->setMappingName("MULTIPLE");
     }
+
+    // Check if the resulting name is different
+    if (macroParams[i]->getName(1024) != oldName) {
+      namesChanged = true;
+    }
   }
   macrosDirty = true;
+
+  if (namesChanged) {
+    // Notify the DAW host to rescan parameter metadata (CLAP/VST3 support)
+    auto details =
+        juce::AudioProcessorListener::ChangeDetails().withParameterInfoChanged(
+            true);
+    updateHostDisplay(details);
+  }
 }
 
 void ArpsEuclidyaProcessor::parameterChanged(const juce::String &parameterID,
