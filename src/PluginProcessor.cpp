@@ -2,11 +2,12 @@
 
 #include "AppSettings.h"
 #include "MacroParameter.h"
-#include "MidiInNode/MidiInNode.h"
 #include "MidiOutNode/MidiOutNode.h"
 #include "PluginEditor.h"
-#include "ReverseNode/ReverseNode.h"
-#include "SortNode/SortNode.h"
+
+namespace FactoryPatches {
+extern const char *getNamedResource(const char *name, int &size);
+}
 
 ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     : AudioProcessor(BusesProperties()),  // No audio channels for MIDI effect
@@ -26,19 +27,17 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     graphEngine.recalculate();
   };
 
-  // Create default graph (Midi In -> Sort -> Midi Out)
-  auto inNode = std::make_shared<MidiInNode>(midiHandler, macros);
-  auto sortNode = std::make_shared<SortNode>();
-  auto outNode =
-      std::make_shared<MidiOutNode>(midiHandler, clockManager, macros);
-
-  inNode->onMappingChanged = [this]() { updateMacroNames(); };
-  sortNode->onMappingChanged = [this]() { updateMacroNames(); };
-  outNode->onMappingChanged = [this]() { updateMacroNames(); };
-
-  graphEngine.addNode(inNode);
-  graphEngine.addNode(sortNode);
-  graphEngine.addNode(outNode);
+  // Load default Init patch from binary resources
+  int size = 0;
+  const char *data = FactoryPatches::getNamedResource("Init_euclidya", size);
+  if (data != nullptr && size > 0) {
+    juce::String xmlString(data, (size_t)size);
+    std::unique_ptr<juce::XmlElement> xmlState =
+        juce::XmlDocument::parse(xmlString);
+    if (xmlState != nullptr && xmlState->hasTagName("ArpsEuclidyaState")) {
+      loadFromXml(xmlState.get());
+    }
+  }
 }
 
 ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
