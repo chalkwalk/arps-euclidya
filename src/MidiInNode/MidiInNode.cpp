@@ -53,8 +53,12 @@ void MidiInNode::process() {
           ? (int)std::round(macros[(size_t)macroChannelFilter]->load() * 16.0f)
           : channelFilter;
 
-  // Wrap the held notes in a single-step sequence
-  outputSequences[0] = {midiHandler.getHeldNotes(actualChannel)};
+  auto heldNotes = midiHandler.getHeldNotes(actualChannel);
+  NoteSequence seq;
+  for (const auto &note : heldNotes) {
+    seq.push_back({note});
+  }
+  outputSequences[0] = seq;
 
   auto conn = connections.find(0);
   if (conn != connections.end()) {

@@ -27,6 +27,10 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     graphEngine.recalculate();
   };
 
+  // Wire topology changes to force the MidiHandler to become dirty,
+  // ensuring current held notes are pushed through new connections instantly
+  graphEngine.onTopologyChanged = [this]() { midiHandler.forceDirty(); };
+
   // Load default Init patch from binary resources
   int size = 0;
   const char *data = FactoryPatches::getNamedResource("Init_euclidya", size);

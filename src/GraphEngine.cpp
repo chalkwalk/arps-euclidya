@@ -163,6 +163,9 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
   }
 
   source->addConnection(outPort, target, inPort);
+  if (onTopologyChanged) {
+    onTopologyChanged();
+  }
   recalculate();
   return true;
 }
@@ -189,6 +192,9 @@ void GraphEngine::removeConnection(GraphNode *source, int outPort,
     // If we actually removed a connection, clear the target's cached input
     if (it->second.size() < sizeBefore && target != nullptr) {
       target->clearInputSequence(inPort);
+      if (onTopologyChanged) {
+        onTopologyChanged();
+      }
       recalculate();
     }
   }

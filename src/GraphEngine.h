@@ -43,6 +43,10 @@ class GraphEngine {
 
   std::function<void()> onGraphDirtied;
 
+  // Fired when the structural topology changes (connections added/removed)
+  // so the audio thread knows to force-push data through the new lines
+  std::function<void()> onTopologyChanged;
+
   // Occupancy checks
   bool isInputPortOccupied(GraphNode *node, int inPort) const;
   static bool isOutputPortOccupied(GraphNode *node, int portIndex);
