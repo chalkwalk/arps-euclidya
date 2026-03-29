@@ -156,7 +156,7 @@ class NodeFactory {
       m.gridH = 2;
       m.numIn = 0;
     } else if (type == "Diagnostic" || type == "Fold" || type == "Quantizer" ||
-               type == "Split" || type == "Walk") {
+               type == "Split" || type == "Walk" || type == "Unfold") {
       m.gridW = 2;
       m.gridH = 2;
       if (type == "Split")

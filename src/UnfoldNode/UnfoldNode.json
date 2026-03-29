@@ -1,16 +1,82 @@
 {
-  "gridWidth": 1,
-  "gridHeight": 1,
+  "gridWidth": 2,
+  "gridHeight": 2,
   "elements": [
     {
-      "type": "Toggle",
+      "type": "Label",
+      "label": "Order",
+      "colorHex": "ffaaaaaa",
       "gridBounds": [
         0,
         0,
-        20,
-        20
+        13,
+        13
+      ]
+    },
+    {
+      "type": "ComboBox",
+      "label": "ordering",
+      "options": [
+        "Low → High",
+        "High → Low"
       ],
-      "label": "ordering"
+      "gridBounds": [
+        13,
+        0,
+        27,
+        13
+      ]
+    },
+    {
+      "type": "Label",
+      "label": "Mode",
+      "colorHex": "ffaaaaaa",
+      "gridBounds": [
+        0,
+        14,
+        13,
+        12
+      ]
+    },
+    {
+      "type": "ComboBox",
+      "label": "fixedWidth",
+      "options": [
+        "Variable",
+        "Fixed"
+      ],
+      "gridBounds": [
+        13,
+        14,
+        27,
+        12
+      ]
+    },
+    {
+      "type": "Label",
+      "label": "Bias",
+      "colorHex": "ffaaaaaa",
+      "gridBounds": [
+        0,
+        27,
+        13,
+        13
+      ]
+    },
+    {
+      "type": "ComboBox",
+      "label": "noteBias",
+      "options": [
+        "Bottom",
+        "Middle",
+        "Top"
+      ],
+      "gridBounds": [
+        13,
+        27,
+        27,
+        13
+      ]
     }
   ]
 }
