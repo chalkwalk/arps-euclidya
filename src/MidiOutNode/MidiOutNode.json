@@ -195,7 +195,8 @@
       "options": [
         "Gestural",
         "Synchronized",
-        "Deterministic"
+        "Deterministic",
+        "Forgiving"
       ],
       "gridBounds": [
         38,

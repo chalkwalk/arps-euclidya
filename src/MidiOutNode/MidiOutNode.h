@@ -32,9 +32,11 @@ class MidiOutNode : public GraphNode {
   juce::String getCycleLengthInfo() const;
 
   enum class SyncMode {
-    Gestural = 0,      // Starts on key, relative phase
-    Synchronized = 1,  // Interaction snapped to grid, incremental phase
-    Deterministic = 2  // Position bound to absolute DAW playhead
+    Gestural = 0,       // Starts on key, relative phase
+    Synchronized = 1,   // Interaction snapped to grid, incremental phase
+    Deterministic = 2,  // Position bound to absolute DAW playhead
+    Forgiving = 3  // Like Synchronized but fires immediately if slightly late,
+                   // then uses phase-slip convergence to re-align to the grid
   };
 
   enum class PatternMode {
@@ -143,6 +145,10 @@ class MidiOutNode : public GraphNode {
 
   // Per-node tick tracking
   double lastTickPpq = -1.0;
+
+  // Forgiving mode phase-slip: fractional division shortening remaining
+  // (0.0 = no correction needed, decays each tick via *=0.5)
+  double forgivingSlipFraction = 0.0;
 
   // Notes currently playing that need a NoteOff sent later (channel,
   // noteNumber)

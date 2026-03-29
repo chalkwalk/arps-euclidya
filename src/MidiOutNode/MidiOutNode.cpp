@@ -176,6 +176,22 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       anchorPpq = std::floor(currentPpq / division) * division;
       forceTick = true;
       syncArmed = false;
+    } else if (syncMode == SyncMode::Forgiving) {
+      // Snap anchor to the nearest past boundary
+      anchorPpq = std::floor(currentPpq / division) * division;
+      double lateness = currentPpq - anchorPpq;
+      double graceThreshold = division / 8.0;
+
+      if (lateness < graceThreshold) {
+        // Close enough to the beat — fire immediately and schedule phase slip
+        // to correct the early drift over the next few beats.
+        forgivingSlipFraction = lateness / division;
+      } else {
+        // Too late — behave like Synchronized: wait for the next tick
+        forgivingSlipFraction = 0.0;
+      }
+      forceTick = true;
+      syncArmed = false;
     }
   }
 
@@ -190,6 +206,16 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
   // --- Tick Detection ---
   bool isTick = false;
+
+  // For Forgiving mode, compute an adjusted division for phase-slip
+  // convergence. Each tick the slip fraction halves, shortening the effective
+  // division slightly so that subsequent ticks arrive a little earlier until
+  // we're back in phase.
+  double adjustedDivision = division;
+  if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
+    adjustedDivision = division * (1.0 - forgivingSlipFraction);
+  }
+
   double effectivePpq = (syncMode == SyncMode::Deterministic)
                             ? currentPpq
                             : (currentPpq - anchorPpq);
@@ -197,12 +223,18 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                              ? lastTickPpq
                              : (lastTickPpq - anchorPpq);
 
-  double currTick = std::floor(effectivePpq / division);
-  double prevTick = std::floor(prevEffective / division);
+  double currTick = std::floor(effectivePpq / adjustedDivision);
+  double prevTick = std::floor(prevEffective / adjustedDivision);
 
   if (currTick > prevTick || forceTick) {
     isTick = true;
     forceTick = false;
+    // Decay the slip each time a real tick fires
+    if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
+      forgivingSlipFraction *= 0.5;
+      if (forgivingSlipFraction < 0.001)
+        forgivingSlipFraction = 0.0;
+    }
   }
 
   wasHoldingNotes = holdingNotes;
