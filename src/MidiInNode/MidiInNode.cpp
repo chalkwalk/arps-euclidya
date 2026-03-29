@@ -21,8 +21,8 @@ NodeLayout MidiInNode::getLayout() const {
     if (el.label == "channelFilter") {
       el.valueRef = const_cast<int *>(&channelFilter);
       el.macroIndexRef = const_cast<int *>(&macroChannelFilter);
-    } else if (el.label == "legacyMode") {
-      el.valueRef = const_cast<int *>(&legacyMode);
+    } else if (el.label == "mpeEnabled") {
+      el.valueRef = const_cast<int *>(&mpeEnabled);
     }
   }
 
@@ -33,7 +33,7 @@ void MidiInNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("channelFilter", channelFilter);
     xml->setAttribute("macroChannelFilter", macroChannelFilter);
-    xml->setAttribute("legacyMode", legacyMode);
+    xml->setAttribute("mpeEnabled", mpeEnabled);
   }
 }
 
@@ -41,17 +41,34 @@ void MidiInNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     channelFilter = xml->getIntAttribute("channelFilter", 0);
     macroChannelFilter = xml->getIntAttribute("macroChannelFilter", -1);
-    legacyMode = xml->getBoolAttribute("legacyMode", false);
+
+    // Fallback for old patches that saved "legacyMode"
+    if (xml->hasAttribute("mpeEnabled")) {
+      mpeEnabled = xml->getBoolAttribute("mpeEnabled", false) ? 1 : 0;
+    } else if (xml->hasAttribute("legacyMode")) {
+      mpeEnabled = xml->getBoolAttribute("legacyMode", false) ? 0 : 1;
+    }
   }
 }
 
 void MidiInNode::process() {
-  midiHandler.setLegacyMode(legacyMode != 0);
+  // MidiHandler's legacy mode means "MPE is off". So we invert mpeEnabled.
+  bool wantLegacy = (mpeEnabled == 0);
+  if (midiHandler.isLegacyModeEnabled() != wantLegacy) {
+    midiHandler.setLegacyMode(wantLegacy);
+  }
 
-  int actualChannel =
-      macroChannelFilter != -1 && macros[(size_t)macroChannelFilter] != nullptr
-          ? (int)std::round(macros[(size_t)macroChannelFilter]->load() * 16.0f)
-          : channelFilter;
+  int actualChannel = 0;
+
+  if (mpeEnabled == 0) {
+    // Only apply channel filtering if MPE is disabled
+    actualChannel =
+        macroChannelFilter != -1 &&
+                macros[(size_t)macroChannelFilter] != nullptr
+            ? (int)std::round(macros[(size_t)macroChannelFilter]->load() *
+                              16.0f)
+            : channelFilter;
+  }
 
   auto heldNotes = midiHandler.getHeldNotes(actualChannel);
   NoteSequence seq;

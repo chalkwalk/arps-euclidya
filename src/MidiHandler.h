@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+#include <array>
 #include <map>
 #include <mutex>
 #include <vector>
@@ -41,7 +42,24 @@ class MidiHandler : public juce::MPEInstrument::Listener {
   void noteAdded(juce::MPENote newNote) override;
   void noteReleased(juce::MPENote finishedNote) override;
 
+  void updatePressureSmoothing();
+
   juce::MPEInstrument mpeInstrument;
   bool isDirty = false;
   mutable std::mutex stateMutex;
+
+  // Manual poly aftertouch tracking (JUCE MPEInstrument ignores it in legacy
+  // mode)
+  std::map<std::pair<int, int>, float> polyAftertouchState;
+
+  // Per-channel pressure tracking for non-MPE global application
+  std::array<float, 16> channelPressureState{};
+
+  // Slew-smoothed pressure per note (key = {channel, noteNumber})
+  std::map<std::pair<int, int>, float> smoothedPressure;
+  static constexpr float kPressureSlewUp = 0.15f;    // attack smoothing
+  static constexpr float kPressureSlewDown = 0.08f;  // release smoothing
+
+  // Track released notes for pressure tail
+  std::map<std::pair<int, int>, float> releasedNotePressure;
 };

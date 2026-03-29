@@ -16,7 +16,7 @@
     },
     {
       "type": "Toggle",
-      "label": "legacyMode",
+      "label": "mpeEnabled",
       "gridBounds": [
         0,
         13,

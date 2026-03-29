@@ -86,6 +86,8 @@ bool ArpsEuclidyaProcessor::producesMidi() const { return true; }
 
 bool ArpsEuclidyaProcessor::isMidiEffect() const { return true; }
 
+bool ArpsEuclidyaProcessor::supportsMPE() const { return true; }
+
 double ArpsEuclidyaProcessor::getTailLengthSeconds() const { return 0.0; }
 
 int ArpsEuclidyaProcessor::getNumPrograms() { return 1; }

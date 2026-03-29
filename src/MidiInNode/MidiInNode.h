@@ -17,7 +17,7 @@ class MidiInNode : public GraphNode {
 
   int channelFilter = 0;  // 0 means all channels
   int macroChannelFilter = -1;
-  int legacyMode = 0;
+  int mpeEnabled = 0;
 
   MidiHandler &getMidiHandler() { return midiHandler; }
 
