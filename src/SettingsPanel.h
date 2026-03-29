@@ -4,15 +4,19 @@
 
 #include "AppSettings.h"
 
-class SettingsPanel : public juce::Component {
+class ArpsEuclidyaProcessor;
+
+class SettingsPanel : public juce::Component, public juce::Timer {
  public:
-  SettingsPanel();
-  ~SettingsPanel() override = default;
+  SettingsPanel(ArpsEuclidyaProcessor &processor);
+  ~SettingsPanel() override;
 
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void timerCallback() override;
 
  private:
+  ArpsEuclidyaProcessor &processor;
   juce::Label titleLabel{"title", "Settings"};
 
   juce::Label authorLabel{"authorLabel", "Default Author:"};
@@ -23,6 +27,14 @@ class SettingsPanel : public juce::Component {
   juce::TextButton browseLibraryButton{"..."};
 
   std::unique_ptr<juce::FileChooser> fileChooser;
+
+  juce::Label diagLabel{"diagLabel", "MIDI Diagnostics (Input):"};
+  juce::TextEditor diagEditor;
+  juce::TextButton clearDiagButton{"Clear Log"};
+  juce::TextButton copyDiagButton{"Copy Log"};
+  juce::ToggleButton ignoreMpeMasterPressureToggle{
+      "Ignore MPE Master Channel Pressure"};
+  int logLineCount = 0;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsPanel)
 };

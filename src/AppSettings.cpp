@@ -55,3 +55,12 @@ juce::File AppSettings::getResolvedPatchLibraryDir() {
 
   return baseDir.getChildFile("Patches");
 }
+
+bool AppSettings::getIgnoreMpeMasterPressure() {
+  return propertiesFile->getBoolValue("ignoreMpeMasterPressure", false);
+}
+
+void AppSettings::setIgnoreMpeMasterPressure(bool shouldIgnore) {
+  propertiesFile->setValue("ignoreMpeMasterPressure", shouldIgnore);
+  propertiesFile->saveIfNeeded();
+}

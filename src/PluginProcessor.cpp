@@ -42,6 +42,9 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
       loadFromXml(xmlState.get());
     }
   }
+
+  midiHandler.setIgnoreMpeMasterPressure(
+      AppSettings::getInstance().getIgnoreMpeMasterPressure());
 }
 
 ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
@@ -147,6 +150,26 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   // on-screen keyboard
   keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(),
                                       true);
+
+  for (const auto metadata : midiMessages) {
+    const auto message = metadata.getMessage();
+    const int channel = message.getChannel();
+    if (message.isNoteOn()) {
+      logMidiEvent(10, channel, message.getNoteNumber(), message.getVelocity());
+    } else if (message.isNoteOff()) {
+      logMidiEvent(11, channel, message.getNoteNumber(), 0.0f);
+    } else if (message.isController()) {
+      logMidiEvent(12, channel, message.getControllerNumber(),
+                   (float)message.getControllerValue());
+    } else if (message.isChannelPressure()) {
+      logMidiEvent(13, channel, message.getChannelPressureValue(), 0.0f);
+    } else if (message.isPitchWheel()) {
+      logMidiEvent(14, channel, message.getPitchWheelValue(), 0.0f);
+    } else if (message.isAftertouch()) {
+      logMidiEvent(15, channel, message.getNoteNumber(),
+                   (float)message.getAfterTouchValue());
+    }
+  }
 
   midiHandler.processMidi(midiMessages);
 

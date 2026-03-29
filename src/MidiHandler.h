@@ -37,6 +37,11 @@ class MidiHandler : public juce::MPEInstrument::Listener {
   void setLegacyMode(bool shouldEnable);
   bool isLegacyModeEnabled() const;
 
+  void setIgnoreMpeMasterPressure(bool shouldIgnore) {
+    ignoreMpeMasterPressure = shouldIgnore;
+  }
+  bool getIgnoreMpeMasterPressure() const { return ignoreMpeMasterPressure; }
+
  private:
   // MPEInstrument::Listener overrides
   void noteAdded(juce::MPENote newNote) override;
@@ -62,4 +67,6 @@ class MidiHandler : public juce::MPEInstrument::Listener {
 
   // Track released notes for pressure tail
   std::map<std::pair<int, int>, float> releasedNotePressure;
+
+  bool ignoreMpeMasterPressure = false;
 };

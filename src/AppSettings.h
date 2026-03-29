@@ -23,6 +23,10 @@ class AppSettings {
   // Gets the actual resolved path to the user/factory patch library
   juce::File getResolvedPatchLibraryDir();
 
+  // Workaround for DAWs like Bitwig that send MPE pressure on Ch 1
+  bool getIgnoreMpeMasterPressure();
+  void setIgnoreMpeMasterPressure(bool shouldIgnore);
+
   juce::PropertiesFile *getPropertiesFile() { return propertiesFile.get(); }
 
  private:

@@ -19,9 +19,6 @@ void MidiHandler::processMidi(juce::MidiBuffer &midiMessages) {
     if (message.isNoteOn()) {
       polyAftertouchState[{message.getChannel(), message.getNoteNumber()}] =
           0.0f;
-    } else if (message.isAftertouch()) {
-      polyAftertouchState[{message.getChannel(), message.getNoteNumber()}] =
-          message.getAfterTouchValue() / 127.0f;
     } else if (message.isChannelPressure()) {
       int ch = message.getChannel();
       if (ch >= 1 && ch <= 16) {
@@ -29,7 +26,13 @@ void MidiHandler::processMidi(juce::MidiBuffer &midiMessages) {
             message.getChannelPressureValue() / 127.0f;
       }
     }
-    mpeInstrument.processNextMidiEvent(message);
+
+    if (ignoreMpeMasterPressure && !mpeInstrument.isLegacyModeEnabled() &&
+        message.isChannelPressure() && message.getChannel() == 1) {
+      // Skip Master Channel Pressure in MPE mode if workaround active
+    } else {
+      mpeInstrument.processNextMidiEvent(message);
+    }
   }
 
   updatePressureSmoothing();
@@ -184,7 +187,10 @@ void MidiHandler::updatePressureSmoothing() {
       if (patIt != polyAftertouchState.end() && patIt->second > 0.0f) {
         targetPressure = patIt->second;
       } else {
-        targetPressure = channelPressureState[(size_t)(ch - 1)];
+        // Fallback: use per-channel pressure or global (Ch 1) pressure
+        targetPressure =
+            std::max(channelPressureState[(size_t)(ch - 1)],
+                     channelPressureState[0]);  // Ch 1 is Master fallback
       }
     }
 

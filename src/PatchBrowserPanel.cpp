@@ -257,8 +257,8 @@ void PatchBrowserPanel::showMenu() {
         } else if (result == 3) {
           library.getFactoryPatchDirectory().revealToUser();
         } else if (result == 10) {
-          auto *settingsPanel = new SettingsPanel();
-          settingsPanel->setSize(400, 200);
+          auto *settingsPanel = new SettingsPanel(processor);
+          settingsPanel->setSize(450, 500);
           juce::DialogWindow::LaunchOptions opts;
           opts.dialogTitle = "Settings";
           opts.dialogBackgroundColour = juce::Colour(0xff222222);

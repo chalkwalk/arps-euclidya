@@ -7,7 +7,10 @@
 class MacroParameter;
 
 struct MidiLogEvent {
-  int logType;  // 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn, 5=ArpNoteOff
+  // Output logging: 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn,
+  // 5=ArpNoteOff Input logging: 10=InNoteOn, 11=InNoteOff, 12=InCC,
+  // 13=InChanPress, 14=InPitchBend, 15=InPolyAftertouch
+  int logType;
   int channel;
   int data1;
   float data2;
@@ -59,6 +62,8 @@ class ArpsEuclidyaProcessor
                         float newValue) override;
 
   class ArpsEuclidyaEditor *getEditor();
+
+  MidiHandler &getMidiHandler() { return midiHandler; }
 
   juce::AudioProcessorValueTreeState apvts;
   juce::MidiKeyboardState keyboardState;
