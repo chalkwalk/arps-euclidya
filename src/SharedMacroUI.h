@@ -32,7 +32,8 @@ class CustomMacroButton : public juce::TextButton {
 };
 
 class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
-                        public juce::Slider::Listener {
+                        public juce::Slider::Listener,
+                        private juce::AsyncUpdater {
  public:
   MacroAttachment(juce::AudioProcessorValueTreeState &s,
                   const juce::String &pID, juce::Slider &sl)
@@ -42,16 +43,19 @@ class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
     parameterChanged(paramID, *state.getRawParameterValue(paramID));
   }
   ~MacroAttachment() override {
+    cancelPendingUpdate();
     state.removeParameterListener(paramID, this);
     slider.removeListener(this);
   }
   void parameterChanged(const juce::String &, float newValue) override {
-    juce::MessageManager::callAsync([this, newValue]() {
-      juce::ScopedValueSetter<bool> svs(isUpdating, true);
-      double val = slider.getMinimum() +
-                   newValue * (slider.getMaximum() - slider.getMinimum());
-      slider.setValue(val, juce::sendNotificationSync);
-    });
+    targetValue = newValue;
+    triggerAsyncUpdate();
+  }
+  void handleAsyncUpdate() override {
+    juce::ScopedValueSetter<bool> svs(isUpdating, true);
+    double val = slider.getMinimum() +
+                 targetValue * (slider.getMaximum() - slider.getMinimum());
+    slider.setValue(val, juce::sendNotificationSync);
   }
   void sliderValueChanged(juce::Slider *) override {
     if (!isUpdating) {
@@ -67,6 +71,7 @@ class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
   juce::String paramID;
   juce::Slider &slider;
   bool isUpdating = false;
+  std::atomic<float> targetValue{0.0f};
 };
 
 class ButtonAttachment : public juce::AudioProcessorValueTreeState::Listener,

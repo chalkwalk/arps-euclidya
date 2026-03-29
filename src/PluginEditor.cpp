@@ -115,7 +115,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   midiKeyboard.setMidiChannel(1);
   midiKeyboard.setColour(juce::MidiKeyboardComponent::keyDownOverlayColourId,
                          ArpsLookAndFeel::getNeonColor());
-  midiKeyboard.setKeyPressBaseOctave(-1);  // Disable computer keyboard input
+  midiKeyboard.clearKeyMappings();  // Disable computer keyboard input
   midiKeyboard.setWantsKeyboardFocus(false);
 
   addAndMakeVisible(clearNotesButton);
