@@ -25,6 +25,7 @@
 #include "SortNode/SortNode.h"
 #include "SplitNode/SplitNode.h"
 #include "SwitchNode/SwitchNode.h"
+#include "TextNoteNode/TextNoteNode.h"
 #include "TransposeNode/TransposeNode.h"
 #include "UnfoldNode/UnfoldNode.h"
 #include "UnzipNode/UnzipNode.h"
@@ -88,17 +89,42 @@ class NodeFactory {
       return std::make_shared<SwitchNode>(macros);
     if (type == "Midi Out")
       return std::make_shared<MidiOutNode>(midiCtx, clockCtx, macros);
+    if (type == "Note")
+      return std::make_shared<TextNoteNode>(2, 1);
+    if (type == "Note Large")
+      return std::make_shared<TextNoteNode>(3, 2);
     return nullptr;
   }
 
   static std::vector<std::string> getAvailableNodeTypes() {
-    return {"Midi In",      "Sort",        "Reverse",          "Converge",
-            "Diverge",      "Diagnostic",  "ChordN",           "Walk",
-            "Octave Stack", "Transpose",   "Octave Transpose", "Fold",
-            "Unfold",       "Quantizer",   "All Notes",        "Split",
-            "Concatenate",  "Chord Split", "Multiply",         "Zip",
-            "Unzip",        "Route",       "Select",           "Switch",
-            "Sequence",     "Midi Out"};
+    return {"Midi In",
+            "Sort",
+            "Reverse",
+            "Converge",
+            "Diverge",
+            "Diagnostic",
+            "ChordN",
+            "Walk",
+            "Octave Stack",
+            "Transpose",
+            "Octave Transpose",
+            "Fold",
+            "Unfold",
+            "Quantizer",
+            "All Notes",
+            "Split",
+            "Concatenate",
+            "Chord Split",
+            "Multiply",
+            "Zip",
+            "Unzip",
+            "Route",
+            "Select",
+            "Switch",
+            "Sequence",
+            "Midi Out",
+            "Note",
+            "Note Large"};
   }
 
   struct NodeMetadata {
@@ -107,7 +133,17 @@ class NodeFactory {
 
   static NodeMetadata getPreviewMetadata(const std::string &type) {
     NodeMetadata m;
-    if (type == "Midi In") {
+    if (type == "Note") {
+      m.gridW = 2;
+      m.gridH = 1;
+      m.numIn = 0;
+      m.numOut = 0;
+    } else if (type == "Note Large") {
+      m.gridW = 3;
+      m.gridH = 2;
+      m.numIn = 0;
+      m.numOut = 0;
+    } else if (type == "Midi In") {
       m.gridW = 1;
       m.gridH = 1;
       m.numIn = 0;

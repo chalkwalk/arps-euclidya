@@ -59,6 +59,7 @@ target_sources(ArpsEuclidya
         SortNode/SortNode.cpp
         SplitNode/SplitNode.cpp
         SwitchNode/SwitchNode.cpp
+        TextNoteNode/TextNoteNode.cpp
         TransportBar.cpp
         TransposeNode/TransposeNode.cpp
         UnfoldNode/UnfoldNode.cpp
