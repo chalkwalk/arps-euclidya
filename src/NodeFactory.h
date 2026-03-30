@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string>
 
@@ -35,8 +36,8 @@
 class NodeFactory {
  public:
   static std::shared_ptr<GraphNode> createNode(
-      const std::string &type, NoteExpressionManager &midiCtx, ClockManager &clockCtx,
-      std::array<std::atomic<float> *, 32> &macros) {
+      const std::string &type, NoteExpressionManager &midiCtx,
+      ClockManager &clockCtx, std::array<std::atomic<float> *, 32> &macros) {
     if (type == "Midi In")
       return std::make_shared<MidiInNode>(midiCtx, macros);
     if (type == "Sort")
@@ -97,34 +98,19 @@ class NodeFactory {
   }
 
   static std::vector<std::string> getAvailableNodeTypes() {
-    return {"Midi In",
-            "Sort",
-            "Reverse",
-            "Converge",
-            "Diverge",
-            "Diagnostic",
-            "ChordN",
-            "Walk",
-            "Octave Stack",
-            "Transpose",
-            "Octave Transpose",
-            "Fold",
-            "Unfold",
-            "Quantizer",
-            "All Notes",
-            "Split",
-            "Concatenate",
-            "Chord Split",
-            "Multiply",
-            "Zip",
-            "Unzip",
-            "Route",
-            "Select",
-            "Switch",
-            "Sequence",
-            "Midi Out",
-            "Note",
-            "Note Large"};
+    std::vector<std::string> types = {
+        "All Notes",   "Chord Split",  "ChordN",
+        "Concatenate", "Converge",     "Diagnostic",
+        "Diverge",     "Fold",         "Midi In",
+        "Midi Out",    "Multiply",     "Note",
+        "Note Large",  "Octave Stack", "Octave Transpose",
+        "Quantizer",   "Reverse",      "Route",
+        "Select",      "Sequence",     "Sort",
+        "Split",       "Switch",       "Transpose",
+        "Unfold",      "Unzip",        "Walk",
+        "Zip"};
+    std::sort(types.begin(), types.end());
+    return types;
   }
 
   struct NodeMetadata {
