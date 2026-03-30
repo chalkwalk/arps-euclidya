@@ -6,11 +6,23 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "MidiOutNode/MidiOutNode.h"
+
 void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
   if (onGraphDirtied) {
     node->onNodeDirtied = onGraphDirtied;
   }
   nodes.push_back(node);
+}
+
+std::vector<MidiOutNode *> GraphEngine::getMidiOutNodes() const {
+  std::vector<MidiOutNode *> outNodes;
+  for (const auto &node : nodes) {
+    if (auto *out = dynamic_cast<MidiOutNode *>(node.get())) {
+      outNodes.push_back(out);
+    }
+  }
+  return outNodes;
 }
 
 void GraphEngine::removeNode(GraphNode *node) {
@@ -351,7 +363,8 @@ void GraphEngine::saveState(juce::XmlElement *xmlRoot) {
 
 #include "NodeFactory.h"
 
-void GraphEngine::loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
+void GraphEngine::loadState(juce::XmlElement *xmlRoot,
+                            NoteExpressionManager &midiCtx,
                             ClockManager &clockCtx,
                             std::array<std::atomic<float> *, 32> &macros) {
   if (xmlRoot == nullptr) {

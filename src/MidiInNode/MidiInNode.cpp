@@ -8,9 +8,9 @@
 
 // --- MidiInNode Impl
 
-MidiInNode::MidiInNode(MidiHandler &handler,
+MidiInNode::MidiInNode(NoteExpressionManager &handler,
                        std::array<std::atomic<float> *, 32> macrosArray)
-    : midiHandler(handler), macros(macrosArray) {}
+    : noteExpressionManager(handler), macros(macrosArray) {}
 
 NodeLayout MidiInNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::MidiInNode_json,
@@ -52,10 +52,10 @@ void MidiInNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void MidiInNode::process() {
-  // MidiHandler's legacy mode means "MPE is off". So we invert mpeEnabled.
+  // NoteExpressionManager's legacy mode means "MPE is off". So we invert mpeEnabled.
   bool wantLegacy = (mpeEnabled == 0);
-  if (midiHandler.isLegacyModeEnabled() != wantLegacy) {
-    midiHandler.setLegacyMode(wantLegacy);
+  if (noteExpressionManager.isLegacyModeEnabled() != wantLegacy) {
+    noteExpressionManager.setLegacyMode(wantLegacy);
   }
 
   int actualChannel = 0;
@@ -70,7 +70,7 @@ void MidiInNode::process() {
             : channelFilter;
   }
 
-  auto heldNotes = midiHandler.getHeldNotes(actualChannel);
+  auto heldNotes = noteExpressionManager.getHeldNotes(actualChannel);
   NoteSequence seq;
   for (const auto &note : heldNotes) {
     seq.push_back({note});

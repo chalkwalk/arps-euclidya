@@ -10,6 +10,7 @@ struct MidiLogEvent {
   // Output logging: 0=NoteOn, 1=NoteOff, 2=CC, 3=TICK, 4=ArpNoteOn,
   // 5=ArpNoteOff Input logging: 10=InNoteOn, 11=InNoteOff, 12=InCC,
   // 13=InChanPress, 14=InPitchBend, 15=InPolyAftertouch
+  // CLAP logging: 20=ClapNoteOn, 21=ClapNoteOff, 22=ClapExpr
   int logType;
   int channel;
   int data1;
@@ -19,15 +20,25 @@ struct MidiLogEvent {
 // Forward declaration of the editor class
 class ArpsEuclidyaEditor;
 
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
+#include <clap-juce-extensions/clap-juce-extensions.h>
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
 #include "ClockManager.h"
 #include "GraphEngine.h"
-#include "MidiHandler.h"
+#include "NoteExpressionManager.h"
 
 /**
  */
 class ArpsEuclidyaProcessor
     : public juce::AudioProcessor,
-      public juce::AudioProcessorValueTreeState::Listener {
+      public juce::AudioProcessorValueTreeState::Listener,
+      public clap_juce_extensions::clap_juce_audio_processor_capabilities {
  public:
   //==============================================================================
   ArpsEuclidyaProcessor();
@@ -63,27 +74,40 @@ class ArpsEuclidyaProcessor
 
   class ArpsEuclidyaEditor *getEditor();
 
-  MidiHandler &getMidiHandler() { return midiHandler; }
+  NoteExpressionManager &getNoteExpressionManager() {
+    return noteExpressionManager;
+  }
 
-  juce::AudioProcessorValueTreeState apvts;
-  juce::MidiKeyboardState keyboardState;
-  std::array<std::atomic<float> *, 32> macros = {nullptr};
-  std::array<MacroParameter *, 32> macroParams = {nullptr};
+  // CLAP Extensions
+  bool supportsNoteExpressions() override;
+  bool supportsDirectEvent(uint16_t space_id, uint16_t type) override;
+  bool supportsNoteDialectClap(bool isInput) override;
+  bool prefersNoteDialectClap(bool isInput) override;
+  void handleDirectEvent(const clap_event_header_t *event,
+                         int sampleOffset) override;
+  bool supportsOutboundEvents() override { return true; }
+  void addOutboundEventsToQueue(const clap_output_events *out_events,
+                                const juce::MidiBuffer &midiBuffer,
+                                int sampleOffset) override;
 
-  // Called after graph changes to update macro display names
   void updateMacroNames();
 
   juce::AbstractFifo midiLogFifo{512};
   std::array<MidiLogEvent, 512> midiLogBuffer;
   void logMidiEvent(int type, int channel, int d1, float d2);
 
-  // Subsystems
-  MidiHandler midiHandler;
+  // Subsystems and state accessed by UI
+  NoteExpressionManager noteExpressionManager;
   ClockManager clockManager;
   GraphEngine graphEngine;
   juce::CriticalSection graphLock;
 
   std::atomic<bool> macrosDirty{true};
+
+  juce::AudioProcessorValueTreeState apvts;
+  juce::MidiKeyboardState keyboardState;
+  std::array<std::atomic<float> *, 32> macros = {nullptr};
+  std::array<MacroParameter *, 32> macroParams = {nullptr};
 
   struct PatchMetadata {
     juce::String name;
@@ -105,10 +129,13 @@ class ArpsEuclidyaProcessor
   void addNode(const std::shared_ptr<GraphNode> &node);
   void removeNode(GraphNode *node);
 
-  // Hardcoded Step 2 Nodes
-  // Hardcoded Step 2 Nodes
+  std::atomic<bool> isClapProtocol{false};
 
  private:
+  void handleNoteOnEvent(const clap_event_note_t *event);
+  void handleNoteOffEvent(const clap_event_note_t *event);
+  void handleNoteExpressionEvent(const clap_event_note_expression_t *event);
+
   static void upgradePatch(juce::XmlElement *xml, int fromVersion);
   void loadFromXml(juce::XmlElement *xmlState);
   static juce::AudioProcessorValueTreeState::ParameterLayout

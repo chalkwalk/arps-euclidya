@@ -1,11 +1,11 @@
 #pragma once
 
 #include "../GraphNode.h"
-#include "../MidiHandler.h"
+#include "../NoteExpressionManager.h"
 
 class MidiInNode : public GraphNode {
  public:
-  MidiInNode(MidiHandler &handler,
+  MidiInNode(NoteExpressionManager &handler,
              std::array<std::atomic<float> *, 32> macrosArray);
   ~MidiInNode() override = default;
 
@@ -19,7 +19,7 @@ class MidiInNode : public GraphNode {
   int macroChannelFilter = -1;
   int mpeEnabled = 0;
 
-  MidiHandler &getMidiHandler() { return midiHandler; }
+  NoteExpressionManager &getNoteExpressionManager() { return noteExpressionManager; }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
@@ -29,6 +29,6 @@ class MidiInNode : public GraphNode {
   }
 
  private:
-  MidiHandler &midiHandler;
+  NoteExpressionManager &noteExpressionManager;
   std::array<std::atomic<float> *, 32> macros;
 };

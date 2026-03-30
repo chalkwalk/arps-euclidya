@@ -8,11 +8,11 @@
 
 #include "../ClockManager.h"
 #include "../GraphNode.h"
-#include "../MidiHandler.h"
+#include "../NoteExpressionManager.h"
 
 class MidiOutNode : public GraphNode {
  public:
-  MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
+  MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx,
               std::array<std::atomic<float> *, 32> macrosArray);
   ~MidiOutNode() override = default;
 
@@ -25,7 +25,7 @@ class MidiOutNode : public GraphNode {
   // Called immediately when UI controls change
   void parameterChanged() override { clampParameters(); }
 
-  void generateMidi(juce::MidiBuffer &outputBuffer, int samplePosition);
+  void generateOutput(NoteEventCollector &collector, int samplePosition);
 
   // Returns a formatted string showing the cycle length in ticks, quarter
   // beats, and bars
@@ -122,9 +122,9 @@ class MidiOutNode : public GraphNode {
   std::atomic<bool> lastTickPlayedNote{false};
 
  private:
-  void flushPlayingNotes(juce::MidiBuffer &buffer, int samplePosition);
+  void flushPlayingNotes(NoteEventCollector &collector, int samplePosition);
 
-  MidiHandler &midiHandler;
+  NoteExpressionManager &noteExpressionManager;
   ClockManager &clockManager;
   std::array<std::atomic<float> *, 32> macros;
 
@@ -150,7 +150,6 @@ class MidiOutNode : public GraphNode {
   // (0.0 = no correction needed, decays each tick via *=0.5)
   double forgivingSlipFraction = 0.0;
 
-  // Notes currently playing that need a NoteOff sent later (channel,
-  // noteNumber)
-  std::vector<std::pair<int, int>> playingNotes;
+  // Notes currently playing that need a NoteOff sent later
+  std::vector<NoteInfo> playingNotes;
 };

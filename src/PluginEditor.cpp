@@ -57,7 +57,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   graphCanvas->onNodeDropped = [this](const juce::String &nodeType,
                                       juce::Point<int> screenPos) {
     auto newNode = NodeFactory::createNode(
-        nodeType.toStdString(), audioProcessor.midiHandler,
+        nodeType.toStdString(), audioProcessor.noteExpressionManager,
         audioProcessor.clockManager, audioProcessor.macros);
     if (newNode) {
       graphCanvas->addNodeAtPosition(newNode, screenPos);
@@ -74,7 +74,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     }
 
     auto newNode = NodeFactory::createNode(
-        original->getName(), audioProcessor.midiHandler,
+        original->getName(), audioProcessor.noteExpressionManager,
         audioProcessor.clockManager, audioProcessor.macros);
 
     if (newNode) {
@@ -122,7 +122,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   clearNotesButton.setButtonText("Clear Notes");
   clearNotesButton.onClick = [this]() {
     audioProcessor.keyboardState.allNotesOff(0);
-    audioProcessor.midiHandler.clearAllNotes();
+    audioProcessor.noteExpressionManager.clearAllNotes();
     audioProcessor.graphEngine.recalculate();
   };
 
@@ -225,7 +225,7 @@ void ArpsEuclidyaEditor::resized() {
 
 void ArpsEuclidyaEditor::addNodeFromLibrary(const juce::String &nodeType) {
   auto newNode = NodeFactory::createNode(
-      nodeType.toStdString(), audioProcessor.midiHandler,
+      nodeType.toStdString(), audioProcessor.noteExpressionManager,
       audioProcessor.clockManager, audioProcessor.macros);
   if (newNode) {
     graphCanvas->addNodeAtDefaultPosition(newNode);

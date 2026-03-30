@@ -2,9 +2,11 @@
 
 #include "../EuclideanMath.h"
 
-MidiOutNode::MidiOutNode(MidiHandler &midiCtx, ClockManager &clockCtx,
+MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx,
                          std::array<std::atomic<float> *, 32> macrosArray)
-    : midiHandler(midiCtx), clockManager(clockCtx), macros(macrosArray) {}
+    : noteExpressionManager(midiCtx),
+      clockManager(clockCtx),
+      macros(macrosArray) {}
 
 namespace {
 bool stepsAreEqual(const std::vector<HeldNote> &a,
@@ -102,11 +104,11 @@ void MidiOutNode::clampParameters() {
   ui_rOffsetMax = (rSteps + 1) / 2;
 }
 
-void MidiOutNode::flushPlayingNotes(juce::MidiBuffer &buffer,
+void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
                                     int samplePosition) {
   for (const auto &note : playingNotes) {
-    buffer.addEvent(juce::MidiMessage::noteOff(note.first, note.second),
-                    samplePosition);
+    collector.addNoteOff(note.channel, note.noteNumber, 0.0f, samplePosition,
+                         note.noteID);
   }
   playingNotes.clear();
 }
@@ -136,8 +138,8 @@ void MidiOutNode::process() {
   }
 }
 
-void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
-                               int samplePosition) {
+void MidiOutNode::generateOutput(NoteEventCollector &collector,
+                                 int samplePosition) {
   auto it0 = inputSequences.find(0);
   bool holdingNotes = (it0 != inputSequences.end() && !it0->second.empty());
   bool isPlaying = clockManager.isHostPlaying();
@@ -243,12 +245,15 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
 
   // Cleanup playing notes on every tick
   if (isTick) {
-    flushPlayingNotes(outputBuffer, samplePosition);
+    flushPlayingNotes(collector, samplePosition);
     lastTickPlayedNote = false;
   }
 
+  if (!isPlaying && wasPlaying) {
+    flushPlayingNotes(collector, samplePosition);
+  }
+
   if (!holdingNotes) {
-    flushPlayingNotes(outputBuffer, samplePosition);
     return;
   }
 
@@ -373,7 +378,8 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
       }
     }
 
-    if (pattern[(size_t)patternIndex % pattern.size()]) {
+    bool shouldPlay = pattern[(size_t)patternIndex % pattern.size()];
+    if (shouldPlay) {
       const auto &step =
           sequence[(size_t)sequenceIndex % (size_t)sequence.size()];
       visualPatternIndex = patternIndex % (int)pattern.size();
@@ -387,10 +393,12 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
         float currentTimbre = 0.0f;
 
         if (noteTrigger.sourceNoteNumber != -1) {
-          currentPressure = midiHandler.getMpeZ(noteTrigger.sourceChannel,
-                                                noteTrigger.sourceNoteNumber);
-          currentTimbre = midiHandler.getMpeY(noteTrigger.sourceChannel,
-                                              noteTrigger.sourceNoteNumber);
+          currentPressure = noteExpressionManager.getMpeZ(
+              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
+              noteTrigger.sourceNoteID);
+          currentTimbre = noteExpressionManager.getMpeY(
+              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
+              noteTrigger.sourceNoteID);
         }
 
         float actualPressMod =
@@ -411,12 +419,15 @@ void MidiOutNode::generateMidi(juce::MidiBuffer &outputBuffer,
                 (actualTimbMod * (currentTimbre - noteTrigger.velocity)),
             0.0f, 1.0f);
 
-        outputBuffer.addEvent(
-            juce::MidiMessage::noteOn(outputChannel, noteTrigger.noteNumber,
-                                      finalVelocity),
-            samplePosition);
+        // Calculate a new noteID if possible (for CLAP tracking)
+        // For now we use -1, but we could generate a sequence here if needed.
+        int32_t outNoteID = -1;
 
-        playingNotes.emplace_back(outputChannel, noteTrigger.noteNumber);
+        collector.addNoteOn(outputChannel, noteTrigger.noteNumber,
+                            finalVelocity, samplePosition, outNoteID);
+
+        playingNotes.push_back(
+            {outputChannel, noteTrigger.noteNumber, outNoteID});
       }
     }
 

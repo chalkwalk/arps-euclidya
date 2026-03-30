@@ -6,7 +6,7 @@
 
 #include "GraphNode.h"
 
-class MidiHandler;
+class NoteExpressionManager;
 class ClockManager;
 
 class GraphEngine {
@@ -35,6 +35,9 @@ class GraphEngine {
   bool isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
                       GraphNode *ignoreNode = nullptr) const;
 
+  // Helpers to get specific node types
+  std::vector<class MidiOutNode *> getMidiOutNodes() const;
+
   juce::Point<int> findClosestFreeSpot(int startX, int startY, int gridW,
                                        int gridH,
                                        GraphNode *ignoreNode = nullptr) const;
@@ -55,7 +58,7 @@ class GraphEngine {
   bool wouldCreateCycle(GraphNode *source, GraphNode *target) const;
 
   void saveState(juce::XmlElement *xmlRoot);
-  void loadState(juce::XmlElement *xmlRoot, MidiHandler &midiCtx,
+  void loadState(juce::XmlElement *xmlRoot, NoteExpressionManager &midiCtx,
                  ClockManager &clockCtx,
                  std::array<std::atomic<float> *, 32> &macros);
 

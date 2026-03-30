@@ -71,7 +71,7 @@ SettingsPanel::SettingsPanel(ArpsEuclidyaProcessor &p) : processor(p) {
   ignoreMpeMasterPressureToggle.onClick = [this]() {
     bool state = ignoreMpeMasterPressureToggle.getToggleState();
     AppSettings::getInstance().setIgnoreMpeMasterPressure(state);
-    processor.getMidiHandler().setIgnoreMpeMasterPressure(state);
+    processor.getNoteExpressionManager().setIgnoreMpeMasterPressure(state);
   };
 
   startTimerHz(15);
@@ -153,6 +153,12 @@ void SettingsPanel::timerCallback() {
         typeStr = "Out ArpOn  ";
       else if (ev.logType == 5)
         typeStr = "Out ArpOff ";
+      else if (ev.logType == 20)
+        typeStr = "CLAP NoteOn";
+      else if (ev.logType == 21)
+        typeStr = "CLAP NoteOff";
+      else if (ev.logType == 22)
+        typeStr = "CLAP Expr";
       else
         typeStr = "Unknown (" + juce::String(ev.logType) + ")";
 

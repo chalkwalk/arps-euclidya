@@ -27,9 +27,11 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     graphEngine.recalculate();
   };
 
-  // Wire topology changes to force the MidiHandler to become dirty,
+  // Wire topology changes to force the NoteExpressionManager to become dirty,
   // ensuring current held notes are pushed through new connections instantly
-  graphEngine.onTopologyChanged = [this]() { midiHandler.forceDirty(); };
+  graphEngine.onTopologyChanged = [this]() {
+    noteExpressionManager.forceDirty();
+  };
 
   // Load default Init patch from binary resources
   int size = 0;
@@ -43,7 +45,7 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     }
   }
 
-  midiHandler.setIgnoreMpeMasterPressure(
+  noteExpressionManager.setIgnoreMpeMasterPressure(
       AppSettings::getInstance().getIgnoreMpeMasterPressure());
 }
 
@@ -127,10 +129,61 @@ bool ArpsEuclidyaProcessor::isBusesLayoutSupported(
       layouts.getMainOutputChannelSet() != juce::AudioChannelSet::disabled());
 }
 
+void ArpsEuclidyaProcessor::handleNoteOnEvent(const clap_event_note_t *event) {
+  keyboardState.noteOn(event->channel + 1, event->key, (float)event->velocity);
+  noteExpressionManager.handleNoteOn(event->channel, event->key,
+                                     (float)event->velocity, event->note_id);
+}
+
+void ArpsEuclidyaProcessor::handleNoteOffEvent(const clap_event_note_t *event) {
+  keyboardState.noteOff(event->channel + 1, event->key, (float)event->velocity);
+  noteExpressionManager.handleNoteOff(event->channel, event->key,
+                                      (float)event->velocity, event->note_id);
+}
+
+void ArpsEuclidyaProcessor::handleNoteExpressionEvent(
+    const clap_event_note_expression_t *event) {
+  NoteExpressionType type;
+  switch (event->expression_id) {
+    case CLAP_NOTE_EXPRESSION_VOLUME:
+      type = NoteExpressionType::Volume;
+      break;
+    case CLAP_NOTE_EXPRESSION_TUNING:
+      type = NoteExpressionType::Tuning;
+      break;
+    case CLAP_NOTE_EXPRESSION_BRIGHTNESS:
+      type = NoteExpressionType::Brightness;
+      break;
+    case CLAP_NOTE_EXPRESSION_PRESSURE:
+      type = NoteExpressionType::Pressure;
+      break;
+    default:
+      return;
+  }
+  noteExpressionManager.handleNoteExpression(
+      event->channel, event->key, type, (float)event->value, event->note_id);
+}
+
 void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                          juce::MidiBuffer &midiMessages) {
-  // Ensure no audio passes through
+  // Ensure no audio passes through; this is a MIDI effect.
+  // This also ensures we don't pick up noise or feedback from the host.
   buffer.clear();
+
+  // If we are running in CLAP mode, we prefer direct events for NoteOn/Off.
+  // We filter out any redundant MIDI NoteOn/Off messages here...
+  if (isClapProtocol) {
+    juce::MidiBuffer filteredMessages;
+    for (const auto metadata : midiMessages) {
+      const auto message = metadata.getMessage();
+      if (!message.isNoteOn() && !message.isNoteOff()) {
+        filteredMessages.addEvent(message, metadata.samplePosition);
+      }
+    }
+    midiMessages.swapWith(filteredMessages);
+  }
+
+  const int numSamples = buffer.getNumSamples();
 
   // Step 2: Update Clock and process incoming MPE/Note states
   clockManager.update(getPlayHead(), buffer.getNumSamples(), getSampleRate());
@@ -141,16 +194,14 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     hasLoggedParams = true;
   }
 
-  if (clockManager.isTick()) {
-    // Send a ping to our UI console
-    logMidiEvent(3, 0, 0, 0.0f);
-  }
-
   // Inject UI-generated synthetic notes and extract DAW MIDI to update the
-  // on-screen keyboard
-  keyboardState.processNextMidiBuffer(midiMessages, 0, buffer.getNumSamples(),
-                                      true);
+  // on-screen keyboard.
+  // CRITICAL: We set injectToBuffer to false in CLAP mode because we handle
+  // the notes manually and don't want redundant MIDI events on Channel 1.
+  keyboardState.processNextMidiBuffer(midiMessages, 0, numSamples,
+                                      !isClapProtocol);
 
+  // Log incoming MIDI
   for (const auto metadata : midiMessages) {
     const auto message = metadata.getMessage();
     const int channel = message.getChannel();
@@ -171,13 +222,15 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
   }
 
-  midiHandler.processMidi(midiMessages);
+  if (!isClapProtocol) {
+    noteExpressionManager.processMidi(midiMessages);
+  }
 
   {
     const juce::ScopedLock sl(graphLock);
 
     // Instantaneous graph recalculation
-    if (midiHandler.hasChanged()) {
+    if (noteExpressionManager.hasChanged()) {
       graphEngine.recalculate();
     }
 
@@ -186,10 +239,34 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     // The output node evaluates the tick and sequence cache to build the new
     // buffer. Find all MidiOutNodes in the graph and let them emit.
-    for (const auto &node : graphEngine.getNodes()) {
-      if (auto *outNode = dynamic_cast<MidiOutNode *>(node.get())) {
-        outNode->generateMidi(midiMessages, 0);
+    class MidiBufferCollector : public NoteEventCollector {
+     public:
+      MidiBufferCollector(juce::MidiBuffer &b) : buffer(b) {}
+      void addNoteOn(int channel, int noteNumber, float velocity,
+                     int sampleOffset, int32_t /*noteID*/) override {
+        buffer.addEvent(
+            juce::MidiMessage::noteOn(channel, noteNumber, velocity),
+            sampleOffset);
       }
+      void addNoteOff(int channel, int noteNumber, float velocity,
+                      int sampleOffset, int32_t /*noteID*/) override {
+        buffer.addEvent(
+            juce::MidiMessage::noteOff(channel, noteNumber, velocity),
+            sampleOffset);
+      }
+      void addNoteExpression(int channel, int noteNumber,
+                             NoteExpressionType type, float value,
+                             int sampleOffset, int32_t /*noteID*/) override {
+        // Future: map to MIDI CC/PitchBend if needed
+        juce::ignoreUnused(channel, noteNumber, type, value, sampleOffset);
+      }
+
+     private:
+      juce::MidiBuffer &buffer;
+    } collector(midiMessages);
+
+    for (const auto &outNode : graphEngine.getMidiOutNodes()) {
+      outNode->generateOutput(collector, 0);
     }
   }
 
@@ -356,7 +433,8 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
   auto *graphXml = xmlState->getChildByName("Graph");
   if (graphXml != nullptr) {
     const juce::ScopedLock sl(graphLock);
-    graphEngine.loadState(graphXml, midiHandler, clockManager, macros);
+    graphEngine.loadState(graphXml, noteExpressionManager, clockManager,
+                          macros);
     for (const auto &node : graphEngine.getNodes()) {
       node->onMappingChanged = [this]() { updateMacroNames(); };
     }
@@ -470,6 +548,106 @@ void ArpsEuclidyaProcessor::parameterChanged(const juce::String &parameterID,
   juce::ignoreUnused(parameterID, newValue);
   const juce::ScopedLock sl(graphLock);
   graphEngine.recalculate();
+}
+
+bool ArpsEuclidyaProcessor::supportsNoteExpressions() { return true; }
+
+bool ArpsEuclidyaProcessor::supportsNoteDialectClap(bool isInput) {
+  juce::ignoreUnused(isInput);
+  return true;
+}
+
+bool ArpsEuclidyaProcessor::prefersNoteDialectClap(bool isInput) {
+  juce::ignoreUnused(isInput);
+  return true;
+}
+
+bool ArpsEuclidyaProcessor::supportsDirectEvent(uint16_t space_id,
+                                                uint16_t type) {
+  if (space_id == CLAP_CORE_EVENT_SPACE_ID) {
+    switch (type) {
+      case CLAP_EVENT_NOTE_ON:
+      case CLAP_EVENT_NOTE_OFF:
+      case CLAP_EVENT_NOTE_EXPRESSION:
+      case CLAP_EVENT_MIDI:
+      case CLAP_EVENT_MIDI_SYSEX:
+        return true;
+      default:
+        break;
+    }
+  }
+  return false;
+}
+
+void ArpsEuclidyaProcessor::handleDirectEvent(const clap_event_header_t *event,
+                                              int sampleOffset) {
+  isClapProtocol = true;
+  juce::ignoreUnused(sampleOffset);
+  if (event->space_id == CLAP_CORE_EVENT_SPACE_ID) {
+    switch (event->type) {
+      case CLAP_EVENT_NOTE_ON: {
+        handleNoteOnEvent(reinterpret_cast<const clap_event_note_t *>(event));
+        break;
+      }
+      case CLAP_EVENT_NOTE_OFF: {
+        handleNoteOffEvent(reinterpret_cast<const clap_event_note_t *>(event));
+        break;
+      }
+      case CLAP_EVENT_NOTE_EXPRESSION: {
+        handleNoteExpressionEvent(
+            reinterpret_cast<const clap_event_note_expression_t *>(event));
+        break;
+      }
+      case CLAP_EVENT_PARAM_VALUE: {
+        const auto *v =
+            reinterpret_cast<const clap_event_param_value_t *>(event);
+        const auto &params = getParameters();
+        const int index = static_cast<int>(v->param_id);
+        if (index >= 0 && index < params.size()) {
+          params[index]->setValueNotifyingHost(static_cast<float>(v->value));
+        }
+        break;
+      }
+      case CLAP_EVENT_MIDI: {
+        const auto *midiEvent =
+            reinterpret_cast<const clap_event_midi_t *>(event);
+        juce::MidiMessage msg(midiEvent->data[0], midiEvent->data[1],
+                              midiEvent->data[2]);
+        noteExpressionManager.handleMidiMessage(msg);
+        break;
+      }
+      case CLAP_EVENT_MIDI_SYSEX: {
+        break;
+      }
+      default:
+        break;
+    }
+  }
+}
+
+void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
+    const clap_output_events *out_events, const juce::MidiBuffer &midiBuffer,
+    int sampleOffset) {
+  if (!out_events || !out_events->try_push)
+    return;
+
+  // Interleave MIDI events from the buffer into the CLAP output queue
+  for (auto meta : midiBuffer) {
+    auto msg = meta.getMessage();
+    if (msg.getRawDataSize() <= 3) {
+      clap_event_midi evt{};
+      evt.header.size = sizeof(clap_event_midi);
+      evt.header.type = CLAP_EVENT_MIDI;
+      evt.header.time =
+          static_cast<uint32_t>(meta.samplePosition + sampleOffset);
+      evt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+      evt.header.flags = 0;
+      evt.port_index = 0;
+      std::memcpy(&evt.data, msg.getRawData(), (size_t)msg.getRawDataSize());
+      out_events->try_push(out_events,
+                           reinterpret_cast<const clap_event_header *>(&evt));
+    }
+  }
 }
 
 // This creates new instances of the plugin

@@ -37,7 +37,7 @@ target_sources(ArpsEuclidya
         GraphCanvas.cpp
         GraphEngine.cpp
         GraphNode.cpp
-        MidiHandler.cpp
+        NoteExpressionManager.cpp
         MidiInNode/MidiInNode.cpp
         MidiOutNode/MidiOutNode.cpp
         MidiOutNode/MidiOutNodeEditor.cpp
