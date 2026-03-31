@@ -23,7 +23,7 @@ Traditional arpeggiators are often limited to linear patterns and fixed rhythmic
 * **Interactive Node Graph**: A high-performance "Neon Slate" workspace with smooth pan/zoom, snap-to-grid, and intuitive drag-and-drop patching.
 * **Instant Recalculation**: A topological execution engine ensures zero-latency response to parameter changes and MIDI input.
 * **32 Global Macros**: Map internal node parameters to global macros for easy DAW automation and MIDI mapping.
-* **Native MPE Support**: Robust support for per-note expression (Pitch, Pressure, Timbre) across the modular chain. See the [MPE Setup Guide](wiki/8_MPE_Setup.md) for DAW configuration.
+* **Native MPE Support**: Robust support for per-note expression (Pitch, Pressure, Timbre) across the modular chain. See the [MPE Setup Guide](https://github.com/chalkwalk/arps-euclidya/wiki/8_MPE_Setup) for DAW configuration.
 
 ## Build Instructions
 
