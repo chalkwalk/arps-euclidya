@@ -7,6 +7,7 @@
 #include "GraphEngine.h"
 #include "MacroMappingMenu.h"
 #include "MacroParameter.h"
+#include "NodeFactory.h"
 #include "SharedMacroUI.h"
 
 NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
@@ -494,6 +495,34 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
   // Notify canvas of selection (for z-ordering and cable highlighting)
   if (onSelected) {
     onSelected();
+  }
+
+  // Right-click on header to show replacement menu
+  if (e.mods.isRightButtonDown() && e.y < 28) {
+    juce::PopupMenu m;
+    juce::PopupMenu replaceMenu;
+
+    auto types = NodeFactory::getAvailableNodeTypes();
+    int i = 1;
+    for (const auto &type : types) {
+      // Don't include current type in replacement list
+      if (type != targetNode->getName()) {
+        replaceMenu.addItem(i, type);
+      }
+      i++;
+    }
+
+    m.addSubMenu("Replace with...", replaceMenu);
+
+    m.showMenuAsync(juce::PopupMenu::Options(), [this, types](int result) {
+      if (result > 0 && result <= (int)types.size()) {
+        if (onReplaceRequest) {
+          onReplaceRequest(types[(size_t)result - 1]);
+        }
+      }
+    });
+
+    return;
   }
 
   auto pos = e.getPosition();

@@ -67,6 +67,64 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     }
   };
 
+  graphCanvas->onNodeReplaceRequest = [this](GraphNode *oldNode,
+                                             const juce::String &newType) {
+    if (oldNode == nullptr) {
+      return;
+    }
+
+    auto newNode = NodeFactory::createNode(
+        newType.toStdString(), audioProcessor.noteExpressionManager,
+        audioProcessor.clockManager, audioProcessor.macros);
+
+    if (newNode) {
+      newNode->gridX = oldNode->gridX;
+      newNode->gridY = oldNode->gridY;
+      newNode->nodeX = oldNode->nodeX;
+      newNode->nodeY = oldNode->nodeY;
+
+      // Transfer Inputs
+      int inLimit =
+          std::min(oldNode->getNumInputPorts(), newNode->getNumInputPorts());
+      for (int i = 0; i < inLimit; ++i) {
+        // Find source for oldNode's input i
+        for (const auto &n : audioProcessor.graphEngine.getNodes()) {
+          for (const auto &[outPort, connVec] : n->getConnections()) {
+            for (const auto &conn : connVec) {
+              if (conn.targetNode == oldNode && conn.targetInputPort == i) {
+                // Transfer to new node
+                audioProcessor.graphEngine.addExplicitConnection(
+                    n.get(), outPort, newNode.get(), i);
+              }
+            }
+          }
+        }
+      }
+
+      // Transfer Outputs
+      int outLimit =
+          std::min(oldNode->getNumOutputPorts(), newNode->getNumOutputPorts());
+      for (int i = 0; i < outLimit; ++i) {
+        auto it = oldNode->getConnections().find(i);
+        if (it != oldNode->getConnections().end()) {
+          for (const auto &conn : it->second) {
+            audioProcessor.graphEngine.addExplicitConnection(
+                newNode.get(), i, conn.targetNode, conn.targetInputPort);
+          }
+        }
+      }
+
+      // Finalize swap
+      audioProcessor.graphEngine.removeNode(oldNode);
+      audioProcessor.graphEngine.addNode(newNode);
+      graphCanvas->rebuild();
+
+      if (graphCanvas->onGraphChanged) {
+        graphCanvas->onGraphChanged();
+      }
+    }
+  };
+
   graphCanvas->onNodeCloneRequest = [this](GraphNode *original, int gridX,
                                            int gridY) {
     if (original == nullptr) {

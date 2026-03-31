@@ -69,6 +69,12 @@ void GraphCanvas::rebuild() {
       repaint();
     };
 
+    block->onReplaceRequest = [this, n = node.get()](const juce::String &type) {
+      if (onNodeReplaceRequest) {
+        onNodeReplaceRequest(n, type);
+      }
+    };
+
     // Wire port dragging callbacks
     block->onPortDragStart = [this](NodeBlock *b, int port, bool isOutput,
                                     juce::Point<int> canvasPos) {
@@ -428,8 +434,28 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
         return;
       }
     }
-  } else if (e.mods.isMiddleButtonDown() ||
-             (!e.mods.isPopupMenu() && !e.mods.isAnyModifierKeyDown())) {
+
+    // If we reach here, no cable was hit by the right-click — show insertion
+    // menu
+    juce::PopupMenu m;
+    auto types = NodeFactory::getAvailableNodeTypes();
+    int i = 1;
+    for (const auto &type : types) {
+      m.addItem(i++, type);
+    }
+
+    m.showMenuAsync(juce::PopupMenu::Options(), [this, types, e](int result) {
+      if (result > 0 && result <= (int)types.size()) {
+        if (onNodeDropped) {
+          onNodeDropped(types[(size_t)result - 1], e.getPosition());
+        }
+      }
+    });
+    return;
+  }
+
+  if (e.mods.isMiddleButtonDown() ||
+      (!e.mods.isPopupMenu() && !e.mods.isAnyModifierKeyDown())) {
     // If we click empty background, initiate pan
     grabKeyboardFocus();
     isPanning = true;

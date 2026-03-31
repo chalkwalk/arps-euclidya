@@ -51,6 +51,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   // Called when the node is clicked/selected
   std::function<void()> onSelected;
+  std::function<void(const juce::String &)> onReplaceRequest;
 
  private:
   std::shared_ptr<GraphNode> targetNode;

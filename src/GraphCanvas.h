@@ -98,6 +98,7 @@ class GraphCanvas : public juce::Component,
 
   // Callbacks for editor/processor
   std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
+  std::function<void(GraphNode *, const juce::String &)> onNodeReplaceRequest;
   std::function<void(GraphNode *, int, int)> onNodeCloneRequest;
   std::function<void()> onTransportToggle;
 
