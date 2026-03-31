@@ -63,6 +63,13 @@ void TransportBar::timerCallback() {
     bpmLabel.setText(juce::String(clock.getBPM(), 1) + " BPM",
                      juce::dontSendNotification);
   }
+
+  // Sync the Play/Stop button state
+  bool isClockRunning = clock.isStandaloneRunning();
+  if (playStopButton.getToggleState() != isClockRunning) {
+    playStopButton.setToggleState(isClockRunning, juce::dontSendNotification);
+    playStopButton.setButtonText(isClockRunning ? "||" : ">");
+  }
 }
 
 void TransportBar::paint(juce::Graphics &g) {

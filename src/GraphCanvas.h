@@ -99,6 +99,7 @@ class GraphCanvas : public juce::Component,
   // Callbacks for editor/processor
   std::function<void(const juce::String &, juce::Point<int>)> onNodeDropped;
   std::function<void(GraphNode *, int, int)> onNodeCloneRequest;
+  std::function<void()> onTransportToggle;
 
   // Refresh the cached cable paths
   void refreshCableCache();

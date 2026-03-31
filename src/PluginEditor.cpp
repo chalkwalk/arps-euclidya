@@ -110,6 +110,15 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     }
   };
 
+  graphCanvas->onTransportToggle = [this]() {
+    // Only toggle for standalone
+    if (juce::PluginHostType::getPluginLoadedAs() ==
+        juce::AudioProcessor::wrapperType_Standalone) {
+      audioProcessor.clockManager.setPlaying(
+          !audioProcessor.clockManager.isStandaloneRunning());
+    }
+  };
+
   // Setup MIDI Keyboard and Clear Button
   addAndMakeVisible(midiKeyboard);
   midiKeyboard.setMidiChannel(1);

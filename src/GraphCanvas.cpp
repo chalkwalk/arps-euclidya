@@ -431,6 +431,7 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
   } else if (e.mods.isMiddleButtonDown() ||
              (!e.mods.isPopupMenu() && !e.mods.isAnyModifierKeyDown())) {
     // If we click empty background, initiate pan
+    grabKeyboardFocus();
     isPanning = true;
     lastPanScreenPos = e.getScreenPosition();
   }
@@ -744,6 +745,29 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
     return true;
   }
 
+  // Ctrl+D / Cmd+D to clone selected node
+  if ((key.getKeyCode() == 'd' || key.getKeyCode() == 'D') &&
+      key.getModifiers().isCtrlDown()) {
+    if (selectedNode != nullptr) {
+      auto gw = selectedNode->getGridWidth();
+      auto gh = selectedNode->getGridHeight();
+      // Find the closest free spot starting from the current node's position
+      auto nearest = graphEngine.findClosestFreeSpot(
+          selectedNode->gridX, selectedNode->gridY, gw, gh, nullptr);
+      requestNodeClone(selectedNode, nearest.x, nearest.y);
+      return true;
+    }
+  }
+
+  // Space to toggle transport
+  if (key.getKeyCode() == juce::KeyPress::spaceKey ||
+      key.getTextCharacter() == ' ') {
+    if (onTransportToggle) {
+      onTransportToggle();
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -951,7 +975,8 @@ void GraphCanvas::addNodeAtPosition(const std::shared_ptr<GraphNode> &node,
                                     juce::Point<int> screenPos) {
   juce::ScopedLock l(graphLock);
 
-  // Convert screen drop pixel to internal world position considering pan & zoom
+  // Convert screen drop pixel to internal world position considering pan &
+  // zoom
   float worldX = (float)screenPos.x;
   float worldY = (float)screenPos.y;
   getCameraTransform().inverted().transformPoint(worldX, worldY);
@@ -984,7 +1009,8 @@ void GraphCanvas::addNodeAtPosition(const std::shared_ptr<GraphNode> &node,
   // Rebuild the NodeBlock wrappers
   rebuild();
 
-  // Recalculate and apply scaled block bounds cleanly derived from nodeX/nodeY
+  // Recalculate and apply scaled block bounds cleanly derived from
+  // nodeX/nodeY
   updateTransforms();
 
   if (onGraphChanged) {
@@ -1110,8 +1136,11 @@ void GraphCanvas::itemDropped(const SourceDetails &details) {
 void GraphCanvas::selectNode(GraphNode *node) {
   if (selectedNode != node) {
     selectedNode = node;
+    grabKeyboardFocus();
     refreshCableCache();
     repaint();
+  } else {
+    grabKeyboardFocus();
   }
 }
 
