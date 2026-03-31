@@ -230,14 +230,16 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   // 1. Draw background cables
   for (const auto &cable : cachedCables) {
     if (!cable.isSelected && !proximityCableID.matches(cable)) {
-      drawCable(g, cable.path, false, cable.isLarge, false);
+      drawCable(g, cable.path, false, cable.isLarge, false, cable.hasData,
+                cable.hasNotes);
     }
   }
 
   // 2. Draw foreground/selected cables
   for (const auto &cable : cachedCables) {
     if (cable.isSelected && !proximityCableID.matches(cable)) {
-      drawCable(g, cable.path, false, cable.isLarge, true);
+      drawCable(g, cable.path, false, cable.isLarge, true, cable.hasData,
+                cable.hasNotes);
     }
   }
 
@@ -245,7 +247,8 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   if (proximityCableID.isValid()) {
     for (const auto &cable : cachedCables) {
       if (proximityCableID.matches(cable)) {
-        drawCable(g, cable.path, true, cable.isLarge, true);
+        drawCable(g, cable.path, true, cable.isLarge, true, cable.hasData,
+                  cable.hasNotes);
         break;
       }
     }
@@ -270,7 +273,7 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     dragPath.cubicTo(start.x + dx, (float)start.y, end.x - dx, (float)end.y,
                      (float)end.x, (float)end.y);
 
-    drawCable(g, dragPath, true, false, true);
+    drawCable(g, dragPath, true, false, true, false, false);
   }
 
   g.restoreState();  // Pop the camera transform to draw tooltips in screen
@@ -328,7 +331,16 @@ void GraphCanvas::refreshCableCache() {
                            (float)end.y, (float)end.x, (float)end.y);
 
         const auto &outSeq = node->getOutputSequence(outPort);
-        cable.isLarge = (outSeq.size() > 10000);
+        cable.stepCount = (int)outSeq.size();
+        cable.activeStepCount = 0;
+        for (const auto &step : outSeq) {
+          if (!step.empty()) {
+            cable.activeStepCount++;
+          }
+        }
+        cable.hasData = (cable.stepCount > 0);
+        cable.hasNotes = (cable.activeStepCount > 0);
+        cable.isLarge = (cable.stepCount > 10000);
         cable.isSelected =
             (selectedNode != nullptr) &&
             (node.get() == selectedNode || conn.targetNode == selectedNode);
@@ -340,7 +352,8 @@ void GraphCanvas::refreshCableCache() {
 }
 
 void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
-                            bool highlighted, bool warning, bool isForeground) {
+                            bool highlighted, bool warning, bool isForeground,
+                            bool hasData, bool hasNotes) {
   // 1. Drop Shadow (Subtle dark offset)
   auto shadowPath = path;
   shadowPath.applyTransform(juce::AffineTransform::translation(1.0f, 1.5f));
@@ -353,12 +366,17 @@ void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
     baseColor = juce::Colour(0xffeeee44);
   } else if (warning) {
     baseColor = juce::Colour(0xffff6633);
-  } else if (isForeground) {
-    baseColor = juce::Colour(0xffdddddd);  // Bright white
+  } else if (hasNotes) {
+    baseColor = juce::Colour(0xff0df0e3);  // Neon Cyan
+  } else if (hasData) {
+    baseColor = juce::Colour(0xff2266aa);  // Dark Blue
   } else {
-    // Dimmed cable when a node is selected but this cable isn't connected to it
-    baseColor = (selectedNode != nullptr) ? juce::Colour(0xff555555)
-                                          : juce::Colour(0xffdddddd);
+    baseColor = juce::Colour(0xff555555);  // Dead Grey
+  }
+
+  // Dimming for background (non-selected) cables
+  if (!isForeground && !highlighted && selectedNode != nullptr) {
+    baseColor = baseColor.withMultipliedAlpha(0.4f);
   }
 
   // Multi-stroke Bloom
@@ -878,10 +896,8 @@ void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
     juce::Point<float> nearest;
     cable.path.getNearestPoint(localPosWorld, nearest);
     if (nearest.getDistanceFrom(localPosWorld) < 12.0f) {
-      cableTooltipText =
-          juce::String(
-              cable.sourceNode->getOutputSequence(cable.sourcePort).size()) +
-          " steps";
+      cableTooltipText = "Steps: " + juce::String(cable.stepCount) +
+                         " | Active: " + juce::String(cable.activeStepCount);
       if (cable.isLarge) {
         cableTooltipText += juce::String::fromUTF8(" \xe2\x9a\xa0");
       }

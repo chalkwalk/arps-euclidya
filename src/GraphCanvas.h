@@ -119,7 +119,7 @@ class GraphCanvas : public juce::Component,
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
   void drawCable(juce::Graphics &g, const juce::Path &path, bool highlighted,
-                 bool warning, bool isForeground);
+                 bool warning, bool isForeground, bool hasData, bool hasNotes);
   void updateCanvasSize();
 
   // Cable tooltip state
@@ -162,6 +162,10 @@ class GraphCanvas : public juce::Component,
     juce::Path path;
     bool isLarge = false;
     bool isSelected = false;
+    int stepCount = 0;
+    int activeStepCount = 0;
+    bool hasData = false;
+    bool hasNotes = false;
   };
 
   struct CableID {
