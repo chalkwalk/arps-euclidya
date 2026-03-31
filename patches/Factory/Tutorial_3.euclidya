@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Midi In" uuid="a3f3bb06eb394b6fbc7a2d27208a4f69" gridX="1"
+            gridY="3" bypassed="0" channelFilter="1" macroChannelFilter="-1"
+            mpeEnabled="0"/>
+      <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="7"
+            gridY="2" bypassed="0" pSteps="7" pBeats="5" pOffset="-2" rSteps="16"
+            rBeats="10" rOffset="1" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
+            patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="4" triplet="0" outputChannel="1" pressureToVelocity="0.0"
+            timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
+      <Node type="Note" uuid="69fbbc6a6a2e424e99c1c98e185b23f9" gridX="7"
+            gridY="1" bypassed="0" noteText="MIDI output to channel 1, played with a simple euclidean rhythm, and euclidean note skipping."
+            sizeW="2" sizeH="1"/>
+      <Node type="Note Large" uuid="4d9d2d8eb12b46eea13ac88bf483e4ca" gridX="3"
+            gridY="0" bypassed="0" noteText="MIDI input from channel 1 in the order you pressed them; transpose one copy up 4 semi tones and one down 5 semitones. Combine the 3 sequences into a series of chords, then quantize the chords to a D Dorian scale."
+            sizeW="3" sizeH="2"/>
+      <Node type="Transpose" uuid="286c4dc202254e4eb8c314f689e9b497" gridX="2"
+            gridY="2" bypassed="0" semitones="4" macroSemitones="-1"/>
+      <Node type="Transpose" uuid="a601bd5608944f9f9f2be0c075e2e631" gridX="3"
+            gridY="4" bypassed="0" semitones="-5" macroSemitones="-1"/>
+      <Node type="Zip" uuid="813a0e2f28ce401793cf571ef1a9307c" gridX="3"
+            gridY="3" bypassed="0"/>
+      <Node type="Zip" uuid="8df7107502fc4d0192cf5e4213c9c01d" gridX="4"
+            gridY="2" bypassed="0"/>
+      <Node type="Quantizer" uuid="47c0629207834dd99adcb316817164f9" gridX="5"
+            gridY="2" bypassed="0" tonality="3" rootNote="2" mode="1" restOnDrop="1"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="a3f3bb06eb394b6fbc7a2d27208a4f69" sourcePort="0"
+                  targetUuid="286c4dc202254e4eb8c314f689e9b497" targetPort="0"/>
+      <Connection sourceUuid="a3f3bb06eb394b6fbc7a2d27208a4f69" sourcePort="0"
+                  targetUuid="813a0e2f28ce401793cf571ef1a9307c" targetPort="1"/>
+      <Connection sourceUuid="a3f3bb06eb394b6fbc7a2d27208a4f69" sourcePort="0"
+                  targetUuid="a601bd5608944f9f9f2be0c075e2e631" targetPort="0"/>
+      <Connection sourceUuid="286c4dc202254e4eb8c314f689e9b497" sourcePort="0"
+                  targetUuid="813a0e2f28ce401793cf571ef1a9307c" targetPort="0"/>
+      <Connection sourceUuid="a601bd5608944f9f9f2be0c075e2e631" sourcePort="0"
+                  targetUuid="8df7107502fc4d0192cf5e4213c9c01d" targetPort="1"/>
+      <Connection sourceUuid="813a0e2f28ce401793cf571ef1a9307c" sourcePort="0"
+                  targetUuid="8df7107502fc4d0192cf5e4213c9c01d" targetPort="0"/>
+      <Connection sourceUuid="8df7107502fc4d0192cf5e4213c9c01d" sourcePort="0"
+                  targetUuid="47c0629207834dd99adcb316817164f9" targetPort="0"/>
+      <Connection sourceUuid="47c0629207834dd99adcb316817164f9" sourcePort="0"
+                  targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="04: Chords &amp; Scales" author="ChalkWalkMusic" description="Building chords with Zip and forcing them to a scale with Quantizer."
+            tags="tutorial chord scale" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+</ArpsEuclidyaState>

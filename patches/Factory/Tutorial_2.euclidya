@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Sort" uuid="00000000000000000000000000000000" gridX="2"
+            gridY="1" bypassed="0"/>
+      <Node type="Midi In" uuid="a3f3bb06eb394b6fbc7a2d27208a4f69" gridX="1"
+            gridY="1" bypassed="0" channelFilter="1" macroChannelFilter="-1"
+            mpeEnabled="0"/>
+      <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="5"
+            gridY="1" bypassed="0" pSteps="6" pBeats="5" pOffset="-3" rSteps="8"
+            rBeats="5" rOffset="1" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
+            patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="5" triplet="0" outputChannel="1" pressureToVelocity="0.0"
+            timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
+      <Node type="Note" uuid="69fbbc6a6a2e424e99c1c98e185b23f9" gridX="6"
+            gridY="0" bypassed="0" noteText="MIDI output to channel 1, played with a simple euclidean rhythm, and euclidean note skipping."
+            sizeW="2" sizeH="1"/>
+      <Node type="Reverse" uuid="d976dd2a73cd463090586003e441f5b8" gridX="2"
+            gridY="2" bypassed="0"/>
+      <Node type="Concatenate" uuid="7390d35fea27423eb7d4cf539e13ff69" gridX="4"
+            gridY="1" bypassed="0"/>
+      <Node type="Note Large" uuid="4d9d2d8eb12b46eea13ac88bf483e4ca" gridX="2"
+            gridY="-1" bypassed="0" noteText="MIDI input from channel 1, sorted into ascending order, then reversed: the forward and the reverse version are then concatenated."
+            sizeW="3" sizeH="2"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="00000000000000000000000000000000" sourcePort="0"
+                  targetUuid="d976dd2a73cd463090586003e441f5b8" targetPort="0"/>
+      <Connection sourceUuid="00000000000000000000000000000000" sourcePort="0"
+                  targetUuid="7390d35fea27423eb7d4cf539e13ff69" targetPort="0"/>
+      <Connection sourceUuid="a3f3bb06eb394b6fbc7a2d27208a4f69" sourcePort="0"
+                  targetUuid="00000000000000000000000000000000" targetPort="0"/>
+      <Connection sourceUuid="d976dd2a73cd463090586003e441f5b8" sourcePort="0"
+                  targetUuid="7390d35fea27423eb7d4cf539e13ff69" targetPort="1"/>
+      <Connection sourceUuid="7390d35fea27423eb7d4cf539e13ff69" sourcePort="0"
+                  targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="03: Parallelism" author="ChalkWalkMusic" description="Combining multiple sequence branches with Concatenate."
+            tags="tutorial parallel" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+</ArpsEuclidyaState>

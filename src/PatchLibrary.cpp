@@ -23,6 +23,13 @@ struct FactoryPatchEntry {
 
 static const FactoryPatchEntry kFactoryPatches[] = {
     {"Init_euclidya", "Init.euclidya"},
+    {"Tutorial_0_euclidya", "Tutorial_0.euclidya"},
+    {"Tutorial_1_euclidya", "Tutorial_1.euclidya"},
+    {"Tutorial_2_euclidya", "Tutorial_2.euclidya"},
+    {"Tutorial_3_euclidya", "Tutorial_3.euclidya"},
+    {"Tutorial_4_euclidya", "Tutorial_4.euclidya"},
+    {"Tutorial_5_euclidya", "Tutorial_5.euclidya"},
+    {"Tutorial_6_euclidya", "Tutorial_6.euclidya"},
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

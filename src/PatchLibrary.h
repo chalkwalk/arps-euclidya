@@ -5,7 +5,7 @@
 #include <vector>
 
 // Bump this string whenever factory patches change to force re-extraction.
-static constexpr const char *kFactoryPatchVersion = "1.0";
+static constexpr const char *kFactoryPatchVersion = "1.2";
 
 class PatchLibrary {
  public:

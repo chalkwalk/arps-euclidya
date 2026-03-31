@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="9"
+            gridY="2" bypassed="0" pSteps="7" pBeats="5" pOffset="-2" rSteps="13"
+            rBeats="11" rOffset="3" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="2"
+            patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="5" triplet="0" outputChannel="1" pressureToVelocity="0.0"
+            timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
+      <Node type="Note" uuid="69fbbc6a6a2e424e99c1c98e185b23f9" gridX="10"
+            gridY="1" bypassed="0" noteText="MIDI output to channel 1, played with a simple euclidean rhythm, and euclidean note skipping."
+            sizeW="2" sizeH="1"/>
+      <Node type="Note Large" uuid="4d9d2d8eb12b46eea13ac88bf483e4ca" gridX="4"
+            gridY="0" bypassed="0" noteText="No MIDI input, but rather all 12 chromatic notes, quantized to C aeolean (dropping repeats, so we just get the scale tones). A version in convergent and divergent ordered plus forward and reverse, all zipped into a 4 note chord."
+            sizeW="3" sizeH="2"/>
+      <Node type="All Notes" uuid="ec01ef74bce34c02bc463d4232f9589a" gridX="2"
+            gridY="2" bypassed="0" baseOctave="5"/>
+      <Node type="Quantizer" uuid="1da52eff8e2e4cbca784ac3ed363747e" gridX="3"
+            gridY="2" bypassed="0" tonality="4" rootNote="0" mode="0" restOnDrop="0"/>
+      <Node type="Reverse" uuid="cb634903ba674374a1f26b6991116f25" gridX="5"
+            gridY="2" bypassed="0"/>
+      <Node type="Converge" uuid="c366ded1fb1b42e6a88b82ac86c1ea67" gridX="5"
+            gridY="3" bypassed="0"/>
+      <Node type="Diverge" uuid="1cd5cdc33eac4217b8b56ae73d5d6a31" gridX="5"
+            gridY="4" bypassed="0"/>
+      <Node type="Octave Transpose" uuid="30b71e9295a34e63bccc4f3f9f78e951"
+            gridX="6" gridY="4" bypassed="0" octaves="-1" macroOctaves="-1"/>
+      <Node type="Octave Transpose" uuid="aaf9b73a20364da1a6298fec065d91d6"
+            gridX="6" gridY="2" bypassed="0" octaves="1" macroOctaves="-1"/>
+      <Node type="Zip" uuid="6dc33145a7c7450c882124eaeec87e80" gridX="6"
+            gridY="3" bypassed="0"/>
+      <Node type="Zip" uuid="9b4c43c8cd3642f1be2103134c2ec85b" gridX="7"
+            gridY="2" bypassed="0"/>
+      <Node type="Zip" uuid="2fc6884f0f9f486da1f17d2abe32935b" gridX="7"
+            gridY="3" bypassed="0"/>
+      <Node type="Converge" uuid="cddf0324660c47929b710336db3f221b" gridX="8"
+            gridY="3" bypassed="0"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="ec01ef74bce34c02bc463d4232f9589a" sourcePort="0"
+                  targetUuid="1da52eff8e2e4cbca784ac3ed363747e" targetPort="0"/>
+      <Connection sourceUuid="1da52eff8e2e4cbca784ac3ed363747e" sourcePort="0"
+                  targetUuid="cb634903ba674374a1f26b6991116f25" targetPort="0"/>
+      <Connection sourceUuid="1da52eff8e2e4cbca784ac3ed363747e" sourcePort="0"
+                  targetUuid="c366ded1fb1b42e6a88b82ac86c1ea67" targetPort="0"/>
+      <Connection sourceUuid="1da52eff8e2e4cbca784ac3ed363747e" sourcePort="0"
+                  targetUuid="1cd5cdc33eac4217b8b56ae73d5d6a31" targetPort="0"/>
+      <Connection sourceUuid="1da52eff8e2e4cbca784ac3ed363747e" sourcePort="0"
+                  targetUuid="9b4c43c8cd3642f1be2103134c2ec85b" targetPort="1"/>
+      <Connection sourceUuid="cb634903ba674374a1f26b6991116f25" sourcePort="0"
+                  targetUuid="aaf9b73a20364da1a6298fec065d91d6" targetPort="0"/>
+      <Connection sourceUuid="c366ded1fb1b42e6a88b82ac86c1ea67" sourcePort="0"
+                  targetUuid="6dc33145a7c7450c882124eaeec87e80" targetPort="0"/>
+      <Connection sourceUuid="1cd5cdc33eac4217b8b56ae73d5d6a31" sourcePort="0"
+                  targetUuid="30b71e9295a34e63bccc4f3f9f78e951" targetPort="0"/>
+      <Connection sourceUuid="30b71e9295a34e63bccc4f3f9f78e951" sourcePort="0"
+                  targetUuid="6dc33145a7c7450c882124eaeec87e80" targetPort="1"/>
+      <Connection sourceUuid="aaf9b73a20364da1a6298fec065d91d6" sourcePort="0"
+                  targetUuid="9b4c43c8cd3642f1be2103134c2ec85b" targetPort="0"/>
+      <Connection sourceUuid="6dc33145a7c7450c882124eaeec87e80" sourcePort="0"
+                  targetUuid="2fc6884f0f9f486da1f17d2abe32935b" targetPort="1"/>
+      <Connection sourceUuid="9b4c43c8cd3642f1be2103134c2ec85b" sourcePort="0"
+                  targetUuid="2fc6884f0f9f486da1f17d2abe32935b" targetPort="0"/>
+      <Connection sourceUuid="2fc6884f0f9f486da1f17d2abe32935b" sourcePort="0"
+                  targetUuid="cddf0324660c47929b710336db3f221b" targetPort="0"/>
+      <Connection sourceUuid="cddf0324660c47929b710336db3f221b" sourcePort="0"
+                  targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="05: Generative" author="ChalkWalkMusic" description="Autonomous chord generation using Symmetries and All Notes."
+            tags="tutorial generative symmetry" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+</ArpsEuclidyaState>
