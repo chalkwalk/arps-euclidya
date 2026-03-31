@@ -8,6 +8,16 @@ void GraphNode::clearInputSequence(int inputPort) {
   inputSequences.erase(inputPort);
 }
 
+const NoteSequence &GraphNode::getInputSequence(int inputPort) const {
+  auto it = inputSequences.find(inputPort);
+  if (it != inputSequences.end()) {
+    return it->second;
+  }
+
+  static const NoteSequence emptySequence;
+  return emptySequence;
+}
+
 const NoteSequence &GraphNode::getOutputSequence(int outputPort) const {
   auto it = outputSequences.find(outputPort);
   if (it != outputSequences.end()) {
@@ -16,6 +26,11 @@ const NoteSequence &GraphNode::getOutputSequence(int outputPort) const {
 
   static const NoteSequence emptySequence;
   return emptySequence;
+}
+
+void GraphNode::setOutputSequence(int outputPort,
+                                  const NoteSequence &sequence) {
+  outputSequences[outputPort] = sequence;
 }
 
 void GraphNode::addConnection(int thisOutputPort, GraphNode *targetNode,

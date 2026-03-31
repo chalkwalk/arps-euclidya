@@ -58,6 +58,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   juce::Label titleLabel;
   juce::TextButton deleteButton{"X"};
+  juce::TextButton bypassButton{"B"};
 
   // Fallback for nodes not yet migrated to NodeLayout
   std::unique_ptr<juce::Component> customControls;

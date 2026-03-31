@@ -38,6 +38,23 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
     });
   };
 
+  bypassButton.setClickingTogglesState(true);
+  bypassButton.setToggleState(targetNode->bypassed, juce::dontSendNotification);
+  bypassButton.setColour(juce::TextButton::buttonColourId,
+                         juce::Colours::transparentBlack);
+  bypassButton.setColour(juce::TextButton::buttonOnColourId,
+                         juce::Colours::orange.withAlpha(0.5f));
+  bypassButton.setColour(juce::TextButton::textColourOffId,
+                         juce::Colours::white.withAlpha(0.5f));
+  bypassButton.setColour(juce::TextButton::textColourOnId,
+                         juce::Colours::white);
+  addAndMakeVisible(bypassButton);
+  bypassButton.onClick = [this] {
+    targetNode->bypassed = bypassButton.getToggleState();
+    parentCanvas.getEngine().recalculate();
+    repaint();
+  };
+
   auto layout = node->getLayout();
   for (const auto &element : layout.elements) {
     juce::Component *comp = nullptr;
@@ -332,6 +349,16 @@ void NodeBlock::paint(juce::Graphics &g) {
   g.setColour(ArpsLookAndFeel::getForegroundSlate());
   g.fillRoundedRectangle(bounds, 6.0f);
 
+  if (targetNode->bypassed) {
+    g.setColour(juce::Colours::black.withAlpha(0.4f));
+    g.fillRoundedRectangle(bounds, 6.0f);
+
+    g.setColour(juce::Colours::white.withAlpha(0.1f));
+    for (float x = -bounds.getHeight(); x < bounds.getWidth(); x += 12.0f) {
+      g.drawLine(x, bounds.getHeight(), x + bounds.getHeight(), 0.0f, 2.0f);
+    }
+  }
+
   // Border (Neon tinted)
   if (parentCanvas.getSelectedNode() == targetNode.get()) {
     // Outer glow for selected node
@@ -414,6 +441,9 @@ void NodeBlock::resized() {
 
   // Right aligned delete button
   deleteButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
+
+  // Left aligned bypass button
+  bypassButton.setBounds(header.removeFromLeft(HEADER_HEIGHT).reduced(3));
 
   // Title
   titleLabel.setBounds(header.withTrimmedLeft(6));

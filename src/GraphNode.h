@@ -17,6 +17,7 @@ class GraphNode {
   virtual ~GraphNode() = default;
 
   juce::Uuid nodeId;
+  bool bypassed = false;
 
   virtual std::string getName() const = 0;
 
@@ -54,6 +55,7 @@ class GraphNode {
     if (xml) {
       xml->setAttribute("gridX", gridX);
       xml->setAttribute("gridY", gridY);
+      xml->setAttribute("bypassed", bypassed);
     }
   }
   void loadBaseState(juce::XmlElement *xml) {
@@ -72,6 +74,7 @@ class GraphNode {
       // Keep float sync for Phase 1-3 transitional logic
       nodeX = (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
       nodeY = (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
+      bypassed = xml->getBoolAttribute("bypassed", false);
     }
   }
 
@@ -105,7 +108,9 @@ class GraphNode {
 
   void setInputSequence(int inputPort, const NoteSequence &sequence);
   void clearInputSequence(int inputPort);
+  const NoteSequence &getInputSequence(int inputPort) const;
   const NoteSequence &getOutputSequence(int outputPort) const;
+  void setOutputSequence(int outputPort, const NoteSequence &sequence);
 
   struct Connection {
     GraphNode *targetNode;

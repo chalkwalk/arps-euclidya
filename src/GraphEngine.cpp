@@ -319,8 +319,13 @@ void GraphEngine::recalculate() {
   auto sorted = topologicalSort();
 
   for (GraphNode *node : sorted) {
-    // 1. Process this node with current inputs
-    node->process();
+    if (node->bypassed) {
+      if (node->getNumInputPorts() > 0 && node->getNumOutputPorts() > 0) {
+        node->setOutputSequence(0, node->getInputSequence(0));
+      }
+    } else {
+      node->process();
+    }
 
     // 2. Propagate its outputs forward to targets
     for (const auto &[outPort, connVec] : node->getConnections()) {
