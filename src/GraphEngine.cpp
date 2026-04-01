@@ -86,39 +86,69 @@ bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
   return false;
 }
 
-juce::Point<int> GraphEngine::findClosestFreeSpot(int startX, int startY,
-                                                  int gridW, int gridH,
-                                                  GraphNode *ignoreNode) const {
+juce::Point<int> GraphEngine::findClosestFreeSpot(
+    int startX, int startY, int gridW, int gridH, GraphNode *ignoreNode,
+    juce::Point<int> preferredPoint) const {
   if (!isAreaOccupied(startX, startY, gridW, gridH, ignoreNode)) {
     return {startX, startY};
   }
 
+  auto getDistSq = [](int x1, int y1, int x2, int y2) {
+    long long dx = x1 - x2;
+    long long dy = y1 - y2;
+    return dx * dx + dy * dy;
+  };
+
   // Expanding square ring search
-  for (int radius = 1; radius < 50;
-       ++radius) {  // Arbitrary limit to prevent infinite loops
-    // Top and Bottom rows of the ring
+  for (int radius = 1; radius < 50; ++radius) {
+    std::vector<juce::Point<int>> candidates;
+
+    // Helper to check and add candidate
+    auto addIfFree = [&](int x, int y) {
+      if (!isAreaOccupied(x, y, gridW, gridH, ignoreNode)) {
+        candidates.push_back({x, y});
+      }
+    };
+
+    // Top and Bottom rows
     for (int x = startX - radius; x <= startX + radius; ++x) {
-      if (!isAreaOccupied(x, startY - radius, gridW, gridH, ignoreNode)) {
-        return {x, startY - radius};
-      }
-      if (!isAreaOccupied(x, startY + radius, gridW, gridH, ignoreNode)) {
-        return {x, startY + radius};
-      }
+      addIfFree(x, startY - radius);
+      addIfFree(x, startY + radius);
     }
-    // Left and Right columns of the ring (excluding corners already checked)
+    // Left and Right columns (excluding corners)
     for (int y = startY - radius + 1; y < startY + radius; ++y) {
-      if (!isAreaOccupied(startX - radius, y, gridW, gridH, ignoreNode)) {
-        return {startX - radius, y};
-      }
-      if (!isAreaOccupied(startX + radius, y, gridW, gridH, ignoreNode)) {
-        return {startX + radius, y};
-      }
+      addIfFree(startX - radius, y);
+      addIfFree(startX + radius, y);
+    }
+
+    if (!candidates.empty()) {
+      // Sort candidates by distance to target point, then by distance to
+      // preferred point
+      std::sort(candidates.begin(), candidates.end(),
+                [&](const juce::Point<int> &a, const juce::Point<int> &b) {
+                  auto dTargetA = getDistSq(a.x, a.y, startX, startY);
+                  auto dTargetB = getDistSq(b.x, b.y, startX, startY);
+
+                  if (dTargetA != dTargetB) {
+                    return dTargetA < dTargetB;
+                  }
+
+                  if (preferredPoint.x != -1) {
+                    auto dPrefA =
+                        getDistSq(a.x, a.y, preferredPoint.x, preferredPoint.y);
+                    auto dPrefB =
+                        getDistSq(b.x, b.y, preferredPoint.x, preferredPoint.y);
+                    return dPrefA < dPrefB;
+                  }
+
+                  return false;
+                });
+
+      return candidates[0];
     }
   }
 
-  return {
-      startX,
-      startY};  // Fallback (should be extremely rare to fill a 100x100 grid)
+  return {startX, startY};
 }
 
 int GraphEngine::getNextFreeMacro() const {

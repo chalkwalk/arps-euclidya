@@ -40,7 +40,9 @@ class GraphEngine {
 
   juce::Point<int> findClosestFreeSpot(int startX, int startY, int gridW,
                                        int gridH,
-                                       GraphNode *ignoreNode = nullptr) const;
+                                       GraphNode *ignoreNode = nullptr,
+                                       juce::Point<int> preferredPoint = {
+                                           -1, -1}) const;
 
   int getNextFreeMacro() const;
 

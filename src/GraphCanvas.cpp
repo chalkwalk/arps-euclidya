@@ -106,6 +106,15 @@ juce::AffineTransform GraphCanvas::getCameraTransform() const {
   return juce::AffineTransform::scale(zoomFactor).translated(panX, panY);
 }
 
+juce::Point<int> GraphCanvas::getViewportGridCenter() const {
+  auto center = getLocalBounds().getCentre().toFloat();
+  float cx = center.x;
+  float cy = center.y;
+  getCameraTransform().inverted().transformPoint(cx, cy);
+  return {(int)std::round(cx / Layout::GridPitchFloat),
+          (int)std::round(cy / Layout::GridPitchFloat)};
+}
+
 void GraphCanvas::updateTransforms() {
   auto transform = getCameraTransform();
   for (auto *block : nodeBlocks) {
@@ -138,7 +147,8 @@ void GraphCanvas::addNodeAtDefaultPosition(
 
   juce::ScopedLock l(graphLock);
   auto nearest = graphEngine.findClosestFreeSpot(
-      startGridX, startGridY, node->getGridWidth(), node->getGridHeight());
+      startGridX, startGridY, node->getGridWidth(), node->getGridHeight(),
+      nullptr, getViewportGridCenter());
   node->gridX = nearest.x;
   node->gridY = nearest.y;
 
@@ -810,7 +820,8 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
       auto gh = selectedNode->getGridHeight();
       // Find the closest free spot starting from the current node's position
       auto nearest = graphEngine.findClosestFreeSpot(
-          selectedNode->gridX, selectedNode->gridY, gw, gh, nullptr);
+          selectedNode->gridX, selectedNode->gridY, gw, gh, nullptr,
+          getViewportGridCenter());
       requestNodeClone(selectedNode, nearest.x, nearest.y);
       return true;
     }
@@ -1047,8 +1058,9 @@ void GraphCanvas::addNodeAtPosition(const std::shared_ptr<GraphNode> &node,
   } else {
     int ix = (int)std::round(worldX / Layout::GridPitchFloat);
     int iy = (int)std::round(worldY / Layout::GridPitchFloat);
-    auto nearest = graphEngine.findClosestFreeSpot(ix, iy, node->getGridWidth(),
-                                                   node->getGridHeight());
+    auto nearest = graphEngine.findClosestFreeSpot(
+        ix, iy, node->getGridWidth(), node->getGridHeight(), nullptr,
+        getViewportGridCenter());
     dropGridX = nearest.x;
     dropGridY = nearest.y;
   }

@@ -141,6 +141,7 @@ class GraphCanvas : public juce::Component,
   juce::TextButton zoomFitButton;
 
   juce::AffineTransform getCameraTransform() const;
+  juce::Point<int> getViewportGridCenter() const;
   void updateTransforms();
   void updateScrollBars();
   void zoomToFit();
