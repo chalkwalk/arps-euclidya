@@ -37,6 +37,7 @@ struct NoteInfo {
   int channel = 1;
   int noteNumber = 0;
   int32_t noteID = -1;
+  int remainingSamples = -1;  // -1 means no scheduled NoteOff
 };
 
 class NoteEventCollector {

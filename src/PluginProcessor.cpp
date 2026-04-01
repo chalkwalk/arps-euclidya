@@ -266,7 +266,7 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     } collector(midiMessages);
 
     for (const auto &outNode : graphEngine.getMidiOutNodes()) {
-      outNode->generateOutput(collector, 0);
+      outNode->generateOutput(collector, numSamples);
     }
   }
 

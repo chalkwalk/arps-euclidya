@@ -88,7 +88,7 @@
             "bipolar": true,
             "gridBounds": [
                 7,
-                33,
+                9,
                 17,
                 10
             ]
@@ -228,7 +228,7 @@
             "label": "Press -> Vel",
             "gridBounds": [
                 0,
-                53,
+                66,
                 9,
                 4
             ]
@@ -250,8 +250,8 @@
             "type": "Label",
             "label": "Timb -> Vel",
             "gridBounds": [
-                9,
-                53,
+                11,
+                66,
                 9,
                 4
             ]
@@ -325,6 +325,82 @@
                 55,
                 16,
                 7
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Humanize",
+            "gridBounds": [
+                56,
+                62,
+                16,
+                5
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "humTiming",
+            "floatMin": 0,
+            "floatMax": 1,
+            "gridBounds": [
+                49,
+                64,
+                9,
+                15
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Timing",
+            "gridBounds": [
+                49,
+                76,
+                9,
+                4
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "humVelocity",
+            "floatMin": 0,
+            "floatMax": 1,
+            "gridBounds": [
+                60,
+                64,
+                9,
+                15
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Velocity",
+            "gridBounds": [
+                60,
+                76,
+                9,
+                4
+            ]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "humGate",
+            "floatMin": 0,
+            "floatMax": 1,
+            "gridBounds": [
+                71,
+                64,
+                9,
+                15
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Gate",
+            "gridBounds": [
+                71,
+                76,
+                9,
+                4
             ]
         }
     ]

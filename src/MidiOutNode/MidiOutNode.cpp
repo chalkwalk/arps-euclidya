@@ -105,12 +105,26 @@ void MidiOutNode::clampParameters() {
 }
 
 void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
-                                    int samplePosition) {
-  for (const auto &note : playingNotes) {
-    collector.addNoteOff(note.channel, note.noteNumber, 0.0f, samplePosition,
-                         note.noteID);
+                                    int numSamples) {
+  for (auto it = playingNotes.begin(); it != playingNotes.end();) {
+    if (it->remainingSamples != -1) {
+      if (it->remainingSamples <= numSamples) {
+        // Send NoteOff at the scheduled time within this block
+        int offPos = std::max(0, it->remainingSamples);
+        collector.addNoteOff(it->channel, it->noteNumber, 0.0f, offPos,
+                             it->noteID);
+        it = playingNotes.erase(it);
+        continue;
+      }
+      it->remainingSamples -= numSamples;
+    } else {
+      // Legacy behavior or absolute flush (e.g. on stop)
+      collector.addNoteOff(it->channel, it->noteNumber, 0.0f, 0, it->noteID);
+      it = playingNotes.erase(it);
+      continue;
+    }
+    ++it;
   }
-  playingNotes.clear();
 }
 
 void MidiOutNode::process() {
@@ -139,7 +153,7 @@ void MidiOutNode::process() {
 }
 
 void MidiOutNode::generateOutput(NoteEventCollector &collector,
-                                 int samplePosition) {
+                                 int numSamples) {
   auto it0 = inputSequences.find(0);
   bool holdingNotes = (it0 != inputSequences.end() && !it0->second.empty());
   bool isPlaying = clockManager.isHostPlaying();
@@ -247,12 +261,20 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector,
 
   // Cleanup playing notes on every tick
   if (isTick) {
-    flushPlayingNotes(collector, samplePosition);
+    // In Humanize mode, NoteOffs are scheduled per-note.
+    // However, if a new tick arrives and we STILL have notes playing (gate >
+    // 100%), we flush them now to avoid overlap/hangs, OR we could let them
+    // overlap. For Euclidya, we usually want monophonic per-lane logic, so
+    // we'll flush.
+    flushPlayingNotes(collector, numSamples);
     lastTickPlayedNote = false;
   }
 
   if (!isPlaying && wasPlaying) {
-    flushPlayingNotes(collector, samplePosition);
+    for (const auto &note : playingNotes) {
+      collector.addNoteOff(note.channel, note.noteNumber, 0.0f, 0, note.noteID);
+    }
+    playingNotes.clear();
   }
 
   if (!holdingNotes) {
@@ -415,21 +437,64 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector,
                 ? macros[(size_t)macroTimbreToVelocity]->load()
                 : timbreToVelocity;
 
-        float finalVelocity = std::clamp(
+        // --- Humanize Calculation ---
+        float actualHumTiming =
+            macroHumTiming != -1 && macros[(size_t)macroHumTiming] != nullptr
+                ? macros[(size_t)macroHumTiming]->load()
+                : humTiming;
+        float actualHumVelocity =
+            macroHumVelocity != -1 &&
+                    macros[(size_t)macroHumVelocity] != nullptr
+                ? macros[(size_t)macroHumVelocity]->load()
+                : humVelocity;
+        float actualHumGate =
+            macroHumGate != -1 && macros[(size_t)macroHumGate] != nullptr
+                ? macros[(size_t)macroHumGate]->load()
+                : humGate;
+
+        // --- 1. Base + Expression Mapping ---
+        float vIntermediate =
             noteTrigger.velocity +
-                (actualPressMod * (currentPressure - noteTrigger.velocity)) +
-                (actualTimbMod * (currentTimbre - noteTrigger.velocity)),
+            (actualPressMod * (currentPressure - noteTrigger.velocity)) +
+            (actualTimbMod * (currentTimbre - noteTrigger.velocity));
+
+        // --- 2. Humanize Velocity (Interpolation Style) ---
+        float randVTarget = static_cast<float>(
+            static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX));
+        float finalVelocity = std::clamp(
+            vIntermediate + actualHumVelocity * (randVTarget - vIntermediate),
             0.0f, 1.0f);
 
+        // --- Humanize Timing & Gate ---
+        // Timing jitter: up to +/- 50% of the division, max 30ms-ish
+        double randTimingShift =
+            (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX) -
+             0.5) *
+            2.0;  // Random in [-1, 1]
+        double jitterPpq = randTimingShift * actualHumTiming * 0.5 * division;
+        int tJitter = (int)(jitterPpq * clockManager.getSamplesPerPpq());
+
+        // Gate duration jitter
+        double divSamples = division * clockManager.getSamplesPerPpq();
+        // Base gate is 100% of division.
+        // Randomized shift in [0.1, 2.0]
+        float randGateFactor =
+            0.1f + static_cast<float>(static_cast<double>(std::rand()) /
+                                      static_cast<double>(RAND_MAX)) *
+                       1.9f;
+        float finalGateFactor = 1.0f + actualHumGate * (randGateFactor - 1.0f);
+        int duration = (int)(divSamples * std::max(0.05f, finalGateFactor));
+
         // Calculate a new noteID if possible (for CLAP tracking)
-        // For now we use -1, but we could generate a sequence here if needed.
         int32_t outNoteID = -1;
 
-        collector.addNoteOn(outputChannel, noteTrigger.noteNumber,
-                            finalVelocity, samplePosition, outNoteID);
+        int finalSamplePos = std::clamp(tJitter, 0, numSamples - 1);
 
-        playingNotes.push_back(
-            {outputChannel, noteTrigger.noteNumber, outNoteID});
+        collector.addNoteOn(outputChannel, noteTrigger.noteNumber,
+                            finalVelocity, finalSamplePos, outNoteID);
+
+        playingNotes.push_back({outputChannel, noteTrigger.noteNumber,
+                                outNoteID, duration - finalSamplePos});
       }
     }
 
@@ -546,6 +611,13 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("timbreToVelocity", timbreToVelocity);
     xml->setAttribute("macroPressureToVelocity", macroPressureToVelocity);
     xml->setAttribute("macroTimbreToVelocity", macroTimbreToVelocity);
+
+    xml->setAttribute("humTiming", humTiming);
+    xml->setAttribute("humVelocity", humVelocity);
+    xml->setAttribute("humGate", humGate);
+    xml->setAttribute("macroHumTiming", macroHumTiming);
+    xml->setAttribute("macroHumVelocity", macroHumVelocity);
+    xml->setAttribute("macroHumGate", macroHumGate);
   }
 }
 
@@ -585,9 +657,13 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
 
     pressureToVelocity = xml->getDoubleAttribute("pressureToVelocity", 0.0);
     timbreToVelocity = xml->getDoubleAttribute("timbreToVelocity", 0.0);
-    macroPressureToVelocity =
-        xml->getIntAttribute("macroPressureToVelocity", -1);
-    macroTimbreToVelocity = xml->getIntAttribute("macroTimbreToVelocity", -1);
+    humTiming = static_cast<float>(xml->getDoubleAttribute("humTiming", 0.0));
+    humVelocity =
+        static_cast<float>(xml->getDoubleAttribute("humVelocity", 0.0));
+    humGate = static_cast<float>(xml->getDoubleAttribute("humGate", 0.5));
+    macroHumTiming = xml->getIntAttribute("macroHumTiming", -1);
+    macroHumVelocity = xml->getIntAttribute("macroHumVelocity", -1);
+    macroHumGate = xml->getIntAttribute("macroHumGate", -1);
 
     // Sync UI proxies
     ui_syncMode = static_cast<int>(syncMode);

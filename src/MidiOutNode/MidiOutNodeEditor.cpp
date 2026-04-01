@@ -84,6 +84,15 @@ NodeLayout MidiOutNode::getLayout() const {
         el.valueRef = &self->ui_rhythmResetOnRelease;
       } else if (el.label == "outputChannel") {
         el.valueRef = &self->outputChannel;
+      } else if (el.label == "humTiming") {
+        el.floatValueRef = &self->humTiming;
+        el.macroIndexRef = &self->macroHumTiming;
+      } else if (el.label == "humVelocity") {
+        el.floatValueRef = &self->humVelocity;
+        el.macroIndexRef = &self->macroHumVelocity;
+      } else if (el.label == "humGate") {
+        el.floatValueRef = &self->humGate;
+        el.macroIndexRef = &self->macroHumGate;
       }
     }
   };

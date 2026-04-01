@@ -5,6 +5,7 @@
 void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
                           double sampleRate) {
   tickFlag = false;
+  lastSampleRate = sampleRate;
 
   juce::Optional<juce::AudioPlayHead::PositionInfo> info;
 

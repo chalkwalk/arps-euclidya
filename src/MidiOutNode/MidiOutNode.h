@@ -25,7 +25,7 @@ class MidiOutNode : public GraphNode {
   // Called immediately when UI controls change
   void parameterChanged() override { clampParameters(); }
 
-  void generateOutput(NoteEventCollector &collector, int samplePosition);
+  void generateOutput(NoteEventCollector &collector, int numSamples);
 
   // Returns a formatted string showing the cycle length in ticks, quarter
   // beats, and bars
@@ -70,7 +70,10 @@ class MidiOutNode : public GraphNode {
             {"Rhythm Beats", &macroRBeats},
             {"Rhythm Offset", &macroROffset},
             {"Press -> Vel", &macroPressureToVelocity},
-            {"Timb -> Vel", &macroTimbreToVelocity}};
+            {"Timb -> Vel", &macroTimbreToVelocity},
+            {"Hum Timing", &macroHumTiming},
+            {"Hum Velocity", &macroHumVelocity},
+            {"Hum Gate", &macroHumGate}};
   }
 
   int pSteps = 16;
@@ -87,9 +90,6 @@ class MidiOutNode : public GraphNode {
   int macroRBeats = -1;
   int macroROffset = -1;
 
-  int macroPressureToVelocity = -1;
-  int macroTimbreToVelocity = -1;
-
   // Sync & Reset Controls
   SyncMode syncMode = SyncMode::Synchronized;
   PatternMode patternMode = PatternMode::Gated;
@@ -102,6 +102,16 @@ class MidiOutNode : public GraphNode {
 
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;
+
+  float humTiming = 0.0f;
+  float humVelocity = 0.0f;
+  float humGate = 0.0f;
+
+  int macroPressureToVelocity = -1;
+  int macroTimbreToVelocity = -1;
+  int macroHumTiming = -1;
+  int macroHumVelocity = -1;
+  int macroHumGate = -1;
 
   // UI proxy variables (NodeBlock UI needs integer pointers)
   int ui_syncMode = 1;
@@ -122,7 +132,7 @@ class MidiOutNode : public GraphNode {
   std::atomic<bool> lastTickPlayedNote{false};
 
  private:
-  void flushPlayingNotes(NoteEventCollector &collector, int samplePosition);
+  void flushPlayingNotes(NoteEventCollector &collector, int numSamples);
 
   NoteExpressionManager &noteExpressionManager;
   ClockManager &clockManager;

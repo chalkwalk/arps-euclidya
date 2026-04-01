@@ -24,6 +24,12 @@ class ClockManager {
   double getCumulativePpq() const { return cumulativePpq; }
 
   bool isHostPlaying() const { return hostPlaying; }
+  double getSamplesPerPpq() const {
+    if (lastSampleRate > 0) {
+      return (lastSampleRate * 60.0) / currentBPM;
+    }
+    return 1.0;
+  }
 
   // Standalone Transport Controls
   void setPlaying(bool playing) { standaloneRunning = playing; }
@@ -42,6 +48,7 @@ class ClockManager {
 
   // Cumulative PPQ: always-incrementing, works in all modes
   double cumulativePpq = 0.0;
+  double lastSampleRate = 44100.0;
 
   // Internal phase accumulator for free-running mode (samples)
   double internalPhase = 0.0;
