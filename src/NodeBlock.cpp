@@ -56,219 +56,248 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
     repaint();
   };
 
-  auto layout = node->getLayout();
-  for (const auto &element : layout.elements) {
-    juce::Component *comp = nullptr;
+  auto createComponents = [this, &apvts](
+                              const std::vector<UIElement> &elements,
+                              juce::OwnedArray<juce::Component> &components,
+                              std::vector<std::unique_ptr<
+                                  juce::AudioProcessorValueTreeState::Listener>>
+                                  &attachments) {
+    for (const auto &element : elements) {
+      juce::Component *comp = nullptr;
 
-    if (element.type == UIElementType::RotarySlider) {
-      auto *slider = new CustomMacroSlider();
-      slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-      slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+      if (element.type == UIElementType::RotarySlider) {
+        auto *slider = new CustomMacroSlider();
+        slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
 
-      if (element.bipolar) {
-        slider->getProperties().set("bipolar", true);
-      }
+        if (element.bipolar) {
+          slider->getProperties().set("bipolar", true);
+        }
 
-      if (element.floatValueRef != nullptr) {
-        // Float-valued slider
-        slider->setRange(element.floatMin, element.floatMax, element.step);
-        slider->setValue(*element.floatValueRef, juce::dontSendNotification);
-        slider->onValueChange = [node, slider,
-                                 valRef = element.floatValueRef]() {
-          *valRef = (float)slider->getValue();
-          node->parameterChanged();
-          if (node->onNodeDirtied) {
-            node->onNodeDirtied();
+        if (element.floatValueRef != nullptr) {
+          slider->setRange(element.floatMin, element.floatMax, element.step);
+          slider->setValue(*element.floatValueRef, juce::dontSendNotification);
+          slider->onValueChange = [node = targetNode, slider,
+                                   valRef = element.floatValueRef]() {
+            *valRef = (float)slider->getValue();
+            node->parameterChanged();
+            if (node->onNodeDirtied) {
+              node->onNodeDirtied();
+            }
+          };
+        } else {
+          slider->setRange(element.minValue, element.maxValue, element.step);
+          if (element.valueRef != nullptr) {
+            slider->setValue(*element.valueRef, juce::dontSendNotification);
+            slider->onValueChange = [node = targetNode, slider,
+                                     valRef = element.valueRef]() {
+              *valRef = (int)slider->getValue();
+              node->parameterChanged();
+              if (node->onNodeDirtied) {
+                node->onNodeDirtied();
+              }
+            };
           }
-        };
-      } else {
-        // Int-valued slider
-        slider->setRange(element.minValue, element.maxValue, element.step);
+        }
+
+        if (element.macroIndexRef != nullptr) {
+          auto updateSliderVisibility = [slider](int macro) {
+            if (macro == -1) {
+              slider->removeColour(juce::Slider::rotarySliderFillColourId);
+              slider->removeColour(juce::Slider::rotarySliderOutlineColourId);
+            } else {
+              slider->setColour(juce::Slider::rotarySliderFillColourId,
+                                juce::Colours::orange);
+              slider->setColour(juce::Slider::rotarySliderOutlineColourId,
+                                juce::Colours::orange.withAlpha(0.3f));
+            }
+          };
+
+          updateSliderVisibility(*element.macroIndexRef);
+
+          GraphCanvas *canvasPtr = &parentCanvas;
+          slider->onRightClick = [node = targetNode, slider,
+                                  macroRef = element.macroIndexRef, canvasPtr,
+                                  &apvts]() {
+            MacroMappingMenu::showMenu(
+                slider, *macroRef,
+                [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
+                  if (macroIndex == -2) {
+                    macroIndex = canvasPtr->getEngine().getNextFreeMacro();
+                    if (macroIndex == -1) {
+                      return;
+                    }
+                  }
+
+                  auto *param =
+                      dynamic_cast<MacroParameter *>(apvts.getParameter(
+                          "macro_" + juce::String(macroIndex + 1)));
+                  if (param != nullptr && !param->isMapped()) {
+                    float norm =
+                        (float)((slider->getValue() - slider->getMinimum()) /
+                                (slider->getMaximum() - slider->getMinimum()));
+                    param->setValueNotifyingHost(norm);
+                  }
+
+                  *macroRef = macroIndex;
+                  node->parameterChanged();
+                  if (node->onMappingChanged) {
+                    node->onMappingChanged();
+                  }
+
+                  canvasPtr->rebuild();
+                });
+          };
+
+          if (*element.macroIndexRef != -1) {
+            juce::String paramID =
+                "macro_" + juce::String(*element.macroIndexRef + 1);
+            attachments.push_back(
+                std::make_unique<MacroAttachment>(apvts, paramID, *slider));
+          }
+        }
+        comp = slider;
+      } else if (element.type == UIElementType::Label) {
+        auto *label = new juce::Label();
+        label->setText(element.label, juce::dontSendNotification);
+        label->setJustificationType(juce::Justification::centred);
+        label->setInterceptsMouseClicks(false, false);
+
+        if (element.colorHex.isNotEmpty()) {
+          label->setColour(juce::Label::textColourId,
+                           juce::Colour::fromString(element.colorHex));
+          label->setFont(
+              juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
+        }
+
+        comp = label;
+      } else if (element.type == UIElementType::PushButton ||
+                 element.type == UIElementType::Toggle) {
+        auto *button = new CustomMacroButton();
+        button->setButtonText(element.label);
+
+        if (element.type == UIElementType::Toggle) {
+          button->setClickingTogglesState(true);
+        }
+
         if (element.valueRef != nullptr) {
-          slider->setValue(*element.valueRef, juce::dontSendNotification);
-          slider->onValueChange = [node, slider, valRef = element.valueRef]() {
-            *valRef = (int)slider->getValue();
+          button->setToggleState(*element.valueRef != 0,
+                                 juce::dontSendNotification);
+
+          button->onClick = [node = targetNode, button,
+                             valRef = element.valueRef, element]() {
+            if (element.macroIndexRef != nullptr &&
+                *element.macroIndexRef != -1) {
+              return;
+            }
+
+            if (element.type == UIElementType::Toggle) {
+              *valRef = button->getToggleState() ? 1 : 0;
+            } else {
+              *valRef = (*valRef == 0) ? 1 : 0;
+            }
+
             node->parameterChanged();
             if (node->onNodeDirtied) {
               node->onNodeDirtied();
             }
           };
         }
-      }
 
-      if (element.macroIndexRef != nullptr) {
-        auto updateSliderVisibility = [slider](int macro) {
-          if (macro == -1) {
-            slider->removeColour(juce::Slider::rotarySliderFillColourId);
-            slider->removeColour(juce::Slider::rotarySliderOutlineColourId);
-          } else {
-            slider->setColour(juce::Slider::rotarySliderFillColourId,
-                              juce::Colours::orange);
-            slider->setColour(juce::Slider::rotarySliderOutlineColourId,
-                              juce::Colours::orange.withAlpha(0.3f));
-          }
-        };
-
-        updateSliderVisibility(*element.macroIndexRef);
-
-        GraphCanvas *canvasPtr = &parentCanvas;
-        slider->onRightClick = [node, slider, macroRef = element.macroIndexRef,
-                                canvasPtr, &apvts]() {
-          MacroMappingMenu::showMenu(
-              slider, *macroRef,
-              [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
-                if (macroIndex == -2) {
-                  macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (macroIndex == -1) {
-                    return;
+        if (element.macroIndexRef != nullptr) {
+          GraphCanvas *canvasPtr = &parentCanvas;
+          button->onRightClick = [node = targetNode, button,
+                                  macroRef = element.macroIndexRef, canvasPtr,
+                                  &apvts]() {
+            MacroMappingMenu::showMenu(
+                button, *macroRef,
+                [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
+                  if (macroIndex == -2) {
+                    macroIndex = canvasPtr->getEngine().getNextFreeMacro();
+                    if (macroIndex == -1) {
+                      return;
+                    }
                   }
-                }
 
-                auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
-                    "macro_" + juce::String(macroIndex + 1)));
-                if (param != nullptr && !param->isMapped()) {
-                  float norm =
-                      (float)((slider->getValue() - slider->getMinimum()) /
-                              (slider->getMaximum() - slider->getMinimum()));
-                  param->setValueNotifyingHost(norm);
-                }
+                  auto *param =
+                      dynamic_cast<MacroParameter *>(apvts.getParameter(
+                          "macro_" + juce::String(macroIndex + 1)));
+                  if (param != nullptr && !param->isMapped()) {
+                    float norm = button->getToggleState() ? 1.0f : 0.0f;
+                    param->setValueNotifyingHost(norm);
+                  }
 
-                *macroRef = macroIndex;
-                node->parameterChanged();
-                if (node->onMappingChanged) {
-                  node->onMappingChanged();
-                }
+                  *macroRef = macroIndex;
+                  node->parameterChanged();
+                  if (node->onMappingChanged) {
+                    node->onMappingChanged();
+                  }
 
-                // Rebuild the graph to ensure MacroAttachments are properly
-                // created for the new mapping
-                canvasPtr->rebuild();
-              });
-        };
+                  canvasPtr->rebuild();
+                });
+          };
 
-        if (*element.macroIndexRef != -1) {
-          juce::String paramID =
-              "macro_" + juce::String(*element.macroIndexRef + 1);
-          dynamicAttachments.push_back(
-              std::make_unique<MacroAttachment>(apvts, paramID, *slider));
+          if (*element.macroIndexRef != -1) {
+            juce::String paramID =
+                "macro_" + juce::String(*element.macroIndexRef + 1);
+            attachments.push_back(
+                std::make_unique<ButtonAttachment>(apvts, paramID, *button));
+          }
         }
-      }
-      comp = slider;
-    } else if (element.type == UIElementType::Label) {
-      auto *label = new juce::Label();
-      label->setText(element.label, juce::dontSendNotification);
-      label->setJustificationType(juce::Justification::centred);
-      label->setInterceptsMouseClicks(false, false);
-
-      if (element.colorHex.isNotEmpty()) {
-        label->setColour(juce::Label::textColourId,
-                         juce::Colour::fromString(element.colorHex));
-        label->setFont(juce::Font(juce::FontOptions(13.0f, juce::Font::bold)));
-      }
-
-      comp = label;
-    } else if (element.type == UIElementType::PushButton ||
-               element.type == UIElementType::Toggle) {
-      auto *button = new CustomMacroButton();
-      button->setButtonText(element.label);
-
-      if (element.type == UIElementType::Toggle) {
-        button->setClickingTogglesState(true);
-      }
-
-      if (element.valueRef != nullptr) {
-        // Initial state sync
-        button->setToggleState(*element.valueRef != 0,
+        comp = button;
+      } else if (element.type == UIElementType::ComboBox) {
+        auto *combo = new juce::ComboBox();
+        int i = 1;
+        for (const auto &opt : element.options) {
+          combo->addItem(opt, i++);
+        }
+        if (element.valueRef != nullptr) {
+          combo->setSelectedId(*element.valueRef + 1,
                                juce::dontSendNotification);
-
-        button->onClick = [node, button, valRef = element.valueRef, element]() {
-          if (element.macroIndexRef != nullptr &&
-              *element.macroIndexRef != -1) {
-            return;
-          }
-
-          if (element.type == UIElementType::Toggle) {
-            *valRef = button->getToggleState() ? 1 : 0;
-          } else {
-            // PushButton logic (e.g. toggle dest or trigger)
-            *valRef = (*valRef == 0) ? 1 : 0;
-          }
-
-          node->parameterChanged();
-          if (node->onNodeDirtied) {
-            node->onNodeDirtied();
-          }
-        };
-      }
-
-      if (element.macroIndexRef != nullptr) {
-        GraphCanvas *canvasPtr = &parentCanvas;
-        button->onRightClick = [node, button, macroRef = element.macroIndexRef,
-                                canvasPtr, &apvts]() {
-          MacroMappingMenu::showMenu(
-              button, *macroRef,
-              [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
-                if (macroIndex == -2) {
-                  macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (macroIndex == -1) {
-                    return;
-                  }
-                }
-
-                auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
-                    "macro_" + juce::String(macroIndex + 1)));
-                if (param != nullptr && !param->isMapped()) {
-                  float norm = button->getToggleState() ? 1.0f : 0.0f;
-                  param->setValueNotifyingHost(norm);
-                }
-
-                *macroRef = macroIndex;
-                node->parameterChanged();
-                if (node->onMappingChanged) {
-                  node->onMappingChanged();
-                }
-
-                // Rebuild the graph to ensure ButtonAttachments are properly
-                // created for the new mapping
-                canvasPtr->rebuild();
-              });
-        };
-
-        if (*element.macroIndexRef != -1) {
-          juce::String paramID =
-              "macro_" + juce::String(*element.macroIndexRef + 1);
-          dynamicAttachments.push_back(
-              std::make_unique<ButtonAttachment>(apvts, paramID, *button));
+          combo->onChange = [node = targetNode, combo,
+                             valRef = element.valueRef]() {
+            *valRef = combo->getSelectedId() - 1;
+            node->parameterChanged();
+            if (node->onNodeDirtied) {
+              node->onNodeDirtied();
+            }
+          };
+        }
+        comp = combo;
+      } else if (element.type == UIElementType::Custom) {
+        if (auto custom =
+                targetNode->createCustomComponent(element.customType, &apvts)) {
+          comp = custom.release();
         }
       }
-      comp = button;
-    } else if (element.type == UIElementType::ComboBox) {
-      auto *combo = new juce::ComboBox();
-      int i = 1;
-      for (const auto &opt : element.options) {
-        combo->addItem(opt, i++);
-      }
-      if (element.valueRef != nullptr) {
-        // Value ref is 0-indexed, ComboBox item IDs are 1-indexed
-        combo->setSelectedId(*element.valueRef + 1, juce::dontSendNotification);
-        combo->onChange = [node, combo, valRef = element.valueRef]() {
-          *valRef = combo->getSelectedId() - 1;
-          node->parameterChanged();
-          if (node->onNodeDirtied) {
-            node->onNodeDirtied();
-          }
-        };
-      }
-      comp = combo;
-    } else if (element.type == UIElementType::Custom) {
-      if (auto custom =
-              node->createCustomComponent(element.customType, &apvts)) {
-        comp = custom.release();
+
+      if (comp != nullptr) {
+        components.add(comp);
+        addAndMakeVisible(comp);
       }
     }
+  };
 
-    if (comp != nullptr) {
-      dynamicComponents.add(comp);
-      addAndMakeVisible(comp);
+  auto layout = node->getLayout();
+  createComponents(layout.elements, dynamicComponents, dynamicAttachments);
+
+  if (layout.extendedGridWidth > 0 && layout.extendedGridHeight > 0) {
+    addAndMakeVisible(expandButton);
+    expandButton.setClickingTogglesState(true);
+    expandButton.setColour(juce::TextButton::buttonColourId,
+                           juce::Colours::transparentBlack);
+    expandButton.setColour(juce::TextButton::buttonOnColourId,
+                           juce::Colours::transparentBlack);
+    expandButton.setColour(juce::TextButton::textColourOffId,
+                           juce::Colours::white.withAlpha(0.7f));
+    expandButton.setColour(juce::TextButton::textColourOnId,
+                           juce::Colours::white);
+    expandButton.onClick = [this] { toggleExpansion(); };
+
+    createComponents(layout.extendedElements, extendedComponents,
+                     extendedAttachments);
+    for (auto *comp : extendedComponents) {
+      comp->setVisible(false);
     }
   }
 
@@ -279,74 +308,107 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
     }
   }
 
-  // Physical bounds derived exclusively from grid properties
-  int gridW = node->getGridWidth();
-  int gridH = node->getGridHeight();
+  updateSize();
+  startTimerHz(12);  // Steady UI sync
+}
 
-  // Tram lines math
+void NodeBlock::toggleExpansion() {
+  isExpanded = !isExpanded;
+  expandButton.setToggleState(isExpanded, juce::dontSendNotification);
+  expandButton.setButtonText(isExpanded ? "<" : ">");
+
+  for (auto *comp : extendedComponents) {
+    comp->setVisible(isExpanded);
+  }
+
+  if (isExpanded) {
+    toFront(false);
+  }
+
+  updateSize();
+
+  if (onPositionChanged) {
+    onPositionChanged();
+  }
+}
+
+void NodeBlock::updateSize() {
+  auto layout = targetNode->getLayout();
+  int gridW = layout.gridWidth;
+  int gridH = layout.gridHeight;
+
+  if (isExpanded && layout.extendedGridWidth > 0 &&
+      layout.extendedGridHeight > 0) {
+    gridW = layout.extendedGridWidth;
+    gridH = layout.extendedGridHeight;
+  }
+
   int width = (gridW * Layout::GridPitch) - Layout::TramlineMargin;
   int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
 
   setSize(width, height);
-  startTimerHz(12);  // Steady UI sync
 }
 
 void NodeBlock::timerCallback() {
   auto layout = targetNode->getLayout();
-  for (int i = 0; i < dynamicComponents.size(); ++i) {
-    if (i < (int)layout.elements.size()) {
-      auto &element = layout.elements[(size_t)i];
-      auto *comp = dynamicComponents[i];
 
-      if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
-        if (element.dynamicMinRef != nullptr &&
-            element.dynamicMaxRef != nullptr) {
-          int curMin = *element.dynamicMinRef;
-          int curMax = *element.dynamicMaxRef;
+  auto syncElements = [](const std::vector<UIElement> &elements,
+                         const juce::OwnedArray<juce::Component> &components) {
+    for (int i = 0; i < components.size(); ++i) {
+      if (i < (int)elements.size()) {
+        auto &element = elements[(size_t)i];
+        auto *comp = components[i];
 
-          // Ensure range has a width of at least 1 to avoid NaN proportions in
-          // JUCE's Internal NormalisableRange (division by zero)
-          if (curMin == curMax) {
-            curMax = curMin + 1;
+        if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
+          if (element.dynamicMinRef != nullptr &&
+              element.dynamicMaxRef != nullptr) {
+            int curMin = *element.dynamicMinRef;
+            int curMax = *element.dynamicMaxRef;
+            if (curMin == curMax)
+              curMax = curMin + 1;
+            if (slider->getMinimum() != curMin ||
+                slider->getMaximum() != curMax) {
+              slider->setRange(curMin, curMax, element.step);
+            }
           }
 
-          if (slider->getMinimum() != curMin ||
-              slider->getMaximum() != curMax) {
-            slider->setRange(curMin, curMax, element.step);
+          if (!slider->isMouseButtonDown()) {
+            if (element.floatValueRef != nullptr) {
+              slider->setValue(*element.floatValueRef,
+                               juce::dontSendNotification);
+            } else if (element.valueRef != nullptr) {
+              slider->setValue(*element.valueRef, juce::dontSendNotification);
+            }
           }
-        }
-
-        if (!slider->isMouseButtonDown()) {
-          if (element.floatValueRef != nullptr) {
-            slider->setValue(*element.floatValueRef,
-                             juce::dontSendNotification);
-          } else if (element.valueRef != nullptr) {
-            slider->setValue(*element.valueRef, juce::dontSendNotification);
+        } else if (auto *button = dynamic_cast<juce::TextButton *>(comp)) {
+          if (element.label != button->getButtonText()) {
+            button->setButtonText(element.label);
           }
-        }
-      } else if (auto *button = dynamic_cast<juce::TextButton *>(comp)) {
-        if (element.label != button->getButtonText()) {
-          button->setButtonText(element.label);
-        }
-        if (element.valueRef != nullptr && !button->isMouseButtonDown()) {
-          bool state = (*element.valueRef != 0);
-          if (button->getToggleState() != state) {
-            button->setToggleState(state, juce::dontSendNotification);
+          if (element.valueRef != nullptr && !button->isMouseButtonDown()) {
+            bool state = (*element.valueRef != 0);
+            if (button->getToggleState() != state) {
+              button->setToggleState(state, juce::dontSendNotification);
+            }
           }
-        }
-      } else if (auto *combo = dynamic_cast<juce::ComboBox *>(comp)) {
-        if (element.valueRef != nullptr && !combo->isMouseButtonDown()) {
-          int state = *element.valueRef + 1;
-          if (combo->getSelectedId() != state) {
-            combo->setSelectedId(state, juce::dontSendNotification);
+        } else if (auto *combo = dynamic_cast<juce::ComboBox *>(comp)) {
+          if (element.valueRef != nullptr && !combo->isMouseButtonDown()) {
+            int state = *element.valueRef + 1;
+            if (combo->getSelectedId() != state) {
+              combo->setSelectedId(state, juce::dontSendNotification);
+            }
           }
-        }
-      } else if (auto *label = dynamic_cast<juce::Label *>(comp)) {
-        if (element.label != label->getText()) {
-          label->setText(element.label, juce::dontSendNotification);
+        } else if (auto *label = dynamic_cast<juce::Label *>(comp)) {
+          if (element.label != label->getText()) {
+            label->setText(element.label, juce::dontSendNotification);
+          }
         }
       }
     }
+  };
+
+  syncElements(layout.elements, dynamicComponents);
+  if (isExpanded) {
+    syncElements(layout.extendedElements, extendedComponents);
   }
 }
 
@@ -456,37 +518,50 @@ void NodeBlock::resized() {
   // Title
   titleLabel.setBounds(header.withTrimmedLeft(6));
 
+  if (expandButton.isVisible()) {
+    expandButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
+  }
+
   // Body: dynamic controls
   auto layout = targetNode->getLayout();
 
-  // Base offset for internal elements (below header, inside margins)
-  int startX = PORT_MARGIN;
-  int startY = HEADER_HEIGHT;
+  auto layoutElements = [this](
+                            const std::vector<UIElement> &elements,
+                            const juce::OwnedArray<juce::Component> &components,
+                            int gridW, int gridH) {
+    // Available body area for placing controls
+    int bodyWidth = getWidth() - (PORT_MARGIN * 2);
+    int bodyHeight = getHeight() - HEADER_HEIGHT - 4;
 
-  // Available body area for placing controls
-  int bodyWidth = getWidth() - (PORT_MARGIN * 2);  // margins on both sides
-  int bodyHeight =
-      getHeight() - HEADER_HEIGHT - 4;  // header + small bottom pad
+    constexpr int SUBS_PER_UNIT = 20;
+    int gridCols = gridW * SUBS_PER_UNIT;
+    int gridRows = gridH * SUBS_PER_UNIT;
 
-  // Uniform grid: 20 subdivisions per module grid unit
-  constexpr int SUBS_PER_UNIT = 20;
-  int gridCols = layout.gridWidth * SUBS_PER_UNIT;
-  int gridRows = layout.gridHeight * SUBS_PER_UNIT;
+    float subGridX = (float)bodyWidth / (float)gridCols;
+    float subGridY = (float)bodyHeight / (float)gridRows;
 
-  // Compute the sub-grid pitch
-  float subGridX = (float)bodyWidth / (float)gridCols;
-  float subGridY = (float)bodyHeight / (float)gridRows;
+    int startX = PORT_MARGIN;
+    int startY = HEADER_HEIGHT;
 
-  for (int i = 0; i < dynamicComponents.size(); ++i) {
-    if (i < (int)layout.elements.size()) {
-      auto &element = layout.elements[(size_t)i];
-      auto eb = element.gridBounds;
+    for (int i = 0; i < components.size(); ++i) {
+      if (i < (int)elements.size()) {
+        auto &element = elements[(size_t)i];
+        auto eb = element.gridBounds;
 
-      dynamicComponents[i]->setBounds(startX + (int)(eb.getX() * subGridX),
-                                      startY + (int)(eb.getY() * subGridY),
-                                      (int)(eb.getWidth() * subGridX),
-                                      (int)(eb.getHeight() * subGridY));
+        components[i]->setBounds(startX + (int)(eb.getX() * subGridX),
+                                 startY + (int)(eb.getY() * subGridY),
+                                 (int)(eb.getWidth() * subGridX),
+                                 (int)(eb.getHeight() * subGridY));
+      }
     }
+  };
+
+  if (isExpanded) {
+    layoutElements(layout.extendedElements, extendedComponents,
+                   layout.extendedGridWidth, layout.extendedGridHeight);
+  } else {
+    layoutElements(layout.elements, dynamicComponents, layout.gridWidth,
+                   layout.gridHeight);
   }
 
   if (customControls != nullptr) {

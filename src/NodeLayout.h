@@ -4,7 +4,7 @@
 
 #include <vector>
 
-enum class UIElementType {
+enum class UIElementType : uint8_t {
   RotarySlider,
   Toggle,
   Label,
@@ -36,5 +36,11 @@ struct UIElement {
 struct NodeLayout {
   int gridWidth = 1;
   int gridHeight = 1;
+
+  // For "Origami" extended UI
+  int extendedGridWidth = 0;   // 0 means no extended UI
+  int extendedGridHeight = 0;  // 0 means no extended UI
+
   std::vector<UIElement> elements;
+  std::vector<UIElement> extendedElements;
 };

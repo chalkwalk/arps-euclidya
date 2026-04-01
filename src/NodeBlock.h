@@ -26,11 +26,13 @@ class NodeBlock : public juce::Component, private juce::Timer {
   // Aborts movement and reverts to start position
   void cancelDrag();
 
-  std::shared_ptr<GraphNode> getNode() const { return targetNode; }
+  [[nodiscard]] std::shared_ptr<GraphNode> getNode() const {
+    return targetNode;
+  }
 
   // Get the centre point of a port in parent (canvas) coordinates
-  juce::Point<int> getInputPortCentre(int portIndex) const;
-  juce::Point<int> getOutputPortCentre(int portIndex) const;
+  [[nodiscard]] juce::Point<int> getInputPortCentre(int portIndex) const;
+  [[nodiscard]] juce::Point<int> getOutputPortCentre(int portIndex) const;
 
   // Port geometry
   static constexpr int PORT_RADIUS = 8;
@@ -60,6 +62,12 @@ class NodeBlock : public juce::Component, private juce::Timer {
   juce::Label titleLabel;
   juce::TextButton deleteButton{"X"};
   juce::TextButton bypassButton{"B"};
+  juce::TextButton expandButton{">"};
+
+  bool isExpanded = false;
+
+  void toggleExpansion();
+  void updateSize();
 
   // Fallback for nodes not yet migrated to NodeLayout
   std::unique_ptr<juce::Component> customControls;
@@ -68,6 +76,10 @@ class NodeBlock : public juce::Component, private juce::Timer {
   juce::OwnedArray<juce::Component> dynamicComponents;
   std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::Listener>>
       dynamicAttachments;
+
+  juce::OwnedArray<juce::Component> extendedComponents;
+  std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::Listener>>
+      extendedAttachments;
 
   int dragStartGridX = 0;
   int dragStartGridY = 0;
@@ -79,10 +91,10 @@ class NodeBlock : public juce::Component, private juce::Timer {
   bool isDraggingCable = false;
 
   // Calculate the port rectangles for hit testing
-  static juce::Rectangle<int> getInputPortRect(int portIndex);
-  juce::Rectangle<int> getOutputPortRect(int portIndex) const;
-  int hitTestInputPort(juce::Point<int> localPoint) const;
-  int hitTestOutputPort(juce::Point<int> localPoint) const;
+  [[nodiscard]] static juce::Rectangle<int> getInputPortRect(int portIndex);
+  [[nodiscard]] juce::Rectangle<int> getOutputPortRect(int portIndex) const;
+  [[nodiscard]] int hitTestInputPort(juce::Point<int> localPoint) const;
+  [[nodiscard]] int hitTestOutputPort(juce::Point<int> localPoint) const;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NodeBlock)
 };
@@ -98,8 +110,8 @@ class NodeDragPreview : public juce::Component {
 
   void paint(juce::Graphics &g) override;
 
-  int getGridWidth() const { return gridW; }
-  int getGridHeight() const { return gridH; }
+  [[nodiscard]] int getGridWidth() const { return gridW; }
+  [[nodiscard]] int getGridHeight() const { return gridH; }
 
  private:
   juce::String type;
