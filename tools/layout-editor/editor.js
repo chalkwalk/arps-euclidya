@@ -40,7 +40,7 @@ const ROTARY_END = Math.PI * 2.8;    // ~5 o'clock
 let dirHandle = null;
 let nodeFiles = new Map();
 let currentNodeKey = null;
-let currentData = null;
+let previewMode = 0; // 0: folded, 1: unfolded
 let selectedElementIndex = -1;
 
 const btnOpen = document.getElementById('btn-open-dir');
@@ -111,7 +111,7 @@ async function scanDirectory(handle, path) {
     } else if (entry.kind === 'file' && entry.name.endsWith('.json')) {
       const parts = fullPath.split('/');
       if (parts.length >= 2 &&
-          parts[parts.length - 2] === entry.name.replace('.json', '')) {
+        parts[parts.length - 2] === entry.name.replace('.json', '')) {
         nodeFiles.set(fullPath, entry);
       }
     }
@@ -143,6 +143,10 @@ selNode.addEventListener('change', async (e) => {
 
     document.getElementById('node-w').value = currentData.gridWidth || 1;
     document.getElementById('node-h').value = currentData.gridHeight || 1;
+    document.getElementById('node-ew').value = currentData.extendedGridWidth || 0;
+    document.getElementById('node-eh').value = currentData.extendedGridHeight || 0;
+    document.getElementById('sel-preview-mode').value = "0";
+    previewMode = 0;
 
     initCanvas();
     renderAll();
@@ -155,6 +159,13 @@ selNode.addEventListener('change', async (e) => {
   }
 });
 
+document.getElementById('sel-preview-mode').addEventListener('change', (e) => {
+  previewMode = parseInt(e.target.value);
+  selectedElementIndex = -1;
+  renderAll();
+  renderProperties();
+});
+
 btnSave.addEventListener('click', async () => {
   if (!currentData || !currentNodeKey) return;
   try {
@@ -162,6 +173,11 @@ btnSave.addEventListener('click', async () => {
     currentData.elements.forEach(el => {
       el.gridBounds = el.gridBounds.map(v => Math.round(v));
     });
+    if (currentData.extendedElements) {
+      currentData.extendedElements.forEach(el => {
+        el.gridBounds = el.gridBounds.map(v => Math.round(v));
+      });
+    }
     const jsonStr = JSON.stringify(currentData, null, 4);
     const fileHandle = nodeFiles.get(currentNodeKey);
     const writable = await fileHandle.createWritable();
@@ -180,10 +196,16 @@ document.getElementById('node-w').addEventListener('change', (e) => {
     renderAll();
   }
 });
-document.getElementById('node-h').addEventListener('change', (e) => {
+document.getElementById('node-ew').addEventListener('change', (e) => {
   if (currentData) {
-    currentData.gridHeight = parseInt(e.target.value);
-    renderAll();
+    currentData.extendedGridWidth = parseInt(e.target.value);
+    if (previewMode === 1) renderAll();
+  }
+});
+document.getElementById('node-eh').addEventListener('change', (e) => {
+  if (currentData) {
+    currentData.extendedGridHeight = parseInt(e.target.value);
+    if (previewMode === 1) renderAll();
   }
 });
 
@@ -221,7 +243,7 @@ function bodyRegion(nodeW, nodeH) {
 function subGridPitch(bodyW, bodyH, gridW, gridH) {
   const cols = gridW * SUBS_PER_UNIT;
   const rows = gridH * SUBS_PER_UNIT;
-  return {sx: bodyW / cols, sy: bodyH / rows};
+  return { sx: bodyW / cols, sy: bodyH / rows };
 }
 
 function elementRect(el, body, sx, sy) {
@@ -241,16 +263,24 @@ function elementRect(el, body, sx, sy) {
 function renderAll() {
   if (!currentData || !previewCtx) return;
 
-  const gw = currentData.gridWidth || 1;
-  const gh = currentData.gridHeight || 1;
-  const {w: nodeW, h: nodeH} = nodePixelSize(gw, gh);
+  let gw = currentData.gridWidth || 1;
+  let gh = currentData.gridHeight || 1;
+  let elements = currentData.elements || [];
+
+  if (previewMode === 1 && currentData.extendedGridWidth > 0 && currentData.extendedGridHeight > 0) {
+    gw = currentData.extendedGridWidth;
+    gh = currentData.extendedGridHeight;
+    elements = currentData.extendedElements || [];
+  }
+
+  const { w: nodeW, h: nodeH } = nodePixelSize(gw, gh);
 
   previewCanvas.width = nodeW;
   previewCanvas.height = nodeH;
 
   const ctx = previewCtx;
   const body = bodyRegion(nodeW, nodeH);
-  const {sx, sy} = subGridPitch(body.w, body.h, gw, gh);
+  const { sx, sy } = subGridPitch(body.w, body.h, gw, gh);
 
   // --- Node body ---
   drawNodeBody(ctx, nodeW, nodeH);
@@ -259,7 +289,7 @@ function renderAll() {
   drawSubGrid(ctx, body, gw, gh, sx, sy);
 
   // --- Elements ---
-  currentData.elements.forEach((el, i) => {
+  elements.forEach((el, i) => {
     const r = elementRect(el, body, sx, sy);
     const selected = (i === selectedElementIndex);
     drawElement(ctx, el, r, selected);
@@ -267,8 +297,8 @@ function renderAll() {
 
   // --- Selected element border (on top) ---
   if (selectedElementIndex >= 0 &&
-      selectedElementIndex < currentData.elements.length) {
-    const el = currentData.elements[selectedElementIndex];
+    selectedElementIndex < elements.length) {
+    const el = elements[selectedElementIndex];
     const r = elementRect(el, body, sx, sy);
     ctx.strokeStyle = COLOR_NEON;
     ctx.lineWidth = 1.5;
@@ -305,10 +335,10 @@ function drawNodeBody(ctx, nodeW, nodeH) {
 
   // Title text
   const nodeName = currentNodeKey ? currentNodeKey.split('/')
-                                        .pop()
-                                        .replace('.json', '')
-                                        .replace('Node', ' Node') :
-                                    'Node';
+    .pop()
+    .replace('.json', '')
+    .replace('Node', ' Node') :
+    'Node';
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `bold ${Math.max(9, 14 * SCALE / 3)}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'left';
@@ -330,11 +360,11 @@ function drawNodeBody(ctx, nodeW, nodeH) {
 
   // Input ports (left edge half-stadiums) — 1 shown as representative
   drawPort(
-      ctx, 0, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, true);
+    ctx, 0, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, true);
   // Output ports (right edge)
   drawPort(
-      ctx, nodeW, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE,
-      false);
+    ctx, nodeW, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE,
+    false);
 }
 
 function drawPort(ctx, edgeX, centreY, r, isInput) {
@@ -480,7 +510,7 @@ function drawLabel(ctx, el, r) {
   if (el.colorHex) {
     // Strip leading 'ff' alpha prefix if present (aarrggbb → rrggbb)
     const hex =
-        el.colorHex.length === 8 ? el.colorHex.substring(2) : el.colorHex;
+      el.colorHex.length === 8 ? el.colorHex.substring(2) : el.colorHex;
     color = '#' + hex;
     bold = true;
   }
@@ -541,7 +571,7 @@ function drawCombo(ctx, el, r) {
 
   // Label text (first option or custom label)
   const displayText =
-      (el.options && el.options.length > 0) ? el.options[0] : (el.label || '');
+    (el.options && el.options.length > 0) ? el.options[0] : (el.label || '');
   const fontSize = Math.max(6, 11 * SCALE / 3);
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
@@ -580,7 +610,7 @@ function drawCustom(ctx, el, r) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(
-      el.customType || el.type || 'Custom', r.x + r.w / 2, r.y + r.h / 2);
+    el.customType || el.type || 'Custom', r.x + r.w / 2, r.y + r.h / 2);
 }
 
 // ============================================================
@@ -595,12 +625,16 @@ let interactIdx = -1;
 
 function getBodyAndPitch() {
   if (!currentData) return null;
-  const gw = currentData.gridWidth || 1;
-  const gh = currentData.gridHeight || 1;
-  const {w: nw, h: nh} = nodePixelSize(gw, gh);
+  let gw = currentData.gridWidth || 1;
+  let gh = currentData.gridHeight || 1;
+  if (previewMode === 1 && currentData.extendedGridWidth > 0 && currentData.extendedGridHeight > 0) {
+    gw = currentData.extendedGridWidth;
+    gh = currentData.extendedGridHeight;
+  }
+  const { w: nw, h: nh } = nodePixelSize(gw, gh);
   const body = bodyRegion(nw, nh);
-  const {sx, sy} = subGridPitch(body.w, body.h, gw, gh);
-  return {body, sx, sy};
+  const { sx, sy } = subGridPitch(body.w, body.h, gw, gh);
+  return { body, sx, sy };
 }
 
 function renderOverlay(body, sx, sy) {
@@ -611,7 +645,8 @@ function renderOverlay(body, sx, sy) {
   overlayDiv.style.left = previewCanvas.offsetLeft + 'px';
   overlayDiv.style.top = previewCanvas.offsetTop + 'px';
 
-  currentData.elements.forEach((el, index) => {
+  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  elements.forEach((el, index) => {
     const r = elementRect(el, body, sx, sy);
     const handle = document.createElement('div');
     handle.className = 'overlay-element';
@@ -638,11 +673,12 @@ function renderOverlay(body, sx, sy) {
 function elementAtPoint(px, py) {
   const g = getBodyAndPitch();
   if (!g) return -1;
-  const {body, sx, sy} = g;
+  const { body, sx, sy } = g;
 
+  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
   // Iterate in reverse (top elements first)
-  for (let i = currentData.elements.length - 1; i >= 0; i--) {
-    const r = elementRect(currentData.elements[i], body, sx, sy);
+  for (let i = elements.length - 1; i >= 0; i--) {
+    const r = elementRect(elements[i], body, sx, sy);
     if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return i;
   }
   return -1;
@@ -662,15 +698,16 @@ function onCanvasMouseDown(e) {
     return;
   }
 
+  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
   selectedElementIndex = idx;
   interactIdx = idx;
   dragStartX = e.clientX;
   dragStartY = e.clientY;
-  dragStartBounds = [...currentData.elements[idx].gridBounds];
+  dragStartBounds = [...elements[idx].gridBounds];
 
   // Check if we're near the bottom-right (resize zone = 10px corner)
   const g = getBodyAndPitch();
-  const r = elementRect(currentData.elements[idx], g.body, g.sx, g.sy);
+  const r = elementRect(elements[idx], g.body, g.sx, g.sy);
   const inResizeZone = (px > r.x + r.w - 10) && (py > r.y + r.h - 10);
   isResizing = inResizeZone;
   isDragging = !inResizeZone;
@@ -689,14 +726,12 @@ function onCanvasMouseMove(e) {
 
   const idx = elementAtPoint(px, py);
   if (idx !== -1) {
-    const g = getBodyAndPitch();
-    if (g) {
-      const r = elementRect(currentData.elements[idx], g.body, g.sx, g.sy);
-      // 10px corner for resize grip hit
-      if (px > r.x + r.w - 10 && py > r.y + r.h - 10) {
-        previewCanvas.style.cursor = 'se-resize';
-        return;
-      }
+    const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+    const r = elementRect(elements[idx], g.body, g.sx, g.sy);
+    // 10px corner for resize grip hit
+    if (px > r.x + r.w - 10 && py > r.y + r.h - 10) {
+      previewCanvas.style.cursor = 'se-resize';
+      return;
     }
     previewCanvas.style.cursor = 'move';
     return;
@@ -710,14 +745,15 @@ function onDocMouseMove(e) {
 
   const g = getBodyAndPitch();
   if (!g) return;
-  const {sx, sy} = g;
+  const { sx, sy } = g;
 
   const dx = e.clientX - dragStartX;
   const dy = e.clientY - dragStartY;
   const gridDx = Math.round(dx / sx);
   const gridDy = Math.round(dy / sy);
 
-  const b = currentData.elements[interactIdx].gridBounds;
+  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const b = elements[interactIdx].gridBounds;
   if (isDragging) {
     b[0] = Math.max(0, dragStartBounds[0] + gridDx);
     b[1] = Math.max(0, dragStartBounds[1] + gridDy);
@@ -743,11 +779,12 @@ function onDocMouseUp() {
 function renderProperties() {
   if (selectedElementIndex === -1 || !currentData) {
     propsContent.innerHTML =
-        '<p>Select an element on the canvas to edit its properties.</p>';
+      '<p>Select an element on the canvas to edit its properties.</p>';
     return;
   }
 
-  const el = currentData.elements[selectedElementIndex];
+  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const el = elements[selectedElementIndex];
   let html = `
         <div class="prop-row">
             <label>Type</label>
@@ -759,25 +796,25 @@ function renderProperties() {
 
   if (el.type === 'RotarySlider' || el.type === 'Slider') {
     html += createInput(
-        'minValue', 'Min Value', el.minValue !== undefined ? el.minValue : 0,
-        'number');
+      'minValue', 'Min Value', el.minValue !== undefined ? el.minValue : 0,
+      'number');
     html += createInput(
-        'maxValue', 'Max Value', el.maxValue !== undefined ? el.maxValue : 1,
-        'number');
+      'maxValue', 'Max Value', el.maxValue !== undefined ? el.maxValue : 1,
+      'number');
     html += createInput(
-        'floatMin', 'Float Min', el.floatMin !== undefined ? el.floatMin : '',
-        'number', 'any');
+      'floatMin', 'Float Min', el.floatMin !== undefined ? el.floatMin : '',
+      'number', 'any');
     html += createInput(
-        'floatMax', 'Float Max', el.floatMax !== undefined ? el.floatMax : '',
-        'number', 'any');
+      'floatMax', 'Float Max', el.floatMax !== undefined ? el.floatMax : '',
+      'number', 'any');
     html += createInput(
-        'step', 'Step', el.step !== undefined ? el.step : '', 'number', 'any');
+      'step', 'Step', el.step !== undefined ? el.step : '', 'number', 'any');
     html += createCheckbox('bipolar', 'Bipolar (Centered Zero)', el.bipolar);
   }
 
   if (el.type === 'Label') {
     html +=
-        createInput('colorHex', 'Text Color Hex (aarrggbb)', el.colorHex || '');
+      createInput('colorHex', 'Text Color Hex (aarrggbb)', el.colorHex || '');
   }
 
   if (el.type === 'Custom') {
@@ -785,7 +822,7 @@ function renderProperties() {
   }
 
   html +=
-      `<button id="btn-delete-element" style="background-color:#c93434;margin-top:15px;width:100%">Delete Element</button>`;
+    `<button id="btn-delete-element" style="background-color:#c93434;margin-top:15px;width:100%">Delete Element</button>`;
   propsContent.innerHTML = html;
 
   propsContent.querySelectorAll('.dyn-prop').forEach(inp => {
@@ -811,30 +848,28 @@ function renderProperties() {
   });
 
   document.getElementById('btn-delete-element')
-      .addEventListener('click', () => {
-        if (confirm('Delete this element?')) {
-          currentData.elements.splice(selectedElementIndex, 1);
-          selectedElementIndex = -1;
-          renderAll();
-          renderProperties();
-        }
-      });
+    .addEventListener('click', () => {
+      if (confirm('Delete this element?')) {
+        elements.splice(selectedElementIndex, 1);
+        selectedElementIndex = -1;
+        renderAll();
+        renderProperties();
+      }
+    });
 }
 
 function createInput(key, title, val, type = 'text', step = '') {
   return `<div class="prop-row">
         <label>${title}</label>
-        <input type="${type}" ${
-      step ? `step="${step}"` :
-             ''} class="dyn-prop" data-key="${key}" value="${val}">
+        <input type="${type}" ${step ? `step="${step}"` :
+      ''} class="dyn-prop" data-key="${key}" value="${val}">
     </div>`;
 }
 
 function createCheckbox(key, title, checked) {
   return `<div class="prop-row">
         <label>${title}</label>
-        <input type="checkbox" class="dyn-prop" data-key="${key}" ${
-      checked ? 'checked' : ''}>
+        <input type="checkbox" class="dyn-prop" data-key="${key}" ${checked ? 'checked' : ''}>
     </div>`;
 }
 
@@ -843,14 +878,10 @@ function createBoundsInputs(bounds) {
   return `<div class="prop-row">
         <label>X, Y, Width, Height (grid subs)</label>
         <div style="display:flex;gap:5px;">
-            <input type="number" class="dyn-bound" data-idx="0" value="${
-      bounds[0]}" style="width:44px">
-            <input type="number" class="dyn-bound" data-idx="1" value="${
-      bounds[1]}" style="width:44px">
-            <input type="number" class="dyn-bound" data-idx="2" value="${
-      bounds[2]}" style="width:44px">
-            <input type="number" class="dyn-bound" data-idx="3" value="${
-      bounds[3]}" style="width:44px">
+            <input type="number" class="dyn-bound" data-idx="0" value="${bounds[0]}" style="width:44px">
+            <input type="number" class="dyn-bound" data-idx="1" value="${bounds[1]}" style="width:44px">
+            <input type="number" class="dyn-bound" data-idx="2" value="${bounds[2]}" style="width:44px">
+            <input type="number" class="dyn-bound" data-idx="3" value="${bounds[3]}" style="width:44px">
         </div>
     </div>`;
 }

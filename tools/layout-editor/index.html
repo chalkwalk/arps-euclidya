@@ -37,6 +37,22 @@
                 <label>Grid Height</label>
                 <input type="number" id="node-h" min="1" max="10">
             </div>
+            <h3 id="origami-settings">Origami Settings</h3>
+            <div class="prop-row">
+                <label>Extended Grid Width</label>
+                <input type="number" id="node-ew" min="0" max="10">
+            </div>
+            <div class="prop-row">
+                <label>Extended Grid Height</label>
+                <input type="number" id="node-eh" min="0" max="10">
+            </div>
+            <div class="prop-row">
+                <label>Preview Mode</label>
+                <select id="sel-preview-mode">
+                    <option value="0">Folded (Base)</option>
+                    <option value="1">Unfolded (Extended)</option>
+                </select>
+            </div>
         </div>
     </div>
     <script src="editor.js"></script>

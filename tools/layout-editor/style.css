@@ -1,232 +1,207 @@
 :root {
-  --bg - color : #0b1016;
-  --panel - bg : #1a1e26;
-  --text - color : #e0e0e0;
-  --accent : #1e7a9a;
-  --accent - hover : #2ea0c8;
-  --neon - cyan : #0df0e3;
+  --bg-color: #0b1016;
+  --panel-bg: #1a1e26;
+  --text-color: #e0e0e0;
+  --accent: #1e7a9a;
+  --accent-hover: #2ea0c8;
+  --neon-cyan: #0df0e3;
 }
 
-*{ box - sizing : border - box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
-margin:
-  0;
-padding:
-  0;
-  font - family : 'Segoe UI', Tahoma, Geneva, Verdana, sans - serif;
-color:
-  var(--text - color);
-  background - color : var(--bg - color);
-display:
-  flex;
-  flex - direction : column;
-height:
-  100vh;
-overflow:
-  hidden;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
+  background-color: var(--bg-color);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 #toolbar {
-background - color : var(--panel - bg);
-padding : 8px 20px;
-display : flex;
-align - items : center;
-gap : 12px;
-border - bottom : 1px solid #000;
-flex - shrink : 0;
+  background-color: var(--panel-bg);
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #000;
+  flex-shrink: 0;
 }
 
 #toolbar h2 {
-margin : 0;
-font - size : 15px;
-color : var(--neon - cyan);
-margin - right : 10px;
-white - space : nowrap;
+  margin: 0;
+  font-size: 15px;
+  color: var(--neon-cyan);
+  margin-right: 10px;
+  white-space: nowrap;
 }
 
 button {
-  background - color : var(--accent);
-color:
-  white;
-border:
-  none;
-padding:
-  7px 14px;
-  border - radius : 4px;
-cursor:
-  pointer;
-  font - weight : bold;
-  font - size : 13px;
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
 }
 
-button : hover { background - color : var(--accent - hover); }
+button:hover {
+  background-color: var(--accent-hover);
+}
 
-button : disabled {
-  background - color : #333;
-cursor:
-  not -allowed;
-color:
-# 666;
+button:disabled {
+  background-color: #333;
+  cursor: not-allowed;
+  color: #666;
 }
 
 select {
-padding:
-  6px 8px;
-  border - radius : 4px;
-background:
-# 232830;
-color:
-  white;
-border:
-  1px solid #444;
-  min - width : 200px;
-  font - size : 13px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: #232830;
+  color: white;
+  border: 1px solid #444;
+  min-width: 200px;
+  font-size: 13px;
 }
 
-#scale - label {
-font - size : 12px;
-color : #888;
-white - space : nowrap;
+#scale-label {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
 }
 
-#scale - display {
-font - size : 12px;
-color : var(--neon - cyan);
-min - width : 28px;
+#scale-display {
+  font-size: 12px;
+  color: var(--neon-cyan);
+  min-width: 28px;
 }
 
-#scale - slider {
-width : 90px;
-accent - color : var(--neon - cyan);
+#scale-slider {
+  width: 90px;
+  accent-color: var(--neon-cyan);
 }
 
-#status - message {
-font - size : 12px;
-color : #666;
-margin - left : auto;
-white - space : nowrap;
+#status-message {
+  font-size: 12px;
+  color: #666;
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 /* ── Layout ── */
-#main - content {
-display : flex;
-flex : 1;
-overflow : hidden;
+#main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
-#canvas - wrapper {
-flex : 1;
-overflow : auto;
-padding : 40px;
-display : flex;
-align - items : flex - start;
-justify - content : center;
-background - color : #090c10;
-position : relative;
+#canvas-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 40px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background-color: #090c10;
+  position: relative;
 }
 
-/* The <canvas> element — styled directly in JS */
-#preview - canvas {
-display : block;
-border - radius : 6px;
-box - shadow : 0 0 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(13, 240, 227, 0.05);
+#preview-canvas {
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(13, 240, 227, 0.05);
 }
 
-/* Transparent interaction overlay */
 #overlay {
-position : absolute;
-pointer - events : none;
+  position: absolute;
+  pointer-events: none;
 }
 
-.overlay - element {
-position:
-  absolute;
-  box - sizing : border - box;
+.overlay-element {
+  position: absolute;
+  box-sizing: border-box;
 }
 
-.overlay - element.resize - grip {
-position:
-  absolute;
-bottom:
-  0;
-right:
-  0;
-width:
-  10px;
-height:
-  10px;
-background:
-  var(--neon - cyan);
-  border - radius : 50 % 0 0 0;
-opacity:
-  0.7;
-  /* Visual only; cursor and hover logic handled by canvas */
-  pointer - events : none;
+.overlay-element .resize-grip {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  background: var(--neon-cyan);
+  border-radius: 50% 0 0 0;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 /* ── Properties Panel ── */
-#properties - panel {
-width : 280px;
-background - color : var(--panel - bg);
-border - left : 1px solid #0a0c10;
-padding : 16px;
-overflow - y : auto;
-flex - shrink : 0;
+#properties-panel {
+  width: 280px;
+  background-color: var(--panel-bg);
+  border-left: 1px solid #0a0c10;
+  padding: 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 
-#properties - panel h3 {
-margin - top : 0;
-font - size : 11px;
-text - transform : uppercase;
-letter - spacing : 1.5px;
-color : #555;
-border - bottom : 1px solid #2a2e38;
-padding - bottom : 8px;
-margin - bottom : 14px;
+#properties-panel h3 {
+  margin-top: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #555;
+  border-bottom: 1px solid #2a2e38;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
 }
 
-.prop - row {
-  margin - bottom : 10px;
-display:
-  flex;
-  flex - direction : column;
+.prop-row {
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
 }
 
-.prop - row label {
-  font - size : 11px;
-color:
-# 888;
-  margin - bottom : 4px;
+.prop-row:last-child {
+  margin-bottom: 40px;
 }
 
-.prop - row input, .prop - row select {
-background:
-# 131820;
-border:
-  1px solid #2e3440;
-color:
-  white;
-padding:
-  5px 7px;
-  border - radius : 3px;
-  font - size : 12px;
+.prop-row label {
+  font-size: 11px;
+  color: #888;
+  margin-bottom: 4px;
 }
 
-.prop - row input : focus, .prop - row select : focus {
-outline:
-  1px solid var(--neon - cyan);
-  border - color : var(--neon - cyan);
+.prop-row input,
+.prop-row select {
+  background: #131820;
+  border: 1px solid #2e3440;
+  color: white;
+  padding: 5px 7px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 
-.prop - row input[type = "checkbox"] {
-  align - self : flex - start;
-width:
-  14px;
-height:
-  14px;
+.prop-row input:focus,
+.prop-row select:focus {
+  outline: 1px solid var(--neon-cyan);
+  border-color: var(--neon-cyan);
 }
 
-#node - settings {
-margin - top : 8px;
+.prop-row input[type="checkbox"] {
+  align-self: flex-start;
+  width: 14px;
+  height: 14px;
+}
+
+#node-settings,
+#origami-settings {
+  margin-top: 24px;
 }
