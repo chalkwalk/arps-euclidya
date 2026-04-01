@@ -155,7 +155,10 @@ class GraphCanvas : public juce::Component,
   int ghostTargetY = 0;
   int ghostTargetW = 1;
   int ghostTargetH = 1;
+  int ghostResolvedX = 0;
+  int ghostResolvedY = 0;
   bool ghostIsValid = false;
+  bool hasGhostResolved = false;
 
   struct CachedCable {
     GraphNode *sourceNode;

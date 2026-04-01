@@ -196,28 +196,56 @@ void GraphCanvas::paint(juce::Graphics &g) {
   if (showGhostTarget) {
     g.addTransform(getCameraTransform());
 
-    // Abstract world coordinates
-    float gx =
-        (float)(ghostTargetX * Layout::GridPitch) + Layout::TramlineOffset;
-    float gy =
-        (float)(ghostTargetY * Layout::GridPitch) + Layout::TramlineOffset;
-    float gw =
-        (float)(ghostTargetW * Layout::GridPitch) - Layout::TramlineMargin;
-    float gh =
-        (float)(ghostTargetH * Layout::GridPitch) - Layout::TramlineMargin;
+    // 1. Calculate world-space rectangles
+    auto getRect = [](int gx, int gy, int gw, int gh) {
+      float x = (float)(gx * Layout::GridPitch) + Layout::TramlineOffset;
+      float y = (float)(gy * Layout::GridPitch) + Layout::TramlineOffset;
+      float w = (float)(gw * Layout::GridPitch) - Layout::TramlineMargin;
+      float h = (float)(gh * Layout::GridPitch) - Layout::TramlineMargin;
+      return juce::Rectangle<float>(x, y, w, h);
+    };
 
-    juce::Rectangle<float> rect(gx, gy, gw, gh);
+    auto mouseRect =
+        getRect(ghostTargetX, ghostTargetY, ghostTargetW, ghostTargetH);
+    auto resolvedRect =
+        getRect(ghostResolvedX, ghostResolvedY, ghostTargetW, ghostTargetH);
 
+    // 2. Draw "Flight Path" if the target is redirected
+    if (!ghostIsValid && hasGhostResolved) {
+      juce::Path flightPath;
+      flightPath.startNewSubPath(mouseRect.getCentre());
+      flightPath.lineTo(resolvedRect.getCentre());
+
+      // Ribbon Glow
+      g.setColour(juce::Colour(0x440df0e3));  // Neon Cyan glow
+      g.strokePath(flightPath, juce::PathStrokeType(6.0f));
+
+      // Dashed Line
+      juce::Path dashedPath;
+      float dashLengths[] = {8.0f, 4.0f};
+      juce::PathStrokeType(2.0f).createDashedStroke(dashedPath, flightPath,
+                                                    dashLengths, 2);
+      g.setColour(juce::Colour(0xaa0df0e3));
+      g.fillPath(dashedPath);
+    }
+
+    // 3. Draw Mouse Ghost (Dimmed / Indicator)
     if (ghostIsValid) {
       g.setColour(juce::Colour(0x4444ff44));  // translucent green
-      g.fillRoundedRectangle(rect, 6.0f);
-      g.setColour(juce::Colour(0x8844ff44));
-      g.drawRoundedRectangle(rect, 6.0f, 2.0f);
+      g.fillRoundedRectangle(mouseRect, 6.0f);
     } else {
-      g.setColour(juce::Colour(0x44ff4444));  // translucent red
-      g.fillRoundedRectangle(rect, 6.0f);
-      g.setColour(juce::Colour(0x88ff4444));
-      g.drawRoundedRectangle(rect, 6.0f, 2.0f);
+      g.setColour(juce::Colour(0x22ff4444));  // faint red
+      g.fillRoundedRectangle(mouseRect, 6.0f);
+      g.setColour(juce::Colour(0x44ff4444));
+      g.drawRoundedRectangle(mouseRect, 6.0f, 1.0f);
+    }
+
+    // 4. Draw Resolved Ghost (The actual destination)
+    if (!ghostIsValid && hasGhostResolved) {
+      g.setColour(juce::Colour(0x6644ff44));  // stronger green
+      g.fillRoundedRectangle(resolvedRect, 6.0f);
+      g.setColour(juce::Colour(0xaa44ff44));
+      g.drawRoundedRectangle(resolvedRect, 6.0f, 2.0f);
     }
 
     g.addTransform(getCameraTransform().inverted());
@@ -1215,6 +1243,8 @@ void GraphCanvas::selectNode(GraphNode *node) {
 
 void GraphCanvas::setGhostTarget(int gridX, int gridY, int gridW, int gridH,
                                  GraphNode *ignoreNode) {
+  bool posChanged = (gridX != ghostTargetX || gridY != ghostTargetY);
+
   showGhostTarget = true;
   ghostTargetX = gridX;
   ghostTargetY = gridY;
@@ -1224,6 +1254,19 @@ void GraphCanvas::setGhostTarget(int gridX, int gridY, int gridW, int gridH,
   const juce::ScopedLock sl(graphLock);
   ghostIsValid =
       !graphEngine.isAreaOccupied(gridX, gridY, gridW, gridH, ignoreNode);
+
+  if (ghostIsValid) {
+    ghostResolvedX = gridX;
+    ghostResolvedY = gridY;
+    hasGhostResolved = true;
+  } else if (posChanged || !hasGhostResolved) {
+    auto resolved = graphEngine.findClosestFreeSpot(
+        gridX, gridY, gridW, gridH, ignoreNode, getViewportGridCenter());
+    ghostResolvedX = resolved.x;
+    ghostResolvedY = resolved.y;
+    hasGhostResolved = true;
+  }
+
   repaint();
 }
 
