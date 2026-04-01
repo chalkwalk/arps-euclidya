@@ -229,13 +229,15 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector,
   double prevTick = std::floor(prevEffective / adjustedDivision);
 
   if (currTick > prevTick || forceTick) {
-    isTick = true;
-    forceTick = false;
-    // Decay the slip each time a real tick fires
-    if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
-      forgivingSlipFraction *= 0.5;
-      if (forgivingSlipFraction < 0.001)
-        forgivingSlipFraction = 0.0;
+    if (syncMode == SyncMode::Gestural || isPlaying) {
+      isTick = true;
+      forceTick = false;
+      // Decay the slip each time a real tick fires
+      if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
+        forgivingSlipFraction *= 0.5;
+        if (forgivingSlipFraction < 0.001)
+          forgivingSlipFraction = 0.0;
+      }
     }
   }
 

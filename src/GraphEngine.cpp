@@ -426,4 +426,5 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
       }
     }
   }
+  recalculate();
 }

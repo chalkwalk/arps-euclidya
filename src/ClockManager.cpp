@@ -12,35 +12,46 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
     info = playHead->getPosition();
   }
 
-  if (info.hasValue() && info->getIsPlaying()) {
-    hostPlaying = true;
-    if (info->getBpm().hasValue()) {
-      currentBPM = *info->getBpm();
-    }
-
-    if (info->getPpqPosition().hasValue()) {
-      double currentPpq = *info->getPpqPosition();
-
-      // Update cumulative PPQ to mirror host position
-      cumulativePpq = currentPpq;
-
-      if (lastPpqPosition >= 0.0) {
-        // Determine if we crossed an 1/8th note boundary (0.5 PPQ)
-        double division = 0.5;
-
-        double previousTick = std::floor(lastPpqPosition / division);
-        double currentTick = std::floor(currentPpq / division);
-
-        if (currentTick > previousTick) {
-          tickFlag = true;
-        }
+  if (info.hasValue()) {
+    if (info->getIsPlaying()) {
+      hostPlaying = true;
+      if (info->getBpm().hasValue()) {
+        currentBPM = *info->getBpm();
       }
-      lastPpqPosition = currentPpq;
+
+      if (info->getPpqPosition().hasValue()) {
+        double currentPpq = *info->getPpqPosition();
+
+        // Update cumulative PPQ to mirror host position
+        cumulativePpq = currentPpq;
+
+        if (lastPpqPosition >= 0.0) {
+          // Determine if we crossed an 1/8th note boundary (0.5 PPQ)
+          double division = 0.5;
+
+          double previousTick = std::floor(lastPpqPosition / division);
+          double currentTick = std::floor(currentPpq / division);
+
+          if (currentTick > previousTick) {
+            tickFlag = true;
+          }
+        }
+        lastPpqPosition = currentPpq;
+      }
+    } else {
+      hostPlaying = false;
+      // Fallback: Continue unified timeline from BPM while host is stopped
+      lastPpqPosition = -1.0;
+      if (sampleRate > 0) {
+        double samplesPerBeat = (sampleRate * 60.0) / currentBPM;
+        double beatsElapsed = (double)samplesPerBlock / samplesPerBeat;
+        cumulativePpq += beatsElapsed;
+      }
     }
   } else {
-    hostPlaying = false;
-    // Fallback: Free-sync internal clock when host is stopped or unavailable
-    lastPpqPosition = -1.0;  // Reset host sync
+    hostPlaying = standaloneRunning;
+    // Fallback: Free-sync internal clock when no host is available
+    lastPpqPosition = -1.0;
 
     if (standaloneRunning && sampleRate > 0) {
       double samplesPerBeat = (sampleRate * 60.0) / currentBPM;

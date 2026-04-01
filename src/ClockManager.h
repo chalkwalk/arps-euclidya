@@ -38,7 +38,7 @@ class ClockManager {
   double currentBPM = 120.0;
   bool tickFlag = false;
   bool hostPlaying = false;
-  bool standaloneRunning = true;
+  bool standaloneRunning = false;
 
   // Cumulative PPQ: always-incrementing, works in all modes
   double cumulativePpq = 0.0;
