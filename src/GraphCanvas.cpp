@@ -110,8 +110,16 @@ void GraphCanvas::updateTransforms() {
   auto transform = getCameraTransform();
   for (auto *block : nodeBlocks) {
     block->setTransform(transform);
-    block->setBounds((int)block->getNode()->nodeX, (int)block->getNode()->nodeY,
-                     block->getWidth(), block->getHeight());
+
+    // Safety check for NaN coordinates before setting bounds
+    float nx = block->getNode()->nodeX;
+    float ny = block->getNode()->nodeY;
+    if (std::isnan(nx) || std::isinf(nx))
+      nx = 0.0f;
+    if (std::isnan(ny) || std::isinf(ny))
+      ny = 0.0f;
+
+    block->setBounds((int)nx, (int)ny, block->getWidth(), block->getHeight());
   }
   updateScrollBars();
 }
@@ -333,10 +341,26 @@ void GraphCanvas::refreshCableCache() {
         auto start = sourceBlock->getOutputPortCentre(outPort);
         auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
 
-        cable.path.startNewSubPath(start.toFloat());
-        float dx = std::max(std::abs((float)(end.x - start.x)) * 0.5f, 40.0f);
-        cable.path.cubicTo(start.x + dx, (float)start.y, end.x - dx,
-                           (float)end.y, (float)end.x, (float)end.y);
+        auto startF = start.toFloat();
+        auto endF = end.toFloat();
+
+        // Final safety check for NaN/Inf before path operations
+        if (std::isnan(startF.x) || std::isinf(startF.x))
+          startF.x = 0.0f;
+        if (std::isnan(startF.y) || std::isinf(startF.y))
+          startF.y = 0.0f;
+        if (std::isnan(endF.x) || std::isinf(endF.x))
+          endF.x = 0.0f;
+        if (std::isnan(endF.y) || std::isinf(endF.y))
+          endF.y = 0.0f;
+
+        cable.path.startNewSubPath(startF);
+        float dx = std::max(std::abs(endF.x - startF.x) * 0.5f, 40.0f);
+        if (std::isnan(dx) || std::isinf(dx))
+          dx = 40.0f;
+
+        cable.path.cubicTo(startF.x + dx, startF.y, endF.x - dx, endF.y, endF.x,
+                           endF.y);
 
         const auto &outSeq = node->getOutputSequence(outPort);
         cable.stepCount = (int)outSeq.size();

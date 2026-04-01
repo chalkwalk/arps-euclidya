@@ -347,7 +347,7 @@ void SequenceNode::process() {
         HeldNote hn;
         hn.noteNumber = n;
         hn.channel = 1;
-        hn.velocity = 100;
+        hn.velocity = 0.8f;
         hn.sourceNoteNumber =
             n;  // For manual steps, the note is its own source
         hn.sourceChannel = 1;

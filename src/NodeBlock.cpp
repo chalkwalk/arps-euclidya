@@ -303,6 +303,13 @@ void NodeBlock::timerCallback() {
             element.dynamicMaxRef != nullptr) {
           int curMin = *element.dynamicMinRef;
           int curMax = *element.dynamicMaxRef;
+
+          // Ensure range has a width of at least 1 to avoid NaN proportions in
+          // JUCE's Internal NormalisableRange (division by zero)
+          if (curMin == curMax) {
+            curMax = curMin + 1;
+          }
+
           if (slider->getMinimum() != curMin ||
               slider->getMaximum() != curMax) {
             slider->setRange(curMin, curMax, element.step);
