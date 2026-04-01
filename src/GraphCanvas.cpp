@@ -27,8 +27,9 @@ GraphCanvas::GraphCanvas(GraphEngine &engine,
   hScroll.setAutoHide(false);
   vScroll.setAutoHide(false);
 
-  // Intercept all child mouse events to support universal middle-click panning
-  addMouseListener(this, true);
+  // Intercept child mouse events to support universal middle-click panning
+  // We no longer add 'this' as a listener to itself (which was causing double
+  // clicks) instead we add it specifically to each NodeBlock in rebuild().
   addKeyListener(this);
 }
 
@@ -88,6 +89,7 @@ void GraphCanvas::rebuild() {
     };
 
     addAndMakeVisible(block);
+    block->addMouseListener(this, false);
     nodeBlocks.add(block);
   }
 
