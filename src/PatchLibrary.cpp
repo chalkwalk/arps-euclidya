@@ -97,6 +97,12 @@ void PatchLibrary::scan() {
   scanDirectory(factoryDir, Bank::Factory, factoryDir.getFullPathName());
   scanDirectory(userDir, Bank::User, userDir.getFullPathName());
 
+  // Alphanumeric sort (Natural order, case-insensitive)
+  std::sort(allPatches.begin(), allPatches.end(),
+            [](const PatchInfo &a, const PatchInfo &b) {
+              return a.name.compareNatural(b.name) < 0;
+            });
+
   DBG("PatchLibrary: scanned " + juce::String(allPatches.size()) +
       " patches (" + juce::String(getPatches(Bank::Factory).size()) +
       " factory, " + juce::String(getPatches(Bank::User).size()) + " user)");
@@ -178,6 +184,13 @@ std::vector<juce::String> PatchLibrary::getCategories(Bank bank) const {
       categories.push_back(p.category);
     }
   }
+
+  // Alphanumeric sort for categories
+  std::sort(categories.begin(), categories.end(),
+            [](const juce::String &a, const juce::String &b) {
+              return a.compareNatural(b) < 0;
+            });
+
   return categories;
 }
 
