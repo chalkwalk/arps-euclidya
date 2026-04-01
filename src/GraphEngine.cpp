@@ -29,6 +29,13 @@ void GraphEngine::removeNode(GraphNode *node) {
   // First, remove all connections involving this node
   for (auto &n : nodes) {
     if (n.get() == node) {
+      // Before clearing our own connections, tell the targets to clear their
+      // cached inputs from us
+      for (const auto &[outPort, connVec] : n->getConnections()) {
+        for (const auto &conn : connVec) {
+          conn.targetNode->clearInputSequence(conn.targetInputPort);
+        }
+      }
       n->clearConnections();
     } else {
       // Remove connections that point to the deleted node
