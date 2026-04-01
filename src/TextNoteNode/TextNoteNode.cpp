@@ -24,6 +24,7 @@ class TextNoteCustomComponent : public juce::Component {
     editor.onTextChange = [this]() { targetNode.noteText = editor.getText(); };
 
     addAndMakeVisible(editor);
+    setWantsKeyboardFocus(true);
   }
 
   void resized() override { editor.setBounds(getLocalBounds().reduced(2)); }

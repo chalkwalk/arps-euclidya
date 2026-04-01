@@ -62,7 +62,7 @@ void GraphCanvas::rebuild() {
     // Selection: bring to front when clicked anywhere on the block
     block->onSelected = [this, b = block]() {
       selectNode(b->getNode().get());
-      b->toFront(true);
+      b->toFront(false);
       hScroll.toFront(false);
       vScroll.toFront(false);
       zoomFitButton.toFront(false);
@@ -771,6 +771,11 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
 
   if (key.isKeyCode(juce::KeyPress::deleteKey) ||
       key.isKeyCode(juce::KeyPress::backspaceKey)) {
+    // If the focused component is a TextEditor, let it handle the key
+    if (dynamic_cast<juce::TextEditor *>(originatingComponent) != nullptr) {
+      return false;
+    }
+
     if (selectedNode != nullptr) {
       const juce::ScopedLock sl(graphLock);
       graphEngine.removeNode(selectedNode);
