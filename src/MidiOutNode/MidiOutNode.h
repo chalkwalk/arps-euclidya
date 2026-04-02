@@ -25,7 +25,8 @@ class MidiOutNode : public GraphNode {
   // Called immediately when UI controls change
   void parameterChanged() override { clampParameters(); }
 
-  void generateOutput(NoteEventCollector &collector, int numSamples);
+  void generateOutput(NoteEventCollector &collector, int numSamples,
+                      std::atomic<int32_t> &noteIDCounter);
 
   // Returns a formatted string showing the cycle length in ticks, quarter
   // beats, and bars
@@ -98,7 +99,7 @@ class MidiOutNode : public GraphNode {
   bool rhythmResetOnRelease = true;   // Reset rhythm on all-keys-up
   int clockDivisionIndex = 5;  // Index into division table (default: 1/8)
   bool triplet = false;        // Triplet modifier
-  int outputChannel = 1;       // Output MIDI channel (1-16)
+  int outputChannel = 0;       // Output MIDI channel (0-15)
 
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;

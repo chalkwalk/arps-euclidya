@@ -33,6 +33,17 @@ class ArpsEuclidyaEditor;
 #include "GraphEngine.h"
 #include "NoteExpressionManager.h"
 
+struct OutboundClapEvent {
+  enum class Type { NoteOn, NoteOff, NoteExpression };
+  Type type;
+  int channel;
+  int noteNumber;
+  float value;  // velocity or expression value
+  int sampleOffset;
+  int32_t noteID;
+  NoteExpressionType expressionType;
+};
+
 /**
  */
 class ArpsEuclidyaProcessor
@@ -130,6 +141,8 @@ class ArpsEuclidyaProcessor
   void removeNode(GraphNode *node);
 
   std::atomic<bool> isClapProtocol{false};
+  std::atomic<int32_t> globalNoteIDCounter{0};
+  std::vector<OutboundClapEvent> outboundClapEvents;
 
  private:
   void handleNoteOnEvent(const clap_event_note_t *event);

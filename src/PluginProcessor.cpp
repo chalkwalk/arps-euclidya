@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 
+#include <memory>
+
 #include "AppSettings.h"
 #include "MacroParameter.h"
 #include "MidiOutNode/MidiOutNode.h"
@@ -245,28 +247,61 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
       void addNoteOn(int channel, int noteNumber, float velocity,
                      int sampleOffset, int32_t /*noteID*/) override {
         buffer.addEvent(
-            juce::MidiMessage::noteOn(channel, noteNumber, velocity),
+            juce::MidiMessage::noteOn(channel + 1, noteNumber, velocity),
             sampleOffset);
       }
       void addNoteOff(int channel, int noteNumber, float velocity,
                       int sampleOffset, int32_t /*noteID*/) override {
         buffer.addEvent(
-            juce::MidiMessage::noteOff(channel, noteNumber, velocity),
+            juce::MidiMessage::noteOff(channel + 1, noteNumber, velocity),
             sampleOffset);
       }
       void addNoteExpression(int channel, int noteNumber,
                              NoteExpressionType type, float value,
                              int sampleOffset, int32_t /*noteID*/) override {
-        // Future: map to MIDI CC/PitchBend if needed
         juce::ignoreUnused(channel, noteNumber, type, value, sampleOffset);
       }
 
      private:
       juce::MidiBuffer &buffer;
-    } collector(midiMessages);
+    };
+
+    class ClapEventCollector : public NoteEventCollector {
+     public:
+      ClapEventCollector(std::vector<OutboundClapEvent> &v) : events(v) {}
+      void addNoteOn(int channel, int noteNumber, float velocity,
+                     int sampleOffset, int32_t noteID) override {
+        events.push_back({OutboundClapEvent::Type::NoteOn, channel, noteNumber,
+                          velocity, sampleOffset, noteID,
+                          NoteExpressionType::Volume});
+      }
+      void addNoteOff(int channel, int noteNumber, float velocity,
+                      int sampleOffset, int32_t noteID) override {
+        events.push_back({OutboundClapEvent::Type::NoteOff, channel, noteNumber,
+                          velocity, sampleOffset, noteID,
+                          NoteExpressionType::Volume});
+      }
+      void addNoteExpression(int channel, int noteNumber,
+                             NoteExpressionType type, float value,
+                             int sampleOffset, int32_t noteID) override {
+        events.push_back({OutboundClapEvent::Type::NoteExpression, channel,
+                          noteNumber, value, sampleOffset, noteID, type});
+      }
+
+     private:
+      std::vector<OutboundClapEvent> &events;
+    };
+
+    outboundClapEvents.clear();
+    std::unique_ptr<NoteEventCollector> collector;
+    if (isClapProtocol) {
+      collector = std::make_unique<ClapEventCollector>(outboundClapEvents);
+    } else {
+      collector = std::make_unique<MidiBufferCollector>(midiMessages);
+    }
 
     for (const auto &outNode : graphEngine.getMidiOutNodes()) {
-      outNode->generateOutput(collector, numSamples);
+      outNode->generateOutput(*collector, numSamples, globalNoteIDCounter);
     }
   }
 
@@ -631,7 +666,70 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
   if (!out_events || !out_events->try_push)
     return;
 
-  // Interleave MIDI events from the buffer into the CLAP output queue
+  // 1. Push native CLAP events collected during processBlock
+  for (const auto &evt : outboundClapEvents) {
+    if (evt.type == OutboundClapEvent::Type::NoteOn) {
+      clap_event_note clapEvt{};
+      clapEvt.header.size = sizeof(clap_event_note);
+      clapEvt.header.type = CLAP_EVENT_NOTE_ON;
+      clapEvt.header.time =
+          static_cast<uint32_t>(evt.sampleOffset + sampleOffset);
+      clapEvt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+      clapEvt.header.flags = 0;
+      clapEvt.port_index = 0;
+      clapEvt.channel = (int16_t)evt.channel;
+      clapEvt.key = (int16_t)evt.noteNumber;
+      clapEvt.velocity = (double)evt.value;
+      clapEvt.note_id = evt.noteID;
+      out_events->try_push(out_events, &clapEvt.header);
+    } else if (evt.type == OutboundClapEvent::Type::NoteOff) {
+      clap_event_note clapEvt{};
+      clapEvt.header.size = sizeof(clap_event_note);
+      clapEvt.header.type = CLAP_EVENT_NOTE_OFF;
+      clapEvt.header.time =
+          static_cast<uint32_t>(evt.sampleOffset + sampleOffset);
+      clapEvt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+      clapEvt.header.flags = 0;
+      clapEvt.port_index = 0;
+      clapEvt.channel = (int16_t)evt.channel;
+      clapEvt.key = (int16_t)evt.noteNumber;
+      clapEvt.velocity = (double)evt.value;
+      clapEvt.note_id = evt.noteID;
+      out_events->try_push(out_events, &clapEvt.header);
+    } else if (evt.type == OutboundClapEvent::Type::NoteExpression) {
+      clap_event_note_expression clapEvt{};
+      clapEvt.header.size = sizeof(clap_event_note_expression);
+      clapEvt.header.type = CLAP_EVENT_NOTE_EXPRESSION;
+      clapEvt.header.time =
+          static_cast<uint32_t>(evt.sampleOffset + sampleOffset);
+      clapEvt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+      clapEvt.header.flags = 0;
+      clapEvt.port_index = 0;
+      clapEvt.channel = (int16_t)evt.channel;
+      clapEvt.key = (int16_t)evt.noteNumber;
+      clapEvt.note_id = evt.noteID;
+      clapEvt.value = (double)evt.value;
+
+      switch (evt.expressionType) {
+        case NoteExpressionType::Volume:
+          clapEvt.expression_id = CLAP_NOTE_EXPRESSION_VOLUME;
+          break;
+        case NoteExpressionType::Pressure:
+          clapEvt.expression_id = CLAP_NOTE_EXPRESSION_PRESSURE;
+          break;
+        case NoteExpressionType::Tuning:
+          clapEvt.expression_id = CLAP_NOTE_EXPRESSION_TUNING;
+          break;
+        case NoteExpressionType::Brightness:
+          clapEvt.expression_id = CLAP_NOTE_EXPRESSION_BRIGHTNESS;
+          break;
+      }
+      out_events->try_push(out_events, &clapEvt.header);
+    }
+  }
+
+  // 2. Interleave any remaining MIDI events from the buffer into the CLAP
+  // output queue
   for (auto meta : midiBuffer) {
     auto msg = meta.getMessage();
     if (msg.getRawDataSize() <= 3) {

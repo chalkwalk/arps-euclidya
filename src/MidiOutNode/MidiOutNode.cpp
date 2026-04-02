@@ -152,8 +152,8 @@ void MidiOutNode::process() {
   }
 }
 
-void MidiOutNode::generateOutput(NoteEventCollector &collector,
-                                 int numSamples) {
+void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
+                                 std::atomic<int32_t> &noteIDCounter) {
   auto it0 = inputSequences.find(0);
   bool holdingNotes = (it0 != inputSequences.end() && !it0->second.empty());
   bool isPlaying = clockManager.isHostPlaying();
@@ -486,7 +486,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector,
         int duration = (int)(divSamples * std::max(0.05f, finalGateFactor));
 
         // Calculate a new noteID if possible (for CLAP tracking)
-        int32_t outNoteID = -1;
+        int32_t outNoteID = noteIDCounter.fetch_add(1);
 
         int finalSamplePos = std::clamp(tJitter, 0, numSamples - 1);
 
@@ -653,7 +653,7 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     rhythmResetOnRelease = xml->getIntAttribute("rhythmResetOnRelease", 1) != 0;
     clockDivisionIndex = xml->getIntAttribute("clockDivisionIndex", 5);
     triplet = xml->getIntAttribute("triplet", 0) != 0;
-    outputChannel = xml->getIntAttribute("outputChannel", 1);
+    outputChannel = xml->getIntAttribute("outputChannel", 0);
 
     pressureToVelocity = xml->getDoubleAttribute("pressureToVelocity", 0.0);
     timbreToVelocity = xml->getDoubleAttribute("timbreToVelocity", 0.0);
