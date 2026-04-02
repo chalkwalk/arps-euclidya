@@ -35,36 +35,40 @@ class SequenceNodeEditor : public juce::Component,
 
     lengthSlider.onRightClick = [this, &node, &apvts]() {
       GraphCanvas *canvasPtr = findParentComponentOfClass<GraphCanvas>();
+      if (canvasPtr == nullptr) {
+        return;
+      }
+
       MacroMappingMenu::showMenu(
           &lengthSlider, node.macroSeqLength,
           [&node, canvasPtr, &apvts, this](int macroIndex) {
-            if (macroIndex == -2) {
-              if (canvasPtr != nullptr) {
-                macroIndex = canvasPtr->getEngine().getNextFreeMacro();
+            canvasPtr->performMutation([&node, canvasPtr, &apvts, macroIndex,
+                                        this]() {
+              int finalMacroIndex = macroIndex;
+              if (finalMacroIndex == -2) {
+                finalMacroIndex = canvasPtr->getEngine().getNextFreeMacro();
+                if (finalMacroIndex < 0) {
+                  return;
+                }
               }
-              if (macroIndex < 0) {
-                return;
+
+              auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
+                  "macro_" + juce::String(finalMacroIndex + 1)));
+              if (param != nullptr && !param->isMapped()) {
+                float norm = (float)((lengthSlider.getValue() -
+                                      lengthSlider.getMinimum()) /
+                                     (lengthSlider.getMaximum() -
+                                      lengthSlider.getMinimum()));
+                param->setValueNotifyingHost(norm);
               }
-            }
 
-            auto *param = dynamic_cast<MacroParameter *>(
-                apvts.getParameter("macro_" + juce::String(macroIndex + 1)));
-            if (param != nullptr && !param->isMapped()) {
-              float norm = (float)((lengthSlider.getValue() -
-                                    lengthSlider.getMinimum()) /
-                                   (lengthSlider.getMaximum() -
-                                    lengthSlider.getMinimum()));
-              param->setValueNotifyingHost(norm);
-            }
+              node.macroSeqLength = finalMacroIndex;
+              if (node.onMappingChanged) {
+                node.onMappingChanged();
+              }
 
-            node.macroSeqLength = macroIndex;
-            if (node.onMappingChanged) {
-              node.onMappingChanged();
-            }
-
-            if (canvasPtr != nullptr) {
               canvasPtr->rebuild();
-            }
+            });
           });
     };
 
@@ -193,15 +197,33 @@ class SequenceNodeEditor : public juce::Component,
     int noteNum = 127 - scrollOffset - i;
 
     if (noteNum >= 0 && noteNum <= 127 && c >= 0 && c < 16) {
-      if (e.mods.isLeftButtonDown()) {
-        seqNode.grid[noteNum][c] = true;
-      } else if (e.mods.isRightButtonDown()) {
-        seqNode.grid[noteNum][c] = false;
+      GraphCanvas *canvasPtr = findParentComponentOfClass<GraphCanvas>();
+      if (canvasPtr != nullptr) {
+        bool isClearing = e.mods.isRightButtonDown();
+        bool newState = !isClearing;
+
+        // Peak optimization: only trigger undo if state actually changes
+        if (seqNode.grid[noteNum][c] != newState) {
+          canvasPtr->performMutation([this, noteNum, c, newState]() {
+            seqNode.grid[noteNum][c] = newState;
+            if (seqNode.onNodeDirtied) {
+              seqNode.onNodeDirtied();
+            }
+          });
+          repaint();
+        }
+      } else {
+        // Fallback for non-canvas context if any
+        if (e.mods.isLeftButtonDown()) {
+          seqNode.grid[noteNum][c] = true;
+        } else if (e.mods.isRightButtonDown()) {
+          seqNode.grid[noteNum][c] = false;
+        }
+        if (seqNode.onNodeDirtied) {
+          seqNode.onNodeDirtied();
+        }
+        repaint();
       }
-      if (seqNode.onNodeDirtied) {
-        seqNode.onNodeDirtied();
-      }
-      repaint();
     }
   }
 

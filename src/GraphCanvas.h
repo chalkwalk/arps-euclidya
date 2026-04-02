@@ -14,6 +14,13 @@ class GraphCanvas : public juce::Component,
               juce::CriticalSection &lock);
   ~GraphCanvas() override = default;
 
+  void undo();
+  void redo();
+
+  std::function<void(std::function<void()>)> performMutation;
+  std::function<void()> onUndo;
+  std::function<void()> onRedo;
+
   void paint(juce::Graphics &g) override;
   void paintOverChildren(juce::Graphics &g) override;
   void resized() override;

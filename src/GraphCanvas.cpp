@@ -33,6 +33,18 @@ GraphCanvas::GraphCanvas(GraphEngine &engine,
   addKeyListener(this);
 }
 
+void GraphCanvas::undo() {
+  if (onUndo) {
+    onUndo();
+  }
+}
+
+void GraphCanvas::redo() {
+  if (onRedo) {
+    onRedo();
+  }
+}
+
 void GraphCanvas::rebuild() {
   nodeBlocks.clear();
 
@@ -46,7 +58,11 @@ void GraphCanvas::rebuild() {
 
     block->onDelete = [this, nodePtr = node.get()]() {
       const juce::ScopedLock sl2(graphLock);
-      graphEngine.removeNode(nodePtr);
+      if (performMutation) {
+        performMutation([this, nodePtr]() { graphEngine.removeNode(nodePtr); });
+      } else {
+        graphEngine.removeNode(nodePtr);
+      }
       rebuild();
       if (onGraphChanged) {
         onGraphChanged();
@@ -491,8 +507,15 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
       juce::Point<float> nearest;
       cable.path.getNearestPoint(localPos, nearest);
       if (nearest.getDistanceFrom(localPos) < 12.0f) {
-        graphEngine.removeConnection(cable.sourceNode, cable.sourcePort,
-                                     cable.targetNode, cable.targetPort);
+        if (performMutation) {
+          performMutation([this, &cable]() {
+            graphEngine.removeConnection(cable.sourceNode, cable.sourcePort,
+                                         cable.targetNode, cable.targetPort);
+          });
+        } else {
+          graphEngine.removeConnection(cable.sourceNode, cable.sourcePort,
+                                       cable.targetNode, cable.targetPort);
+        }
         refreshCableCache();
         repaint();
         return;
@@ -671,6 +694,11 @@ void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
   }
 
   if (connected) {
+    if (performMutation) {
+      // Actually, proximity connection happens after a drag-mutation is already
+      // finished? No, it's called during mouseUp. We should probably wrap the
+      // entire mouseUp sequence in a mutation if any change happens.
+    }
     refreshCableCache();
     repaint();
     if (onGraphChanged) {
@@ -713,21 +741,38 @@ bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
     int targetPort = bestCable->targetPort;
 
     // Disconnect A -> B. Then A -> New(0), New(0) -> B
-    graphEngine.removeConnection(sourceNode, sourcePort, targetNode,
-                                 targetPort);
+    if (performMutation) {
+      performMutation([this, sourceNode, sourcePort, targetNode, targetPort,
+                       newNode]() {
+        graphEngine.removeConnection(sourceNode, sourcePort, targetNode,
+                                     targetPort);
 
-    bool conn1 =
         graphEngine.addExplicitConnection(sourceNode, sourcePort, newNode, 0);
-    bool conn2 =
         graphEngine.addExplicitConnection(newNode, 0, targetNode, targetPort);
-
-    if (conn1 || conn2) {
+      });
       refreshCableCache();
       repaint();
       if (onGraphChanged) {
         onGraphChanged();
       }
       return true;
+    } else {
+      graphEngine.removeConnection(sourceNode, sourcePort, targetNode,
+                                   targetPort);
+
+      bool conn1 =
+          graphEngine.addExplicitConnection(sourceNode, sourcePort, newNode, 0);
+      bool conn2 =
+          graphEngine.addExplicitConnection(newNode, 0, targetNode, targetPort);
+
+      if (conn1 || conn2) {
+        refreshCableCache();
+        repaint();
+        if (onGraphChanged) {
+          onGraphChanged();
+        }
+        return true;
+      }
     }
   }
 
@@ -762,9 +807,17 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
         if (blockLocalWorld.getDistanceFrom(portCentreWorld) <=
             NodeBlock::PORT_HIT_RADIUS) {
           const juce::ScopedLock sl(graphLock);
-          graphEngine.addExplicitConnection(
-              cableDragSourceBlock->getNode().get(), cableDragSourcePort,
-              block->getNode().get(), i);
+          if (performMutation) {
+            performMutation([this, block, i]() {
+              graphEngine.addExplicitConnection(
+                  cableDragSourceBlock->getNode().get(), cableDragSourcePort,
+                  block->getNode().get(), i);
+            });
+          } else {
+            graphEngine.addExplicitConnection(
+                cableDragSourceBlock->getNode().get(), cableDragSourcePort,
+                block->getNode().get(), i);
+          }
           break;
         }
       }
@@ -777,9 +830,17 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
         if (blockLocalWorld.getDistanceFrom(portCentreWorld) <=
             NodeBlock::PORT_HIT_RADIUS) {
           const juce::ScopedLock sl(graphLock);
-          graphEngine.addExplicitConnection(
-              block->getNode().get(), i, cableDragSourceBlock->getNode().get(),
-              cableDragSourcePort);
+          if (performMutation) {
+            performMutation([this, block, i]() {
+              graphEngine.addExplicitConnection(
+                  block->getNode().get(), i,
+                  cableDragSourceBlock->getNode().get(), cableDragSourcePort);
+            });
+          } else {
+            graphEngine.addExplicitConnection(
+                block->getNode().get(), i,
+                cableDragSourceBlock->getNode().get(), cableDragSourcePort);
+          }
           break;
         }
       }
@@ -816,7 +877,11 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
 
     if (selectedNode != nullptr) {
       const juce::ScopedLock sl(graphLock);
-      graphEngine.removeNode(selectedNode);
+      if (performMutation) {
+        performMutation([this]() { graphEngine.removeNode(selectedNode); });
+      } else {
+        graphEngine.removeNode(selectedNode);
+      }
       selectedNode = nullptr;
       rebuild();
       if (onGraphChanged) {
@@ -840,9 +905,20 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
     return true;
   }
 
+  // Ctrl+Z / Cmd+Z to undo
+  if ((key.getKeyCode() == 'z' || key.getKeyCode() == 'Z') &&
+      key.getModifiers().isCommandDown()) {
+    if (key.getModifiers().isShiftDown()) {
+      redo();
+    } else {
+      undo();
+    }
+    return true;
+  }
+
   // Ctrl+D / Cmd+D to clone selected node
   if ((key.getKeyCode() == 'd' || key.getKeyCode() == 'D') &&
-      key.getModifiers().isCtrlDown()) {
+      key.getModifiers().isCommandDown()) {
     if (selectedNode != nullptr) {
       auto gw = selectedNode->getGridWidth();
       auto gh = selectedNode->getGridHeight();

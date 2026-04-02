@@ -512,17 +512,104 @@ ArpsEuclidyaEditor *ArpsEuclidyaProcessor::getEditor() {
   return dynamic_cast<ArpsEuclidyaEditor *>(getActiveEditor());
 }
 
+class GraphStateUndoAction : public juce::UndoableAction {
+ public:
+  GraphStateUndoAction(ArpsEuclidyaProcessor &p,
+                       std::unique_ptr<juce::XmlElement> before,
+                       std::unique_ptr<juce::XmlElement> after)
+      : processor(p),
+        stateBefore(std::move(before)),
+        stateAfter(std::move(after)) {}
+
+  bool perform() override {
+    if (isFirstPerform) {
+      isFirstPerform = false;
+      return true;
+    }
+    if (stateAfter != nullptr) {
+      processor.loadFromXml(stateAfter.get());
+      return true;
+    }
+    return false;
+  }
+
+  bool undo() override {
+    if (stateBefore != nullptr) {
+      processor.loadFromXml(stateBefore.get());
+      return true;
+    }
+    return false;
+  }
+
+  int getSizeInUnits() override { return 10; }
+
+ private:
+  ArpsEuclidyaProcessor &processor;
+  std::unique_ptr<juce::XmlElement> stateBefore;
+  std::unique_ptr<juce::XmlElement> stateAfter;
+  bool isFirstPerform = true;
+};
+
+void ArpsEuclidyaProcessor::performGraphMutation(
+    std::function<void()> mutation) {
+  auto before = captureState();
+  mutation();
+  auto after = captureState();
+  undoManager.perform(
+      new GraphStateUndoAction(*this, std::move(before), std::move(after)));
+}
+
+std::unique_ptr<juce::XmlElement> ArpsEuclidyaProcessor::captureState() {
+  auto xmlRoot = std::make_unique<juce::XmlElement>("ArpsEuclidyaState");
+  xmlRoot->setAttribute("version", CURRENT_PATCH_VERSION);
+
+  if (juce::PluginHostType::getPluginLoadedAs() ==
+      juce::AudioProcessor::wrapperType_Standalone) {
+    xmlRoot->setAttribute("standaloneBPM", clockManager.getBPM());
+  }
+
+  // Save APVTS Macros
+  auto state = apvts.copyState();
+  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
+  if (apvtsXml != nullptr) {
+    auto *wrapper = xmlRoot->createNewChildElement("APVTS");
+    wrapper->addChildElement(apvtsXml.release());
+  }
+
+  // Save Graph State
+  auto *graphXml = xmlRoot->createNewChildElement("Graph");
+  {
+    const juce::ScopedLock sl(graphLock);
+    graphEngine.saveState(graphXml);
+  }
+
+  // Save Metadata
+  auto *metaXml = xmlRoot->createNewChildElement("Metadata");
+  metaXml->setAttribute("name", currentPatchMetadata.name);
+  metaXml->setAttribute("author", currentPatchMetadata.author);
+  metaXml->setAttribute("description", currentPatchMetadata.description);
+  metaXml->setAttribute("tags", currentPatchMetadata.tags);
+  metaXml->setAttribute("created", currentPatchMetadata.created);
+  metaXml->setAttribute("modified", currentPatchMetadata.modified);
+
+  return xmlRoot;
+}
+
 void ArpsEuclidyaProcessor::addNode(const std::shared_ptr<GraphNode> &node) {
-  const juce::ScopedLock sl(graphLock);
-  node->onMappingChanged = [this]() { updateMacroNames(); };
-  graphEngine.addNode(node);
-  updateMacroNames();
+  performGraphMutation([this, node]() {
+    const juce::ScopedLock sl(graphLock);
+    node->onMappingChanged = [this]() { updateMacroNames(); };
+    graphEngine.addNode(node);
+    updateMacroNames();
+  });
 }
 
 void ArpsEuclidyaProcessor::removeNode(GraphNode *node) {
-  const juce::ScopedLock sl(graphLock);
-  graphEngine.removeNode(node);
-  updateMacroNames();
+  performGraphMutation([this, node]() {
+    const juce::ScopedLock sl(graphLock);
+    graphEngine.removeNode(node);
+    updateMacroNames();
+  });
 }
 
 void ArpsEuclidyaProcessor::updateMacroNames() {

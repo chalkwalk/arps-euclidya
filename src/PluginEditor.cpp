@@ -54,17 +54,26 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
                                               audioProcessor.graphLock);
   addAndMakeVisible(graphCanvas.get());
 
+  graphCanvas->performMutation = [this](std::function<void()> mutation) {
+    audioProcessor.performGraphMutation(std::move(mutation));
+  };
+  graphCanvas->onUndo = [this] { audioProcessor.undoManager.undo(); };
+  graphCanvas->onRedo = [this] { audioProcessor.undoManager.redo(); };
+
   graphCanvas->onNodeDropped = [this](const juce::String &nodeType,
                                       juce::Point<int> screenPos) {
-    auto newNode = NodeFactory::createNode(
-        nodeType.toStdString(), audioProcessor.noteExpressionManager,
-        audioProcessor.clockManager, audioProcessor.macros);
-    if (newNode) {
-      graphCanvas->addNodeAtPosition(newNode, screenPos);
-      if (!graphCanvas->attemptSignalPathInsertion(newNode.get(), screenPos)) {
-        graphCanvas->attemptProximityConnection(newNode.get(), screenPos);
+    audioProcessor.performGraphMutation([this, nodeType, screenPos]() {
+      auto newNode = NodeFactory::createNode(
+          nodeType.toStdString(), audioProcessor.noteExpressionManager,
+          audioProcessor.clockManager, audioProcessor.macros);
+      if (newNode) {
+        graphCanvas->addNodeAtPosition(newNode, screenPos);
+        if (!graphCanvas->attemptSignalPathInsertion(newNode.get(),
+                                                     screenPos)) {
+          graphCanvas->attemptProximityConnection(newNode.get(), screenPos);
+        }
       }
-    }
+    });
   };
 
   graphCanvas->onNodeReplaceRequest = [this](GraphNode *oldNode,
@@ -73,55 +82,55 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
       return;
     }
 
-    auto newNode = NodeFactory::createNode(
-        newType.toStdString(), audioProcessor.noteExpressionManager,
-        audioProcessor.clockManager, audioProcessor.macros);
+    audioProcessor.performGraphMutation([this, oldNode, newType]() {
+      auto newNode = NodeFactory::createNode(
+          newType.toStdString(), audioProcessor.noteExpressionManager,
+          audioProcessor.clockManager, audioProcessor.macros);
 
-    if (newNode) {
-      newNode->gridX = oldNode->gridX;
-      newNode->gridY = oldNode->gridY;
-      newNode->nodeX = oldNode->nodeX;
-      newNode->nodeY = oldNode->nodeY;
+      if (newNode) {
+        newNode->gridX = oldNode->gridX;
+        newNode->gridY = oldNode->gridY;
+        newNode->nodeX = oldNode->nodeX;
+        newNode->nodeY = oldNode->nodeY;
 
-      // Transfer Inputs
-      int inLimit =
-          std::min(oldNode->getNumInputPorts(), newNode->getNumInputPorts());
-      for (int i = 0; i < inLimit; ++i) {
-        // Find source for oldNode's input i
-        for (const auto &n : audioProcessor.graphEngine.getNodes()) {
-          for (const auto &[outPort, connVec] : n->getConnections()) {
-            for (const auto &conn : connVec) {
-              if (conn.targetNode == oldNode && conn.targetInputPort == i) {
-                // Transfer to new node
-                audioProcessor.graphEngine.addExplicitConnection(
-                    n.get(), outPort, newNode.get(), i);
+        // Transfer Inputs
+        int inLimit =
+            std::min(oldNode->getNumInputPorts(), newNode->getNumInputPorts());
+        for (int i = 0; i < inLimit; ++i) {
+          // Find source for oldNode's input i
+          for (const auto &n : audioProcessor.graphEngine.getNodes()) {
+            for (const auto &[outPort, connVec] : n->getConnections()) {
+              for (const auto &conn : connVec) {
+                if (conn.targetNode == oldNode && conn.targetInputPort == i) {
+                  // Transfer to new node
+                  audioProcessor.graphEngine.addExplicitConnection(
+                      n.get(), outPort, newNode.get(), i);
+                }
               }
             }
           }
         }
-      }
 
-      // Transfer Outputs
-      int outLimit =
-          std::min(oldNode->getNumOutputPorts(), newNode->getNumOutputPorts());
-      for (int i = 0; i < outLimit; ++i) {
-        auto it = oldNode->getConnections().find(i);
-        if (it != oldNode->getConnections().end()) {
-          for (const auto &conn : it->second) {
-            audioProcessor.graphEngine.addExplicitConnection(
-                newNode.get(), i, conn.targetNode, conn.targetInputPort);
+        // Transfer Outputs
+        int outLimit = std::min(oldNode->getNumOutputPorts(),
+                                newNode->getNumOutputPorts());
+        for (int i = 0; i < outLimit; ++i) {
+          const auto &conns = oldNode->getConnections();
+          if (conns.count(i)) {
+            for (const auto &conn : conns.at(i)) {
+              audioProcessor.graphEngine.addExplicitConnection(
+                  newNode.get(), i, conn.targetNode, conn.targetInputPort);
+            }
           }
         }
-      }
 
-      // Finalize swap
-      audioProcessor.graphEngine.removeNode(oldNode);
-      audioProcessor.graphEngine.addNode(newNode);
-      graphCanvas->rebuild();
-
-      if (graphCanvas->onGraphChanged) {
-        graphCanvas->onGraphChanged();
+        audioProcessor.removeNode(oldNode);
+        audioProcessor.addNode(newNode);
+        graphCanvas->rebuild();
       }
+    });
+    if (graphCanvas->onGraphChanged) {
+      graphCanvas->onGraphChanged();
     }
   };
 
@@ -131,40 +140,31 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
       return;
     }
 
-    auto newNode = NodeFactory::createNode(
-        original->getName(), audioProcessor.noteExpressionManager,
-        audioProcessor.clockManager, audioProcessor.macros);
+    audioProcessor.performGraphMutation([this, original, gridX, gridY]() {
+      auto newNode = NodeFactory::createNode(
+          original->getName(), audioProcessor.noteExpressionManager,
+          audioProcessor.clockManager, audioProcessor.macros);
 
-    if (newNode) {
-      // Copy state
-      juce::XmlElement xml("Temp");
-      original->saveNodeState(&xml);
-      newNode->loadNodeState(&xml);
+      if (newNode) {
+        // Clone state from original
+        juce::XmlElement xml("Temp");
+        original->saveNodeState(&xml);
+        newNode->loadNodeState(&xml);
 
-      newNode->gridX = gridX;
-      newNode->gridY = gridY;
-      newNode->nodeX =
-          (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
-      newNode->nodeY =
-          (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
+        newNode->gridX = gridX;
+        newNode->gridY = gridY;
+        newNode->nodeX =
+            (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
+        newNode->nodeY =
+            (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
 
-      audioProcessor.addNode(newNode);
-      graphCanvas->rebuild();
-
-      // Attempt proximity connection at the new location
-      juce::Point<int> screenPos(
-          (int)(newNode->nodeX),
-          (int)(newNode->nodeY));  // Rough world to screen conversion
-      // Actually we need the screen position.
-      // But rebuild() might have changed the component positions.
-      // Let's just use the grid coordinates to find the block...
-      // Or better, let attemptProximityConnection handle the world coordinates
-      // too? I'll skip it for clone for now as it's less common to clone *onto*
-      // a node. But the library drop is critical.
-
-      if (graphCanvas->onGraphChanged) {
-        graphCanvas->onGraphChanged();
+        audioProcessor.addNode(newNode);
+        graphCanvas->rebuild();
       }
+    });
+
+    if (graphCanvas->onGraphChanged) {
+      graphCanvas->onGraphChanged();
     }
   };
 

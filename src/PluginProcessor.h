@@ -140,9 +140,16 @@ class ArpsEuclidyaProcessor
   void addNode(const std::shared_ptr<GraphNode> &node);
   void removeNode(GraphNode *node);
 
+  void performGraphMutation(std::function<void()> mutation);
+  std::unique_ptr<juce::XmlElement> captureState();
+
+  juce::UndoManager undoManager;
+
   std::atomic<bool> isClapProtocol{false};
   std::atomic<int32_t> globalNoteIDCounter{0};
   std::vector<OutboundClapEvent> outboundClapEvents;
+
+  void loadFromXml(juce::XmlElement *xmlState);
 
  private:
   void handleNoteOnEvent(const clap_event_note_t *event);
@@ -150,7 +157,6 @@ class ArpsEuclidyaProcessor
   void handleNoteExpressionEvent(const clap_event_note_expression_t *event);
 
   static void upgradePatch(juce::XmlElement *xml, int fromVersion);
-  void loadFromXml(juce::XmlElement *xmlState);
   static juce::AudioProcessorValueTreeState::ParameterLayout
   createParameterLayout();
 

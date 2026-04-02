@@ -122,30 +122,36 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             MacroMappingMenu::showMenu(
                 slider, *macroRef,
                 [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
-                  if (macroIndex == -2) {
-                    macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                    if (macroIndex == -1) {
-                      return;
+                  canvasPtr->performMutation([node, macroRef, canvasPtr, slider,
+                                              &apvts, macroIndex]() {
+                    int finalMacroIndex = macroIndex;
+                    if (finalMacroIndex == -2) {
+                      finalMacroIndex =
+                          canvasPtr->getEngine().getNextFreeMacro();
+                      if (finalMacroIndex == -1) {
+                        return;
+                      }
                     }
-                  }
 
-                  auto *param =
-                      dynamic_cast<MacroParameter *>(apvts.getParameter(
-                          "macro_" + juce::String(macroIndex + 1)));
-                  if (param != nullptr && !param->isMapped()) {
-                    float norm =
-                        (float)((slider->getValue() - slider->getMinimum()) /
-                                (slider->getMaximum() - slider->getMinimum()));
-                    param->setValueNotifyingHost(norm);
-                  }
+                    auto *param =
+                        dynamic_cast<MacroParameter *>(apvts.getParameter(
+                            "macro_" + juce::String(finalMacroIndex + 1)));
+                    if (param != nullptr && !param->isMapped()) {
+                      float norm =
+                          (float)((slider->getValue() - slider->getMinimum()) /
+                                  (slider->getMaximum() -
+                                   slider->getMinimum()));
+                      param->setValueNotifyingHost(norm);
+                    }
 
-                  *macroRef = macroIndex;
-                  node->parameterChanged();
-                  if (node->onMappingChanged) {
-                    node->onMappingChanged();
-                  }
+                    *macroRef = finalMacroIndex;
+                    node->parameterChanged();
+                    if (node->onMappingChanged) {
+                      node->onMappingChanged();
+                    }
 
-                  canvasPtr->rebuild();
+                    canvasPtr->rebuild();
+                  });
                 });
           };
 
@@ -212,28 +218,33 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             MacroMappingMenu::showMenu(
                 button, *macroRef,
                 [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
-                  if (macroIndex == -2) {
-                    macroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                    if (macroIndex == -1) {
-                      return;
+                  canvasPtr->performMutation([node, macroRef, canvasPtr, button,
+                                              &apvts, macroIndex]() {
+                    int finalMacroIndex = macroIndex;
+                    if (finalMacroIndex == -2) {
+                      finalMacroIndex =
+                          canvasPtr->getEngine().getNextFreeMacro();
+                      if (finalMacroIndex == -1) {
+                        return;
+                      }
                     }
-                  }
 
-                  auto *param =
-                      dynamic_cast<MacroParameter *>(apvts.getParameter(
-                          "macro_" + juce::String(macroIndex + 1)));
-                  if (param != nullptr && !param->isMapped()) {
-                    float norm = button->getToggleState() ? 1.0f : 0.0f;
-                    param->setValueNotifyingHost(norm);
-                  }
+                    auto *param =
+                        dynamic_cast<MacroParameter *>(apvts.getParameter(
+                            "macro_" + juce::String(finalMacroIndex + 1)));
+                    if (param != nullptr && !param->isMapped()) {
+                      float norm = button->getToggleState() ? 1.0f : 0.0f;
+                      param->setValueNotifyingHost(norm);
+                    }
 
-                  *macroRef = macroIndex;
-                  node->parameterChanged();
-                  if (node->onMappingChanged) {
-                    node->onMappingChanged();
-                  }
+                    *macroRef = finalMacroIndex;
+                    node->parameterChanged();
+                    if (node->onMappingChanged) {
+                      node->onMappingChanged();
+                    }
 
-                  canvasPtr->rebuild();
+                    canvasPtr->rebuild();
+                  });
                 });
           };
 
@@ -723,25 +734,44 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     }
 
     // Snap to the ghost slot if it's valid...
+    int finalGridX = dragStartGridX;
+    int finalGridY = dragStartGridY;
+
     if (parentCanvas.isGhostValid()) {
-      targetNode->gridX = parentCanvas.getGhostX();
-      targetNode->gridY = parentCanvas.getGhostY();
+      finalGridX = parentCanvas.getGhostX();
+      finalGridY = parentCanvas.getGhostY();
     } else {
-      // Otherwise, instead of just popping back to start, attempt to find the
-      // nearest valid spiral
       auto nearest = parentCanvas.getEngine().findClosestFreeSpot(
           parentCanvas.getGhostX(), parentCanvas.getGhostY(),
           targetNode->getGridWidth(), targetNode->getGridHeight(),
           targetNode.get());
-      targetNode->gridX = nearest.x;
-      targetNode->gridY = nearest.y;
+      finalGridX = nearest.x;
+      finalGridY = nearest.y;
     }
 
-    // Lock the physical layout to the final grid slot
-    targetNode->nodeX =
-        (float)(targetNode->gridX * Layout::GridPitch) + Layout::TramlineOffset;
-    targetNode->nodeY =
-        (float)(targetNode->gridY * Layout::GridPitch) + Layout::TramlineOffset;
+    if (finalGridX != dragStartGridX || finalGridY != dragStartGridY) {
+      if (parentCanvas.performMutation) {
+        parentCanvas.performMutation([this, finalGridX, finalGridY]() {
+          targetNode->gridX = finalGridX;
+          targetNode->gridY = finalGridY;
+          targetNode->nodeX = (float)(targetNode->gridX * Layout::GridPitch) +
+                              Layout::TramlineOffset;
+          targetNode->nodeY = (float)(targetNode->gridY * Layout::GridPitch) +
+                              Layout::TramlineOffset;
+        });
+      } else {
+        targetNode->gridX = finalGridX;
+        targetNode->gridY = finalGridY;
+        targetNode->nodeX = (float)(targetNode->gridX * Layout::GridPitch) +
+                            Layout::TramlineOffset;
+        targetNode->nodeY = (float)(targetNode->gridY * Layout::GridPitch) +
+                            Layout::TramlineOffset;
+      }
+    } else {
+      // Revert to original position if the snap doesn't result in a grid change
+      targetNode->nodeX = dragStartWorldX;
+      targetNode->nodeY = dragStartWorldY;
+    }
 
     parentCanvas.clearGhostTarget();
 
