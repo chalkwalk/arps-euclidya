@@ -87,8 +87,8 @@
             "maxValue": 16,
             "bipolar": true,
             "gridBounds": [
-                7,
-                9,
+                6,
+                33,
                 17,
                 10
             ]
