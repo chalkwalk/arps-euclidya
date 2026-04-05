@@ -8,9 +8,8 @@
 
 // --- MidiInNode Impl
 
-MidiInNode::MidiInNode(NoteExpressionManager &handler,
-                       std::array<std::atomic<float> *, 32> macrosArray)
-    : noteExpressionManager(handler), macros(macrosArray) {}
+MidiInNode::MidiInNode(NoteExpressionManager &handler)
+    : noteExpressionManager(handler) {}
 
 NodeLayout MidiInNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::MidiInNode_json,

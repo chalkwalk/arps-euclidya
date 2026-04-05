@@ -1,12 +1,10 @@
 #pragma once
-#include <array>
-#include <atomic>
 
 #include "../GraphNode.h"
 
 class ChordNNode : public GraphNode {
  public:
-  ChordNNode(std::array<std::atomic<float> *, 32> &macros);
+  ChordNNode() = default;
   ~ChordNNode() override = default;
 
   std::string getName() const override { return "ChordN"; }
@@ -22,7 +20,4 @@ class ChordNNode : public GraphNode {
 
   int nValue = 2;  // Default to 2
   int macroNValue = -1;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

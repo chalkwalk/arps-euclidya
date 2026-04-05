@@ -5,8 +5,7 @@
 
 class MidiInNode : public GraphNode {
  public:
-  MidiInNode(NoteExpressionManager &handler,
-             std::array<std::atomic<float> *, 32> macrosArray);
+  explicit MidiInNode(NoteExpressionManager &handler);
   ~MidiInNode() override = default;
 
   std::string getName() const override { return "Midi In"; }
@@ -31,5 +30,4 @@ class MidiInNode : public GraphNode {
 
  private:
   NoteExpressionManager &noteExpressionManager;
-  std::array<std::atomic<float> *, 32> macros;
 };

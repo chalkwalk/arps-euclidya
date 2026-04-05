@@ -24,11 +24,8 @@ int MidiOutNode::resolveOffsetMacro(int macroIdx, int localVal,
 
 #include "../EuclideanMath.h"
 
-MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx,
-                         std::array<std::atomic<float> *, 32> macrosArray)
-    : noteExpressionManager(midiCtx),
-      clockManager(clockCtx),
-      macros(macrosArray) {}
+MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
+    : noteExpressionManager(midiCtx), clockManager(clockCtx) {}
 
 namespace {
 bool stepsAreEqual(const std::vector<HeldNote> &a,

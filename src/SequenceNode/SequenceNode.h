@@ -4,7 +4,7 @@
 
 class SequenceNode : public GraphNode {
  public:
-  SequenceNode(std::array<std::atomic<float> *, 32> &macros);
+  SequenceNode() = default;
   ~SequenceNode() override = default;
 
   std::string getName() const override { return "Sequence"; }
@@ -29,7 +29,4 @@ class SequenceNode : public GraphNode {
 
   // Full MIDI range grid: 128 notes × 16 steps
   bool grid[128][16] = {{false}};
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

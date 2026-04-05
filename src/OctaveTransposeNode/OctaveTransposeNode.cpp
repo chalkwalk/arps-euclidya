@@ -8,10 +8,6 @@
 
 // --- OctaveTransposeNode Impl
 
-OctaveTransposeNode::OctaveTransposeNode(
-    std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout OctaveTransposeNode::getLayout() const {
   auto layout =
       LayoutParser::parseFromJSON(BinaryData::OctaveTransposeNode_json,
@@ -43,10 +39,11 @@ void OctaveTransposeNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void OctaveTransposeNode::process() {
-  int actualOctaves =
-      macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr
-          ? -4 + (int)std::round(macros[(size_t)macroOctaves]->load() * 8.0f)
-          : octaves;
+  int actualOctaves = resolveMacroInt(macroOctaves, octaves, 8);
+  // Shift to bipolar: macro gives [0,8] -> [-4,+4]
+  if (macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr) {
+    actualOctaves -= 4;
+  }
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualOctaves == 0) {

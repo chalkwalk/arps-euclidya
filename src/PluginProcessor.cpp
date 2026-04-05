@@ -23,6 +23,9 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
     apvts.addParameterListener("macro_" + juce::String(i + 1), this);
   }
 
+  // Give the engine access to the macro parameter array for all nodes
+  graphEngine.setMacros(&macros);
+
   // Create graph engine recalculation callback for internal UI sliders
   graphEngine.onGraphDirtied = [this]() { graphNeedsRecalculate = true; };
 

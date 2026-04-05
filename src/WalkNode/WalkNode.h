@@ -1,13 +1,11 @@
 #pragma once
-#include <array>
-#include <atomic>
 
 #include "../GraphNode.h"
 #include "../SharedMacroUI.h"
 
 class WalkNode : public GraphNode {
  public:
-  WalkNode(std::array<std::atomic<float> *, 32> &macros);
+  WalkNode() = default;
   std::string getName() const override { return "Walk"; }
   void process() override;
   NodeLayout getLayout() const override;
@@ -23,7 +21,4 @@ class WalkNode : public GraphNode {
   int macroWalkLength = -1;
   int walkSkewInt = 0;  // -100 to 100
   int macroWalkSkew = -1;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

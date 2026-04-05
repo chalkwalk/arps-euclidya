@@ -7,9 +7,6 @@
 
 // --- RouteNode Impl
 
-RouteNode::RouteNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout RouteNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::RouteNode_json,
                                             BinaryData::RouteNode_jsonSize);
@@ -40,10 +37,7 @@ void RouteNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void RouteNode::process() {
-  int actualDest =
-      macroRouteDest != -1 && macros[(size_t)macroRouteDest] != nullptr
-          ? (macros[(size_t)macroRouteDest]->load() >= 0.5f ? 1 : 0)
-          : routeDest;
+  int actualDest = resolveMacroInt(macroRouteDest, routeDest, 1);
 
   auto it = inputSequences.find(0);
   NoteSequence emptySeq;

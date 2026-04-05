@@ -7,9 +7,6 @@
 
 // --- TransposeNode Impl
 
-TransposeNode::TransposeNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout TransposeNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::TransposeNode_json,
                                             BinaryData::TransposeNode_jsonSize);
@@ -40,11 +37,11 @@ void TransposeNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void TransposeNode::process() {
-  int actualSemitones =
-      macroSemitones != -1 && macros[(size_t)macroSemitones] != nullptr
-          ? -24 +
-                (int)std::round(macros[(size_t)macroSemitones]->load() * 48.0f)
-          : semitones;
+  int actualSemitones = resolveMacroInt(macroSemitones, semitones, 48);
+  // Shift to bipolar: macro gives [0,48] -> [-24,+24]
+  if (macroSemitones != -1 && macros[(size_t)macroSemitones] != nullptr) {
+    actualSemitones -= 24;
+  }
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() ||

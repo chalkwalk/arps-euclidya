@@ -4,7 +4,7 @@
 
 class RouteNode : public GraphNode {
  public:
-  RouteNode(std::array<std::atomic<float> *, 32> &macros);
+  RouteNode() = default;
   ~RouteNode() override = default;
 
   std::string getName() const override { return "Route"; }
@@ -23,7 +23,4 @@ class RouteNode : public GraphNode {
 
   int routeDest = 0;
   int macroRouteDest = -1;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

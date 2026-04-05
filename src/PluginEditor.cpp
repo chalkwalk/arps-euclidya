@@ -65,7 +65,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     audioProcessor.performGraphMutation([this, nodeType, screenPos]() {
       auto newNode = NodeFactory::createNode(
           nodeType.toStdString(), audioProcessor.noteExpressionManager,
-          audioProcessor.clockManager, audioProcessor.macros);
+          audioProcessor.clockManager);
       if (newNode) {
         graphCanvas->addNodeAtPosition(newNode, screenPos);
         if (!graphCanvas->attemptSignalPathInsertion(newNode.get(),
@@ -85,7 +85,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     audioProcessor.performGraphMutation([this, oldNode, newType]() {
       auto newNode = NodeFactory::createNode(
           newType.toStdString(), audioProcessor.noteExpressionManager,
-          audioProcessor.clockManager, audioProcessor.macros);
+          audioProcessor.clockManager);
 
       if (newNode) {
         newNode->gridX = oldNode->gridX;
@@ -143,7 +143,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     audioProcessor.performGraphMutation([this, original, gridX, gridY]() {
       auto newNode = NodeFactory::createNode(
           original->getName(), audioProcessor.noteExpressionManager,
-          audioProcessor.clockManager, audioProcessor.macros);
+          audioProcessor.clockManager);
 
       if (newNode) {
         // Clone state from original
@@ -291,9 +291,9 @@ void ArpsEuclidyaEditor::resized() {
 }
 
 void ArpsEuclidyaEditor::addNodeFromLibrary(const juce::String &nodeType) {
-  auto newNode = NodeFactory::createNode(
-      nodeType.toStdString(), audioProcessor.noteExpressionManager,
-      audioProcessor.clockManager, audioProcessor.macros);
+  auto newNode = NodeFactory::createNode(nodeType.toStdString(),
+                                         audioProcessor.noteExpressionManager,
+                                         audioProcessor.clockManager);
   if (newNode) {
     graphCanvas->addNodeAtDefaultPosition(newNode);
   }

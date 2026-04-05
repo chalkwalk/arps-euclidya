@@ -1,13 +1,11 @@
 #pragma once
-#include <array>
-#include <atomic>
 
 #include "../GraphNode.h"
 #include "../SharedMacroUI.h"
 
 class OctaveStackNode : public GraphNode {
  public:
-  OctaveStackNode(std::array<std::atomic<float> *, 32> &macros);
+  OctaveStackNode() = default;
   std::string getName() const override { return "Octave Stack"; }
   void process() override;
   NodeLayout getLayout() const override;
@@ -22,7 +20,4 @@ class OctaveStackNode : public GraphNode {
   int octaves = 1;
   int macroOctaves = -1;
   int uniqueOnly = 1;  // 1 = true, 0 = false
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

@@ -11,11 +11,10 @@
 // --- MultiplyNode Impl
 
 void MultiplyNode::process() {
-  int actualRepeat =
-      macroRepeatCount != -1 && macros[(size_t)macroRepeatCount] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroRepeatCount]->load() *
-                                15.0f)
-          : repeatCount;
+  int actualRepeat = resolveMacroInt(macroRepeatCount, repeatCount, 16);
+  if (macroRepeatCount != -1 && macros[(size_t)macroRepeatCount] != nullptr) {
+    actualRepeat = std::max(1, actualRepeat);
+  }
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty()) {

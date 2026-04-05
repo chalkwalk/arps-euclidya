@@ -35,11 +35,11 @@
 
 class NodeFactory {
  public:
-  static std::shared_ptr<GraphNode> createNode(
-      const std::string &type, NoteExpressionManager &midiCtx,
-      ClockManager &clockCtx, std::array<std::atomic<float> *, 32> &macros) {
+  static std::shared_ptr<GraphNode> createNode(const std::string &type,
+                                               NoteExpressionManager &midiCtx,
+                                               ClockManager &clockCtx) {
     if (type == "Midi In")
-      return std::make_shared<MidiInNode>(midiCtx, macros);
+      return std::make_shared<MidiInNode>(midiCtx);
     if (type == "Sort")
       return std::make_shared<SortNode>();
     if (type == "Reverse")
@@ -51,17 +51,17 @@ class NodeFactory {
     if (type == "Diagnostic")
       return std::make_shared<DiagnosticNode>();
     if (type == "ChordN")
-      return std::make_shared<ChordNNode>(macros);
+      return std::make_shared<ChordNNode>();
     if (type == "Walk")
-      return std::make_shared<WalkNode>(macros);
+      return std::make_shared<WalkNode>();
     if (type == "Octave Stack")
-      return std::make_shared<OctaveStackNode>(macros);
+      return std::make_shared<OctaveStackNode>();
     if (type == "Transpose")
-      return std::make_shared<TransposeNode>(macros);
+      return std::make_shared<TransposeNode>();
     if (type == "Octave Transpose")
-      return std::make_shared<OctaveTransposeNode>(macros);
+      return std::make_shared<OctaveTransposeNode>();
     if (type == "Fold")
-      return std::make_shared<FoldNode>(macros);
+      return std::make_shared<FoldNode>();
     if (type == "Unfold")
       return std::make_shared<UnfoldNode>();
     if (type == "Quantizer")
@@ -75,21 +75,21 @@ class NodeFactory {
     if (type == "Chord Split")
       return std::make_shared<ChordSplitNode>();
     if (type == "Multiply")
-      return std::make_shared<MultiplyNode>(macros);
+      return std::make_shared<MultiplyNode>();
     if (type == "Zip")
       return std::make_shared<ZipNode>();
     if (type == "Unzip")
       return std::make_shared<UnzipNode>();
     if (type == "Sequence")
-      return std::make_shared<SequenceNode>(macros);
+      return std::make_shared<SequenceNode>();
     if (type == "Route")
-      return std::make_shared<RouteNode>(macros);
+      return std::make_shared<RouteNode>();
     if (type == "Select")
-      return std::make_shared<SelectNode>(macros);
+      return std::make_shared<SelectNode>();
     if (type == "Switch")
-      return std::make_shared<SwitchNode>(macros);
+      return std::make_shared<SwitchNode>();
     if (type == "Midi Out")
-      return std::make_shared<MidiOutNode>(midiCtx, clockCtx, macros);
+      return std::make_shared<MidiOutNode>(midiCtx, clockCtx);
     if (type == "Note")
       return std::make_shared<TextNoteNode>(2, 1);
     if (type == "Note Large")

@@ -7,9 +7,6 @@
 
 // --- SwitchNode Impl
 
-SwitchNode::SwitchNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout SwitchNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::SwitchNode_json,
                                             BinaryData::SwitchNode_jsonSize);
@@ -40,9 +37,7 @@ void SwitchNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void SwitchNode::process() {
-  bool actualOn = macroSwitch != -1 && macros[(size_t)macroSwitch] != nullptr
-                      ? (macros[(size_t)macroSwitch]->load() >= 0.5f)
-                      : (switchOn != 0);
+  bool actualOn = (resolveMacroInt(macroSwitch, switchOn, 1) != 0);
 
   auto it = inputSequences.find(0);
   NoteSequence inSeq =

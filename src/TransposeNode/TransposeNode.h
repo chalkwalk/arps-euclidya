@@ -5,7 +5,7 @@
 
 class TransposeNode : public GraphNode {
  public:
-  TransposeNode(std::array<std::atomic<float> *, 32> &macros);
+  TransposeNode() = default;
   ~TransposeNode() override = default;
 
   void process() override;
@@ -22,7 +22,4 @@ class TransposeNode : public GraphNode {
 
   int semitones = 0;
   int macroSemitones = -1;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

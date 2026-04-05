@@ -4,6 +4,8 @@
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <array>
+#include <atomic>
 #include <map>
 #include <vector>
 
@@ -126,6 +128,36 @@ class GraphNode {
     return connections;
   }
   void clearConnections();
+
+  // --- Macro Resolution (centralized) ---
+  // The macro array is set once by GraphEngine; nodes use the resolve helpers
+  // in process() instead of reading the array directly.
+  std::array<std::atomic<float> *, 32> macros = {nullptr};
+
+  // Scale macro [0,1] → [0, maxVal] as int, or return localVal if unmapped.
+  int resolveMacroInt(int macroIdx, int localVal, int maxVal) const {
+    if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
+      return (int)std::round(macros[(size_t)macroIdx]->load() * (float)maxVal);
+    }
+    return localVal;
+  }
+
+  // Return macro [0,1] directly as float, or return localVal if unmapped.
+  float resolveMacroFloat(int macroIdx, float localVal) const {
+    if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
+      return macros[(size_t)macroIdx]->load();
+    }
+    return localVal;
+  }
+
+  // Bipolar: (macro - 0.5) × maxVal, centered at zero. Or return localVal.
+  int resolveMacroOffset(int macroIdx, int localVal, int maxVal) const {
+    if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
+      return (int)std::round((macros[(size_t)macroIdx]->load() - 0.5f) *
+                             (float)maxVal);
+    }
+    return localVal;
+  }
 
  protected:
   std::map<int, NoteSequence> inputSequences;

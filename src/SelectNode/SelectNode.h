@@ -4,7 +4,7 @@
 
 class SelectNode : public GraphNode {
  public:
-  SelectNode(std::array<std::atomic<float> *, 32> &macros);
+  SelectNode() = default;
   ~SelectNode() override = default;
 
   std::string getName() const override { return "Select"; }
@@ -23,7 +23,4 @@ class SelectNode : public GraphNode {
 
   int selectSource = 0;
   int macroSelectSource = -1;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

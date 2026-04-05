@@ -9,9 +9,6 @@
 
 // --- OctaveStackNode Impl
 
-OctaveStackNode::OctaveStackNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout OctaveStackNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(
       BinaryData::OctaveStackNode_json, BinaryData::OctaveStackNode_jsonSize);
@@ -46,10 +43,10 @@ void OctaveStackNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void OctaveStackNode::process() {
-  int actualOctaves =
-      macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroOctaves]->load() * 3.0f)
-          : octaves;
+  int actualOctaves = resolveMacroInt(macroOctaves, octaves, 4);
+  if (macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr) {
+    actualOctaves = std::max(1, actualOctaves);
+  }
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty()) {

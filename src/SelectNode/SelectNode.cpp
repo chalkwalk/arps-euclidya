@@ -7,9 +7,6 @@
 
 // --- SelectNode Impl
 
-SelectNode::SelectNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout SelectNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::SelectNode_json,
                                             BinaryData::SelectNode_jsonSize);
@@ -40,10 +37,7 @@ void SelectNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void SelectNode::process() {
-  int actualSource =
-      macroSelectSource != -1 && macros[(size_t)macroSelectSource] != nullptr
-          ? (macros[(size_t)macroSelectSource]->load() >= 0.5f ? 1 : 0)
-          : selectSource;
+  int actualSource = resolveMacroInt(macroSelectSource, selectSource, 1);
 
   auto it0 = inputSequences.find(0);
   auto it1 = inputSequences.find(1);

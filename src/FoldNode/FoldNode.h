@@ -5,7 +5,7 @@
 
 class FoldNode : public GraphNode {
  public:
-  FoldNode(std::array<std::atomic<float> *, 32> &macros);
+  FoldNode() = default;
   ~FoldNode() override = default;
 
   void process() override;
@@ -23,7 +23,4 @@ class FoldNode : public GraphNode {
   int nValue = 2;
   int macroNValue = -1;
   int mode = 0;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

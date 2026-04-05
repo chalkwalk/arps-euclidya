@@ -9,6 +9,9 @@
 #include "MidiOutNode/MidiOutNode.h"
 
 void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
+  if (macrosPtr != nullptr) {
+    node->macros = *macrosPtr;
+  }
   if (onGraphDirtied) {
     auto callback = onGraphDirtied;
     GraphNode *rawPtr = node.get();
@@ -405,7 +408,7 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
   if (nodesXml != nullptr) {
     for (auto *nodeXml : nodesXml->getChildIterator()) {
       std::string type = nodeXml->getStringAttribute("type").toStdString();
-      auto node = NodeFactory::createNode(type, midiCtx, clockCtx, macros);
+      auto node = NodeFactory::createNode(type, midiCtx, clockCtx);
       if (node) {
         node->nodeId = juce::Uuid(nodeXml->getStringAttribute("uuid"));
         node->loadBaseState(nodeXml);
@@ -442,8 +445,9 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
     }
   }
 
-  // Wire callbacks and mark dirty
+  // Wire callbacks, set macros, and mark dirty
   for (const auto &node : nodes) {
+    node->macros = macros;
     if (onGraphDirtied) {
       auto callback = onGraphDirtied;
       GraphNode *rawPtr = node.get();

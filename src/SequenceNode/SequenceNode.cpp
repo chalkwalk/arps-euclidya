@@ -269,8 +269,7 @@ class SequenceNodeCustomComponent : public SequenceNodeEditor {
       : SequenceNodeEditor(node, apvts) {}
 };
 
-SequenceNode::SequenceNode(std::array<std::atomic<float> *, 32> &m)
-    : macros(m) {}
+// ---
 
 NodeLayout SequenceNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::SequenceNode_json,
@@ -354,10 +353,7 @@ void SequenceNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void SequenceNode::process() {
-  int actualLen =
-      macroSeqLength != -1 && macros[(size_t)macroSeqLength] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroSeqLength]->load() * 15.0f)
-          : seqLength;
+  int actualLen = resolveMacroInt(macroSeqLength, seqLength, 16);
   actualLen = std::clamp(actualLen, 1, 16);
 
   NoteSequence outSeq;

@@ -1,6 +1,8 @@
 // GraphEngine.h
 #pragma once
 
+#include <array>
+#include <atomic>
 #include <memory>
 #include <vector>
 
@@ -64,8 +66,11 @@ class GraphEngine {
                  ClockManager &clockCtx,
                  std::array<std::atomic<float> *, 32> &macros);
 
+  void setMacros(std::array<std::atomic<float> *, 32> *m) { macrosPtr = m; }
+
  private:
   std::vector<std::shared_ptr<GraphNode>> nodes;
+  std::array<std::atomic<float> *, 32> *macrosPtr = nullptr;
 
   // Compute a topological ordering of nodes based on connections
   std::vector<GraphNode *> topologicalSort() const;

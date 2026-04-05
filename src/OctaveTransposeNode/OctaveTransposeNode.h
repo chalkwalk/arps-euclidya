@@ -5,7 +5,7 @@
 
 class OctaveTransposeNode : public GraphNode {
  public:
-  OctaveTransposeNode(std::array<std::atomic<float> *, 32> &macros);
+  OctaveTransposeNode() = default;
   ~OctaveTransposeNode() override = default;
 
   void process() override;
@@ -22,7 +22,4 @@ class OctaveTransposeNode : public GraphNode {
 
   int octaves = 0;
   int macroOctaves = -1;
-
- private:
-  std::array<std::atomic<float> *, 32> &macros;
 };

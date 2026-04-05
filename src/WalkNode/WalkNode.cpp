@@ -9,9 +9,6 @@
 
 // --- WalkNode Impl
 
-WalkNode::WalkNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout WalkNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::WalkNode_json,
                                             BinaryData::WalkNode_jsonSize);
@@ -53,15 +50,16 @@ void WalkNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void WalkNode::process() {
-  int actualLength =
-      macroWalkLength != -1 && macros[(size_t)macroWalkLength] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroWalkLength]->load() * 63.0f)
-          : walkLength;
+  int actualLength = resolveMacroInt(macroWalkLength, walkLength, 64);
+  if (macroWalkLength != -1 && macros[(size_t)macroWalkLength] != nullptr) {
+    actualLength = std::max(1, actualLength);
+  }
 
+  float rawSkew = resolveMacroFloat(macroWalkSkew, walkSkewInt / 100.0f);
   float actualSkew =
-      macroWalkSkew != -1 && macros[(size_t)macroWalkSkew] != nullptr
-          ? (macros[(size_t)macroWalkSkew]->load() * 2.0f) - 1.0f
-          : (walkSkewInt / 100.0f);
+      (macroWalkSkew != -1 && macros[(size_t)macroWalkSkew] != nullptr)
+          ? (rawSkew * 2.0f) - 1.0f
+          : rawSkew;
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualLength <= 0) {

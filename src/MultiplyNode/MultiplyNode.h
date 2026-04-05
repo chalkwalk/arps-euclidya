@@ -1,16 +1,12 @@
 #pragma once
 
-#include <array>
-#include <atomic>
-
 #include "../GraphNode.h"
 
 // Repeats each step N times.
 // A,B,C with N=3 becomes A,A,A,B,B,B,C,C,C
 class MultiplyNode : public GraphNode {
  public:
-  MultiplyNode(std::array<std::atomic<float> *, 32> macrosArray)
-      : macros(macrosArray) {}
+  MultiplyNode() = default;
   ~MultiplyNode() override = default;
 
   std::string getName() const override { return "Multiply"; }
@@ -28,7 +24,4 @@ class MultiplyNode : public GraphNode {
 
   int repeatCount = 2;        // 1-16
   int macroRepeatCount = -1;  // macro mapping
-
- private:
-  std::array<std::atomic<float> *, 32> macros;
 };

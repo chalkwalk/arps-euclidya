@@ -8,9 +8,6 @@
 
 // --- ChordNNode Impl
 
-ChordNNode::ChordNNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout ChordNNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::ChordNNode_json,
                                             BinaryData::ChordNNode_jsonSize);
@@ -41,10 +38,10 @@ void ChordNNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void ChordNNode::process() {
-  int actualNValue =
-      macroNValue != -1 && macros[(size_t)macroNValue] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroNValue]->load() * 15.0f)
-          : nValue;
+  int actualNValue = resolveMacroInt(macroNValue, nValue, 16);
+  if (macroNValue != -1 && macros[(size_t)macroNValue] != nullptr) {
+    actualNValue = std::max(1, actualNValue);
+  }
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualNValue <= 0) {

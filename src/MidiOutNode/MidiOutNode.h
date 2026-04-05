@@ -12,8 +12,7 @@
 
 class MidiOutNode : public GraphNode {
  public:
-  MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx,
-              std::array<std::atomic<float> *, 32> macrosArray);
+  MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx);
   ~MidiOutNode() override = default;
 
   std::string getName() const override { return "Midi Out"; }
@@ -141,7 +140,6 @@ class MidiOutNode : public GraphNode {
 
   NoteExpressionManager &noteExpressionManager;
   ClockManager &clockManager;
-  std::array<std::atomic<float> *, 32> macros;
 
   int sequenceIndex = 0;
   int patternIndex = 0;

@@ -8,9 +8,6 @@
 
 // --- FoldNode Impl
 
-FoldNode::FoldNode(std::array<std::atomic<float> *, 32> &inMacros)
-    : macros(inMacros) {}
-
 NodeLayout FoldNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::FoldNode_json,
                                             BinaryData::FoldNode_jsonSize);
@@ -45,10 +42,10 @@ void FoldNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void FoldNode::process() {
-  int actualNValue =
-      macroNValue != -1 && macros[(size_t)macroNValue] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroNValue]->load() * 15.0f)
-          : nValue;
+  int actualNValue = resolveMacroInt(macroNValue, nValue, 16);
+  if (macroNValue != -1 && macros[(size_t)macroNValue] != nullptr) {
+    actualNValue = std::max(1, actualNValue);
+  }
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualNValue <= 1) {
