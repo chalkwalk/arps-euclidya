@@ -13,6 +13,16 @@
 #include "LayoutConstants.h"
 #include "NodeLayout.h"
 
+struct MacroBinding {
+  int macroIndex = -1;
+  float intensity = 1.0f;
+};
+
+struct MacroParam {
+  juce::String name;
+  std::vector<MacroBinding> bindings;
+};
+
 class GraphNode {
  public:
   GraphNode() : nodeId(juce::Uuid()) {}
@@ -157,6 +167,47 @@ class GraphNode {
                              (float)maxVal);
     }
     return localVal;
+  }
+
+  // --- Additive Resolvers (Phase C) ---
+
+  int resolveMacroInt(const MacroParam &param, int localVal, int minVal,
+                      int maxVal) const {
+    if (param.bindings.empty())
+      return std::clamp(localVal, minVal, maxVal);
+    float range = (float)(maxVal - minVal);
+    float effective = (float)localVal;
+    for (const auto &binding : param.bindings) {
+      if (binding.macroIndex >= 0 && binding.macroIndex < 32 &&
+          macros[(size_t)binding.macroIndex] != nullptr) {
+        effective += macros[(size_t)binding.macroIndex]->load() *
+                     binding.intensity * range;
+      }
+    }
+    return std::clamp((int)std::round(effective), minVal, maxVal);
+  }
+
+  float resolveMacroFloat(const MacroParam &param, float localVal, float minVal,
+                          float maxVal) const {
+    if (param.bindings.empty())
+      return std::clamp(localVal, minVal, maxVal);
+    float range = maxVal - minVal;
+    float effective = localVal;
+    for (const auto &binding : param.bindings) {
+      if (binding.macroIndex >= 0 && binding.macroIndex < 32 &&
+          macros[(size_t)binding.macroIndex] != nullptr) {
+        effective += macros[(size_t)binding.macroIndex]->load() *
+                     binding.intensity * range;
+      }
+    }
+    return std::clamp(effective, minVal, maxVal);
+  }
+
+  int resolveMacroOffset(const MacroParam &param, int localVal,
+                         int maxVal) const {
+    // For offsets, range is essentially [-maxVal, maxVal], so range is maxVal
+    // * 2. And minVal is -maxVal, maxVal is maxVal.
+    return resolveMacroInt(param, localVal, -maxVal, maxVal);
   }
 
  protected:
