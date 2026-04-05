@@ -10,14 +10,14 @@ class OctaveStackNode : public GraphNode {
   void process() override;
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Octave Stack", &macroOctaves}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroOctaves};
   }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
   int octaves = 1;
-  int macroOctaves = -1;
+  MacroParam macroOctaves{"Octave Stack", {}};
   int uniqueOnly = 1;  // 1 = true, 0 = false
 };

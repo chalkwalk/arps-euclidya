@@ -283,9 +283,8 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     clampParameters();
 
     // --- Retrieve Parameters (Macros etc) ---
-    int actualRSteps = resolveMacroInt(macroRSteps, rSteps - 1, 31) + 1;
-    int actualRBeats =
-        resolveMacroInt(macroRBeats, rBeats - 1, actualRSteps - 1) + 1;
+    int actualRSteps = resolveMacroInt(macroRSteps, rSteps, 1, 32);
+    int actualRBeats = resolveMacroInt(macroRBeats, rBeats, 1, actualRSteps);
     actualRBeats = std::clamp(actualRBeats, 1, actualRSteps);
     int halfR = (actualRSteps + 1) / 2;
     int actualROffset = resolveMacroOffset(macroROffset, rOffset, actualRSteps);
@@ -299,9 +298,8 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     }
 
     // --- Pattern Logic ---
-    int actualPSteps = resolveMacroInt(macroPSteps, pSteps - 1, 31) + 1;
-    int actualPBeats =
-        resolveMacroInt(macroPBeats, pBeats - 1, actualPSteps - 1) + 1;
+    int actualPSteps = resolveMacroInt(macroPSteps, pSteps, 1, 32);
+    int actualPBeats = resolveMacroInt(macroPBeats, pBeats, 1, actualPSteps);
     actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
     int halfP = (actualPSteps + 1) / 2;
     int actualPOffset = resolveMacroOffset(macroPOffset, pOffset, actualPSteps);
@@ -393,17 +391,19 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
               noteTrigger.sourceNoteID);
         }
 
-        float actualPressMod =
-            resolveMacroFloat(macroPressureToVelocity, pressureToVelocity);
+        float actualPressMod = resolveMacroFloat(
+            macroPressureToVelocity, pressureToVelocity, 0.0f, 1.0f);
 
-        float actualTimbMod =
-            resolveMacroFloat(macroTimbreToVelocity, timbreToVelocity);
+        float actualTimbMod = resolveMacroFloat(macroTimbreToVelocity,
+                                                timbreToVelocity, 0.0f, 1.0f);
 
         // --- Humanize Calculation ---
-        float actualHumTiming = resolveMacroFloat(macroHumTiming, humTiming);
+        float actualHumTiming =
+            resolveMacroFloat(macroHumTiming, humTiming, 0.0f, 1.0f);
         float actualHumVelocity =
-            resolveMacroFloat(macroHumVelocity, humVelocity);
-        float actualHumGate = resolveMacroFloat(macroHumGate, humGate);
+            resolveMacroFloat(macroHumVelocity, humVelocity, 0.0f, 1.0f);
+        float actualHumGate =
+            resolveMacroFloat(macroHumGate, humGate, 0.0f, 1.0f);
 
         // --- 1. Base + Expression Mapping ---
         float vIntermediate =
@@ -463,13 +463,12 @@ juce::String MidiOutNode::getCycleLengthInfo() const {
   int L = (int)it->second.size();
 
   // Resolve actual pattern params (accounting for macros)
-  int actualPSteps = resolveMacroInt(macroPSteps, pSteps - 1, 31) + 1;
-  int actualPBeats =
-      resolveMacroInt(macroPBeats, pBeats - 1, actualPSteps - 1) + 1;
+  int actualPSteps = resolveMacroInt(macroPSteps, pSteps, 1, 32);
+  int actualPBeats = resolveMacroInt(macroPBeats, pBeats, 1, actualPSteps);
   actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
 
   // Resolve actual rhythm params
-  int actualRSteps = resolveMacroInt(macroRSteps, rSteps - 1, 31) + 1;
+  int actualRSteps = resolveMacroInt(macroRSteps, rSteps, 1, 32);
 
   // Pattern cycle: number of played notes before the melodic sequence repeats
   // Formula: K * L / GCD(L, N) where K=beats, N=steps, L=input length
@@ -529,32 +528,13 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("rBeats", rBeats);
     xml->setAttribute("rOffset", rOffset);
 
-    xml->setAttribute("macroPSteps", macroPSteps);
-    xml->setAttribute("macroPBeats", macroPBeats);
-    xml->setAttribute("macroPOffset", macroPOffset);
-    xml->setAttribute("macroRSteps", macroRSteps);
-    xml->setAttribute("macroRBeats", macroRBeats);
-    xml->setAttribute("macroROffset", macroROffset);
-
-    xml->setAttribute("syncMode", (int)syncMode);
-    xml->setAttribute("patternMode", (int)patternMode);
-    xml->setAttribute("patternResetOnRelease", patternResetOnRelease ? 1 : 0);
-    xml->setAttribute("rhythmResetOnRelease", rhythmResetOnRelease ? 1 : 0);
-    xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
-    xml->setAttribute("triplet", triplet ? 1 : 0);
-    xml->setAttribute("outputChannel", outputChannel);
-
     xml->setAttribute("pressureToVelocity", pressureToVelocity);
     xml->setAttribute("timbreToVelocity", timbreToVelocity);
-    xml->setAttribute("macroPressureToVelocity", macroPressureToVelocity);
-    xml->setAttribute("macroTimbreToVelocity", macroTimbreToVelocity);
 
     xml->setAttribute("humTiming", humTiming);
     xml->setAttribute("humVelocity", humVelocity);
     xml->setAttribute("humGate", humGate);
-    xml->setAttribute("macroHumTiming", macroHumTiming);
-    xml->setAttribute("macroHumVelocity", macroHumVelocity);
-    xml->setAttribute("macroHumGate", macroHumGate);
+    saveMacroBindings(xml);
   }
 }
 
@@ -566,13 +546,6 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     rSteps = xml->getIntAttribute("rSteps", 16);
     rBeats = xml->getIntAttribute("rBeats", 16);
     rOffset = xml->getIntAttribute("rOffset", 0);
-
-    macroPSteps = xml->getIntAttribute("macroPSteps", -1);
-    macroPBeats = xml->getIntAttribute("macroPBeats", -1);
-    macroPOffset = xml->getIntAttribute("macroPOffset", -1);
-    macroRSteps = xml->getIntAttribute("macroRSteps", -1);
-    macroRBeats = xml->getIntAttribute("macroRBeats", -1);
-    macroROffset = xml->getIntAttribute("macroROffset", -1);
 
     // Load new syncMode, fallback to deprecated transportSyncMode
     if (xml->hasAttribute("syncMode")) {
@@ -598,9 +571,32 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     humVelocity =
         static_cast<float>(xml->getDoubleAttribute("humVelocity", 0.0));
     humGate = static_cast<float>(xml->getDoubleAttribute("humGate", 0.5));
-    macroHumTiming = xml->getIntAttribute("macroHumTiming", -1);
-    macroHumVelocity = xml->getIntAttribute("macroHumVelocity", -1);
-    macroHumGate = xml->getIntAttribute("macroHumGate", -1);
+
+    // Legacy single-macro migration
+    struct LegacyMapping {
+      const char *attr;
+      MacroParam &param;
+    };
+    LegacyMapping legacy[] = {
+        {"macroPSteps", macroPSteps},
+        {"macroPBeats", macroPBeats},
+        {"macroPOffset", macroPOffset},
+        {"macroRSteps", macroRSteps},
+        {"macroRBeats", macroRBeats},
+        {"macroROffset", macroROffset},
+        {"macroPressureToVelocity", macroPressureToVelocity},
+        {"macroTimbreToVelocity", macroTimbreToVelocity},
+        {"macroHumTiming", macroHumTiming},
+        {"macroHumVelocity", macroHumVelocity},
+        {"macroHumGate", macroHumGate}};
+    for (auto &l : legacy) {
+      if (xml->hasAttribute(l.attr)) {
+        int m = xml->getIntAttribute(l.attr, -1);
+        if (m != -1)
+          l.param.bindings.push_back({m, 1.0f});
+      }
+    }
+    loadMacroBindings(xml);
 
     // Sync UI proxies
     ui_syncMode = static_cast<int>(syncMode);
@@ -612,9 +608,8 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 std::vector<bool> MidiOutNode::getPattern() const {
-  int actualPSteps = resolveMacroInt(macroPSteps, pSteps - 1, 31) + 1;
-  int actualPBeats =
-      resolveMacroInt(macroPBeats, pBeats - 1, actualPSteps - 1) + 1;
+  int actualPSteps = resolveMacroInt(macroPSteps, pSteps, 1, 32);
+  int actualPBeats = resolveMacroInt(macroPBeats, pBeats, 1, actualPSteps);
   int actualPOffset = resolveMacroOffset(macroPOffset, pOffset, actualPSteps);
 
   return EuclideanMath::generatePattern(
@@ -623,9 +618,8 @@ std::vector<bool> MidiOutNode::getPattern() const {
 }
 
 std::vector<bool> MidiOutNode::getRhythm() const {
-  int actualRSteps = resolveMacroInt(macroRSteps, rSteps - 1, 31) + 1;
-  int actualRBeats =
-      resolveMacroInt(macroRBeats, rBeats - 1, actualRSteps - 1) + 1;
+  int actualRSteps = resolveMacroInt(macroRSteps, rSteps, 1, 32);
+  int actualRBeats = resolveMacroInt(macroRBeats, rBeats, 1, actualRSteps);
   int actualROffset = resolveMacroOffset(macroROffset, rOffset, actualRSteps);
 
   return EuclideanMath::generatePattern(

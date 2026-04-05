@@ -11,10 +11,8 @@
 // --- MultiplyNode Impl
 
 void MultiplyNode::process() {
-  int actualRepeat = resolveMacroInt(macroRepeatCount, repeatCount, 16);
-  if (macroRepeatCount != -1 && macros[(size_t)macroRepeatCount] != nullptr) {
-    actualRepeat = std::max(1, actualRepeat);
-  }
+  int actualRepeat = resolveMacroInt(macroRepeatCount, repeatCount, 0, 16);
+  actualRepeat = std::max(1, actualRepeat);
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty()) {
@@ -40,14 +38,19 @@ void MultiplyNode::process() {
 void MultiplyNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("repeatCount", repeatCount);
-    xml->setAttribute("macroRepeatCount", macroRepeatCount);
+    saveMacroBindings(xml);
   }
 }
 
 void MultiplyNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     repeatCount = xml->getIntAttribute("repeatCount", 2);
-    macroRepeatCount = xml->getIntAttribute("macroRepeatCount", -1);
+    if (xml->hasAttribute("macroRepeatCount")) {
+      int m = xml->getIntAttribute("macroRepeatCount", -1);
+      if (m != -1)
+        macroRepeatCount.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
@@ -59,7 +62,7 @@ NodeLayout MultiplyNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "repeatCount") {
       el.valueRef = const_cast<int *>(&repeatCount);
-      el.macroIndexRef = const_cast<int *>(&macroRepeatCount);
+      el.macroParamRef = const_cast<MacroParam *>(&macroRepeatCount);
     }
   }
 

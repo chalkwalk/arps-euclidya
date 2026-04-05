@@ -11,9 +11,7 @@ class FoldNode : public GraphNode {
   void process() override;
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Fold N", &macroNValue}};
-  }
+  std::vector<MacroParam *> getMacroParams() override { return {&macroNValue}; }
 
   std::string getName() const override { return "Fold"; }
 
@@ -21,6 +19,6 @@ class FoldNode : public GraphNode {
   void loadNodeState(juce::XmlElement *xml) override;
 
   int nValue = 2;
-  int macroNValue = -1;
+  MacroParam macroNValue{"Fold N", {}};
   int mode = 0;
 };

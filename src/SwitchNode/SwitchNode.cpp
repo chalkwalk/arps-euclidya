@@ -15,7 +15,7 @@ NodeLayout SwitchNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "switchOn") {
       el.valueRef = const_cast<int *>(&switchOn);
-      el.macroIndexRef = const_cast<int *>(&macroSwitch);
+      el.macroParamRef = const_cast<MacroParam *>(&macroSwitch);
     }
   }
 
@@ -25,19 +25,24 @@ NodeLayout SwitchNode::getLayout() const {
 void SwitchNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("switchOn", (bool)(switchOn != 0));
-    xml->setAttribute("macroSwitch", macroSwitch);
+    saveMacroBindings(xml);
   }
 }
 
 void SwitchNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     switchOn = xml->getBoolAttribute("switchOn", true) ? 1 : 0;
-    macroSwitch = xml->getIntAttribute("macroSwitch", -1);
+    if (xml->hasAttribute("macroSwitch")) {
+      int m = xml->getIntAttribute("macroSwitch", -1);
+      if (m != -1)
+        macroSwitch.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
 void SwitchNode::process() {
-  bool actualOn = (resolveMacroInt(macroSwitch, switchOn, 1) != 0);
+  bool actualOn = (resolveMacroInt(macroSwitch, switchOn, 0, 1) != 0);
 
   auto it = inputSequences.find(0);
   NoteSequence inSeq =

@@ -62,18 +62,18 @@ class MidiOutNode : public GraphNode {
 
   std::function<void()> onParameterChanged;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Pattern Steps", &macroPSteps},
-            {"Pattern Beats", &macroPBeats},
-            {"Pattern Offset", &macroPOffset},
-            {"Rhythm Steps", &macroRSteps},
-            {"Rhythm Beats", &macroRBeats},
-            {"Rhythm Offset", &macroROffset},
-            {"Press -> Vel", &macroPressureToVelocity},
-            {"Timb -> Vel", &macroTimbreToVelocity},
-            {"Hum Timing", &macroHumTiming},
-            {"Hum Velocity", &macroHumVelocity},
-            {"Hum Gate", &macroHumGate}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroPSteps,
+            &macroPBeats,
+            &macroPOffset,
+            &macroRSteps,
+            &macroRBeats,
+            &macroROffset,
+            &macroPressureToVelocity,
+            &macroTimbreToVelocity,
+            &macroHumTiming,
+            &macroHumVelocity,
+            &macroHumGate};
   }
 
   int pSteps = 16;
@@ -83,12 +83,12 @@ class MidiOutNode : public GraphNode {
   int rBeats = 7;
   int rOffset = 0;
 
-  int macroPSteps = -1;
-  int macroPBeats = -1;
-  int macroPOffset = -1;
-  int macroRSteps = -1;
-  int macroRBeats = -1;
-  int macroROffset = -1;
+  MacroParam macroPSteps{"Pattern Steps", {}};
+  MacroParam macroPBeats{"Pattern Beats", {}};
+  MacroParam macroPOffset{"Pattern Offset", {}};
+  MacroParam macroRSteps{"Rhythm Steps", {}};
+  MacroParam macroRBeats{"Rhythm Beats", {}};
+  MacroParam macroROffset{"Rhythm Offset", {}};
 
   // Sync & Reset Controls
   SyncMode syncMode = SyncMode::Synchronized;
@@ -107,11 +107,11 @@ class MidiOutNode : public GraphNode {
   float humVelocity = 0.0f;
   float humGate = 0.0f;
 
-  int macroPressureToVelocity = -1;
-  int macroTimbreToVelocity = -1;
-  int macroHumTiming = -1;
-  int macroHumVelocity = -1;
-  int macroHumGate = -1;
+  MacroParam macroPressureToVelocity{"Press -> Vel", {}};
+  MacroParam macroTimbreToVelocity{"Timb -> Vel", {}};
+  MacroParam macroHumTiming{"Hum Timing", {}};
+  MacroParam macroHumVelocity{"Hum Velocity", {}};
+  MacroParam macroHumGate{"Hum Gate", {}};
 
   // UI proxy variables (NodeBlock UI needs integer pointers)
   int ui_syncMode = 1;
@@ -132,10 +132,6 @@ class MidiOutNode : public GraphNode {
   std::atomic<bool> lastTickPlayedNote{false};
 
  private:
-  int resolveIntMacro(int macroIdx, int localVal, int maxVal) const;
-  float resolveFloatMacro(int macroIdx, float localVal) const;
-  int resolveOffsetMacro(int macroIdx, int localVal, int maxVal) const;
-
   void flushPlayingNotes(NoteEventCollector &collector, int numSamples);
 
   NoteExpressionManager &noteExpressionManager;

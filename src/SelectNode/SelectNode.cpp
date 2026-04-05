@@ -15,7 +15,7 @@ NodeLayout SelectNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "selectSource") {
       el.valueRef = const_cast<int *>(&selectSource);
-      el.macroIndexRef = const_cast<int *>(&macroSelectSource);
+      el.macroParamRef = const_cast<MacroParam *>(&macroSelectSource);
     }
   }
 
@@ -25,19 +25,24 @@ NodeLayout SelectNode::getLayout() const {
 void SelectNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("selectSource", selectSource);
-    xml->setAttribute("macroSelectSource", macroSelectSource);
+    saveMacroBindings(xml);
   }
 }
 
 void SelectNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     selectSource = xml->getIntAttribute("selectSource", 0);
-    macroSelectSource = xml->getIntAttribute("macroSelectSource", -1);
+    if (xml->hasAttribute("macroSelectSource")) {
+      int m = xml->getIntAttribute("macroSelectSource", -1);
+      if (m != -1)
+        macroSelectSource.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
 void SelectNode::process() {
-  int actualSource = resolveMacroInt(macroSelectSource, selectSource, 1);
+  int actualSource = resolveMacroInt(macroSelectSource, selectSource, 0, 1);
 
   auto it0 = inputSequences.find(0);
   auto it1 = inputSequences.find(1);

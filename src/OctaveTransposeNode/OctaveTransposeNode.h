@@ -11,8 +11,8 @@ class OctaveTransposeNode : public GraphNode {
   void process() override;
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Oct Transpose", &macroOctaves}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroOctaves};
   }
 
   std::string getName() const override { return "Octave Transpose"; }
@@ -21,5 +21,5 @@ class OctaveTransposeNode : public GraphNode {
   void loadNodeState(juce::XmlElement *xml) override;
 
   int octaves = 0;
-  int macroOctaves = -1;
+  MacroParam macroOctaves{"Oct Transpose", {}};
 };

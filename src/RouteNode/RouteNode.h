@@ -17,10 +17,10 @@ class RouteNode : public GraphNode {
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Route", &macroRouteDest}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroRouteDest};
   }
 
   int routeDest = 0;
-  int macroRouteDest = -1;
+  MacroParam macroRouteDest{"Route", {}};
 };

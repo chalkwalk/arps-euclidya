@@ -40,36 +40,36 @@ NodeLayout MidiOutNode::getLayout() const {
     for (auto &el : elements) {
       if (el.label == "pSteps") {
         el.valueRef = &self->pSteps;
-        el.macroIndexRef = &self->macroPSteps;
+        el.macroParamRef = &self->macroPSteps;
       } else if (el.label == "pBeats") {
         el.valueRef = &self->pBeats;
-        el.macroIndexRef = &self->macroPBeats;
+        el.macroParamRef = &self->macroPBeats;
         el.dynamicMinRef = &self->ui_pBeatsMin;
         el.dynamicMaxRef = &self->ui_pBeatsMax;
       } else if (el.label == "pOffset") {
         el.valueRef = &self->pOffset;
-        el.macroIndexRef = &self->macroPOffset;
+        el.macroParamRef = &self->macroPOffset;
         el.dynamicMinRef = &self->ui_pOffsetMin;
         el.dynamicMaxRef = &self->ui_pOffsetMax;
       } else if (el.label == "rSteps") {
         el.valueRef = &self->rSteps;
-        el.macroIndexRef = &self->macroRSteps;
+        el.macroParamRef = &self->macroRSteps;
       } else if (el.label == "rBeats") {
         el.valueRef = &self->rBeats;
-        el.macroIndexRef = &self->macroRBeats;
+        el.macroParamRef = &self->macroRBeats;
         el.dynamicMinRef = &self->ui_rBeatsMin;
         el.dynamicMaxRef = &self->ui_rBeatsMax;
       } else if (el.label == "rOffset") {
         el.valueRef = &self->rOffset;
-        el.macroIndexRef = &self->macroROffset;
+        el.macroParamRef = &self->macroROffset;
         el.dynamicMinRef = &self->ui_rOffsetMin;
         el.dynamicMaxRef = &self->ui_rOffsetMax;
       } else if (el.label == "pressureToVelocity") {
         el.floatValueRef = &self->pressureToVelocity;
-        el.macroIndexRef = &self->macroPressureToVelocity;
+        el.macroParamRef = &self->macroPressureToVelocity;
       } else if (el.label == "timbreToVelocity") {
         el.floatValueRef = &self->timbreToVelocity;
-        el.macroIndexRef = &self->macroTimbreToVelocity;
+        el.macroParamRef = &self->macroTimbreToVelocity;
       } else if (el.label == "clockDivisionIndex") {
         el.valueRef = &self->clockDivisionIndex;
       } else if (el.label == "syncMode") {
@@ -86,13 +86,13 @@ NodeLayout MidiOutNode::getLayout() const {
         el.valueRef = &self->outputChannel;
       } else if (el.label == "humTiming") {
         el.floatValueRef = &self->humTiming;
-        el.macroIndexRef = &self->macroHumTiming;
+        el.macroParamRef = &self->macroHumTiming;
       } else if (el.label == "humVelocity") {
         el.floatValueRef = &self->humVelocity;
-        el.macroIndexRef = &self->macroHumVelocity;
+        el.macroParamRef = &self->macroHumVelocity;
       } else if (el.label == "humGate") {
         el.floatValueRef = &self->humGate;
-        el.macroIndexRef = &self->macroHumGate;
+        el.macroParamRef = &self->macroHumGate;
       }
     }
   };

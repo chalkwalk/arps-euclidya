@@ -90,6 +90,46 @@ class GraphNode {
     }
   }
 
+  void saveMacroBindings(juce::XmlElement *xml) {
+    if (!xml)
+      return;
+    auto *bindingsXml = new juce::XmlElement("Bindings");
+    for (auto *param : getMacroParams()) {
+      for (const auto &b : param->bindings) {
+        auto *bXml = new juce::XmlElement("Bind");
+        bXml->setAttribute("param", param->name);
+        bXml->setAttribute("macro", b.macroIndex);
+        bXml->setAttribute("intensity", b.intensity);
+        bindingsXml->addChildElement(bXml);
+      }
+    }
+    if (bindingsXml->getNumChildElements() > 0) {
+      xml->addChildElement(bindingsXml);
+    } else {
+      delete bindingsXml;
+    }
+  }
+
+  void loadMacroBindings(juce::XmlElement *xml) {
+    if (!xml)
+      return;
+    auto params = getMacroParams();
+    auto *bindingsXml = xml->getChildByName("Bindings");
+    if (bindingsXml) {
+      for (auto *bXml : bindingsXml->getChildIterator()) {
+        juce::String pName = bXml->getStringAttribute("param");
+        int mIdx = bXml->getIntAttribute("macro", -1);
+        double inten = bXml->getDoubleAttribute("intensity", 1.0);
+        for (auto *p : params) {
+          if (p->name == pName && mIdx != -1) {
+            p->bindings.push_back({mIdx, (float)inten});
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // Triggered when an upstream connection sets the dirty flag
   virtual void process() = 0;
 
@@ -111,6 +151,8 @@ class GraphNode {
   virtual std::vector<std::pair<juce::String, int *>> getMacroMappings() {
     return {};
   }
+
+  virtual std::vector<MacroParam *> getMacroParams() { return {}; }
 
   // Hook called by NodeBlock when a UI control mapped to this node changes
   virtual void parameterChanged() {}

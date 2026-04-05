@@ -11,8 +11,8 @@ class TransposeNode : public GraphNode {
   void process() override;
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Transpose", &macroSemitones}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroSemitones};
   }
 
   std::string getName() const override { return "Transpose"; }
@@ -21,5 +21,5 @@ class TransposeNode : public GraphNode {
   void loadNodeState(juce::XmlElement *xml) override;
 
   int semitones = 0;
-  int macroSemitones = -1;
+  MacroParam macroSemitones{"Semitones", {}};
 };

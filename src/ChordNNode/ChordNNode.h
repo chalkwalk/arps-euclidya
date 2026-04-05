@@ -11,13 +11,11 @@ class ChordNNode : public GraphNode {
   void process() override;
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Chord N", &macroNValue}};
-  }
+  std::vector<MacroParam *> getMacroParams() override { return {&macroNValue}; }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
   int nValue = 2;  // Default to 2
-  int macroNValue = -1;
+  MacroParam macroNValue{"Chord N", {}};
 };

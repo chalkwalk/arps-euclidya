@@ -17,10 +17,10 @@ NodeLayout WalkNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "walkLength") {
       el.valueRef = const_cast<int *>(&walkLength);
-      el.macroIndexRef = const_cast<int *>(&macroWalkLength);
+      el.macroParamRef = const_cast<MacroParam *>(&macroWalkLength);
     } else if (el.label == "walkSkewInt") {
       el.valueRef = const_cast<int *>(&walkSkewInt);
-      el.macroIndexRef = const_cast<int *>(&macroWalkSkew);
+      el.macroParamRef = const_cast<MacroParam *>(&macroWalkSkew);
     }
   }
 
@@ -30,17 +30,25 @@ NodeLayout WalkNode::getLayout() const {
 void WalkNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("walkLength", walkLength);
-    xml->setAttribute("macroWalkLength", macroWalkLength);
     xml->setAttribute("walkSkewInt", walkSkewInt);
-    xml->setAttribute("macroWalkSkew", macroWalkSkew);
+    saveMacroBindings(xml);
   }
 }
 
 void WalkNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     walkLength = xml->getIntAttribute("walkLength", 16);
-    macroWalkLength = xml->getIntAttribute("macroWalkLength", -1);
-    macroWalkSkew = xml->getIntAttribute("macroWalkSkew", -1);
+    if (xml->hasAttribute("macroWalkLength")) {
+      int m = xml->getIntAttribute("macroWalkLength", -1);
+      if (m != -1)
+        macroWalkLength.bindings.push_back({m, 1.0f});
+    }
+    if (xml->hasAttribute("macroWalkSkew")) {
+      int m = xml->getIntAttribute("macroWalkSkew", -1);
+      if (m != -1)
+        macroWalkSkew.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
     if (xml->hasAttribute("walkSkewInt")) {
       walkSkewInt = xml->getIntAttribute("walkSkewInt", 0);
     } else {
@@ -50,16 +58,11 @@ void WalkNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void WalkNode::process() {
-  int actualLength = resolveMacroInt(macroWalkLength, walkLength, 64);
-  if (macroWalkLength != -1 && macros[(size_t)macroWalkLength] != nullptr) {
-    actualLength = std::max(1, actualLength);
-  }
+  int actualLength = resolveMacroInt(macroWalkLength, walkLength, 0, 64);
+  actualLength = std::max(1, actualLength);
 
-  float rawSkew = resolveMacroFloat(macroWalkSkew, walkSkewInt / 100.0f);
   float actualSkew =
-      (macroWalkSkew != -1 && macros[(size_t)macroWalkSkew] != nullptr)
-          ? (rawSkew * 2.0f) - 1.0f
-          : rawSkew;
+      resolveMacroFloat(macroWalkSkew, walkSkewInt / 100.0f, -1.0f, 1.0f);
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualLength <= 0) {

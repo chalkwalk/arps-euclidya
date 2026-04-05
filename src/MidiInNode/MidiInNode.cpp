@@ -19,7 +19,7 @@ NodeLayout MidiInNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "channelFilter") {
       el.valueRef = const_cast<int *>(&channelFilter);
-      el.macroIndexRef = const_cast<int *>(&macroChannelFilter);
+      el.macroParamRef = const_cast<MacroParam *>(&macroChannelFilter);
     }
   }
 
@@ -29,14 +29,19 @@ NodeLayout MidiInNode::getLayout() const {
 void MidiInNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("channelFilter", channelFilter);
-    xml->setAttribute("macroChannelFilter", macroChannelFilter);
+    saveMacroBindings(xml);
   }
 }
 
 void MidiInNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     channelFilter = xml->getIntAttribute("channelFilter", 0);
-    macroChannelFilter = xml->getIntAttribute("macroChannelFilter", -1);
+    if (xml->hasAttribute("macroChannelFilter")) {
+      int m = xml->getIntAttribute("macroChannelFilter", -1);
+      if (m != -1)
+        macroChannelFilter.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
@@ -49,12 +54,7 @@ void MidiInNode::process() {
 
   if (isLegacy) {
     // Only apply channel filtering if MPE is disabled
-    actualChannel =
-        macroChannelFilter != -1 &&
-                macros[(size_t)macroChannelFilter] != nullptr
-            ? (int)std::round(macros[(size_t)macroChannelFilter]->load() *
-                              16.0f)
-            : channelFilter;
+    actualChannel = resolveMacroInt(macroChannelFilter, channelFilter, 0, 16);
   }
 
   auto heldNotes = noteExpressionManager.getHeldNotes(actualChannel);

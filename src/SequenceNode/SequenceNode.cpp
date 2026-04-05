@@ -40,7 +40,10 @@ class SequenceNodeEditor : public juce::Component,
       }
 
       MacroMappingMenu::showMenu(
-          &lengthSlider, node.macroSeqLength,
+          &lengthSlider,
+          node.macroSeqLength.bindings.empty()
+              ? -1
+              : node.macroSeqLength.bindings[0].macroIndex,
           [&node, canvasPtr, &apvts, this](int macroIndex) {
             canvasPtr->performMutation([&node, canvasPtr, &apvts, macroIndex,
                                         this]() {
@@ -62,7 +65,10 @@ class SequenceNodeEditor : public juce::Component,
                 param->setValueNotifyingHost(norm);
               }
 
-              node.macroSeqLength = finalMacroIndex;
+              node.macroSeqLength.bindings.clear();
+              if (finalMacroIndex >= 0) {
+                node.macroSeqLength.bindings.push_back({finalMacroIndex, 1.0f});
+              }
               if (node.onMappingChanged) {
                 node.onMappingChanged();
               }
@@ -72,9 +78,11 @@ class SequenceNodeEditor : public juce::Component,
           });
     };
 
-    if (node.macroSeqLength != -1) {
+    if (!node.macroSeqLength.bindings.empty()) {
       lengthAttachment = std::make_unique<MacroAttachment>(
-          apvts, "macro_" + juce::String(node.macroSeqLength + 1),
+          apvts,
+          "macro_" +
+              juce::String(node.macroSeqLength.bindings[0].macroIndex + 1),
           lengthSlider);
       lengthSlider.setColour(juce::Slider::rotarySliderFillColourId,
                              juce::Colours::orange);
@@ -290,7 +298,7 @@ std::unique_ptr<juce::Component> SequenceNode::createCustomComponent(
 void SequenceNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("seqLength", seqLength);
-    xml->setAttribute("macroSeqLength", macroSeqLength);
+    saveMacroBindings(xml);
 
     // Compress: only save active cells as "noteNum,step;" pairs
     juce::String activeStr;
@@ -308,7 +316,12 @@ void SequenceNode::saveNodeState(juce::XmlElement *xml) {
 void SequenceNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     seqLength = xml->getIntAttribute("seqLength", 8);
-    macroSeqLength = xml->getIntAttribute("macroSeqLength", -1);
+    if (xml->hasAttribute("macroSeqLength")) {
+      int m = xml->getIntAttribute("macroSeqLength", -1);
+      if (m != -1)
+        macroSeqLength.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
 
     // Clear grid
     for (auto &n : grid) {
@@ -353,7 +366,7 @@ void SequenceNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 void SequenceNode::process() {
-  int actualLen = resolveMacroInt(macroSeqLength, seqLength, 16);
+  int actualLen = resolveMacroInt(macroSeqLength, seqLength, 1, 16);
   actualLen = std::clamp(actualLen, 1, 16);
 
   NoteSequence outSeq;

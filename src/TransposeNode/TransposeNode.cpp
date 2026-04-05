@@ -15,7 +15,7 @@ NodeLayout TransposeNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "semitones") {
       el.valueRef = const_cast<int *>(&semitones);
-      el.macroIndexRef = const_cast<int *>(&macroSemitones);
+      el.macroParamRef = const_cast<MacroParam *>(&macroSemitones);
     }
   }
 
@@ -25,23 +25,25 @@ NodeLayout TransposeNode::getLayout() const {
 void TransposeNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("semitones", semitones);
-    xml->setAttribute("macroSemitones", macroSemitones);
+    saveMacroBindings(xml);
   }
 }
 
 void TransposeNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     semitones = xml->getIntAttribute("semitones", 0);
-    macroSemitones = xml->getIntAttribute("macroSemitones", -1);
+    // Backward compat for old saving format
+    if (xml->hasAttribute("macroSemitones")) {
+      int m = xml->getIntAttribute("macroSemitones", -1);
+      if (m != -1)
+        macroSemitones.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
 void TransposeNode::process() {
-  int actualSemitones = resolveMacroInt(macroSemitones, semitones, 48);
-  // Shift to bipolar: macro gives [0,48] -> [-24,+24]
-  if (macroSemitones != -1 && macros[(size_t)macroSemitones] != nullptr) {
-    actualSemitones -= 24;
-  }
+  int actualSemitones = resolveMacroOffset(macroSemitones, semitones, 24);
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() ||

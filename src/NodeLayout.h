@@ -13,11 +13,14 @@ enum class UIElementType : uint8_t {
   Custom
 };
 
+struct MacroParam;
+
 struct UIElement {
   UIElementType type;
   juce::String label;
   int *valueRef = nullptr;
   int *macroIndexRef = nullptr;
+  MacroParam *macroParamRef = nullptr;
   int minValue = 0;
   int maxValue = 0;
   int *dynamicMinRef = nullptr;    // Dynamic min bound

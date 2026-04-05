@@ -16,7 +16,7 @@ NodeLayout FoldNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "nValue") {
       el.valueRef = const_cast<int *>(&nValue);
-      el.macroIndexRef = const_cast<int *>(&macroNValue);
+      el.macroParamRef = const_cast<MacroParam *>(&macroNValue);
     } else if (el.label == "mode") {
       el.valueRef = const_cast<int *>(&mode);
     }
@@ -28,7 +28,7 @@ NodeLayout FoldNode::getLayout() const {
 void FoldNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("nValue", nValue);
-    xml->setAttribute("macroNValue", macroNValue);
+    saveMacroBindings(xml);
     xml->setAttribute("mode", mode);
   }
 }
@@ -36,16 +36,19 @@ void FoldNode::saveNodeState(juce::XmlElement *xml) {
 void FoldNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     nValue = xml->getIntAttribute("nValue", 2);
-    macroNValue = xml->getIntAttribute("macroNValue", -1);
+    if (xml->hasAttribute("macroNValue")) {
+      int m = xml->getIntAttribute("macroNValue", -1);
+      if (m != -1)
+        macroNValue.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
     mode = xml->getIntAttribute("mode", 0);
   }
 }
 
 void FoldNode::process() {
-  int actualNValue = resolveMacroInt(macroNValue, nValue, 16);
-  if (macroNValue != -1 && macros[(size_t)macroNValue] != nullptr) {
-    actualNValue = std::max(1, actualNValue);
-  }
+  int actualNValue = resolveMacroInt(macroNValue, nValue, 0, 16);
+  actualNValue = std::max(1, actualNValue);
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualNValue <= 1) {

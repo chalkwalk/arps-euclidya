@@ -15,7 +15,7 @@ NodeLayout RouteNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "routeDest") {
       el.valueRef = const_cast<int *>(&routeDest);
-      el.macroIndexRef = const_cast<int *>(&macroRouteDest);
+      el.macroParamRef = const_cast<MacroParam *>(&macroRouteDest);
     }
   }
 
@@ -25,19 +25,24 @@ NodeLayout RouteNode::getLayout() const {
 void RouteNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("routeDest", routeDest);
-    xml->setAttribute("macroRouteDest", macroRouteDest);
+    saveMacroBindings(xml);
   }
 }
 
 void RouteNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     routeDest = xml->getIntAttribute("routeDest", 0);
-    macroRouteDest = xml->getIntAttribute("macroRouteDest", -1);
+    if (xml->hasAttribute("macroRouteDest")) {
+      int m = xml->getIntAttribute("macroRouteDest", -1);
+      if (m != -1)
+        macroRouteDest.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
 void RouteNode::process() {
-  int actualDest = resolveMacroInt(macroRouteDest, routeDest, 1);
+  int actualDest = resolveMacroInt(macroRouteDest, routeDest, 0, 1);
 
   auto it = inputSequences.find(0);
   NoteSequence emptySeq;

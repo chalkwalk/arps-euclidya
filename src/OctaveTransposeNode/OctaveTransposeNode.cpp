@@ -17,7 +17,7 @@ NodeLayout OctaveTransposeNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "octaves") {
       el.valueRef = const_cast<int *>(&octaves);
-      el.macroIndexRef = const_cast<int *>(&macroOctaves);
+      el.macroParamRef = const_cast<MacroParam *>(&macroOctaves);
     }
   }
 
@@ -27,23 +27,24 @@ NodeLayout OctaveTransposeNode::getLayout() const {
 void OctaveTransposeNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("octaves", octaves);
-    xml->setAttribute("macroOctaves", macroOctaves);
+    saveMacroBindings(xml);
   }
 }
 
 void OctaveTransposeNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     octaves = xml->getIntAttribute("octaves", 0);
-    macroOctaves = xml->getIntAttribute("macroOctaves", -1);
+    if (xml->hasAttribute("macroOctaves")) {
+      int m = xml->getIntAttribute("macroOctaves", -1);
+      if (m != -1)
+        macroOctaves.bindings.push_back({m, 1.0f});
+    }
+    loadMacroBindings(xml);
   }
 }
 
 void OctaveTransposeNode::process() {
-  int actualOctaves = resolveMacroInt(macroOctaves, octaves, 8);
-  // Shift to bipolar: macro gives [0,8] -> [-4,+4]
-  if (macroOctaves != -1 && macros[(size_t)macroOctaves] != nullptr) {
-    actualOctaves -= 4;
-  }
+  int actualOctaves = resolveMacroOffset(macroOctaves, octaves, 4);
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty() || actualOctaves == 0) {

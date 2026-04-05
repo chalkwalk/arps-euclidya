@@ -15,7 +15,7 @@ class MidiInNode : public GraphNode {
   NodeLayout getLayout() const override;
 
   int channelFilter = 0;  // 0 means all channels
-  int macroChannelFilter = -1;
+  MacroParam macroChannelFilter{"Channel Filter", {}};
 
   NoteExpressionManager &getNoteExpressionManager() {
     return noteExpressionManager;
@@ -24,8 +24,8 @@ class MidiInNode : public GraphNode {
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Channel Filter", &macroChannelFilter}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroChannelFilter};
   }
 
  private:

@@ -15,13 +15,13 @@ class MultiplyNode : public GraphNode {
 
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Multiply N", &macroRepeatCount}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroRepeatCount};
   }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  int repeatCount = 2;        // 1-16
-  int macroRepeatCount = -1;  // macro mapping
+  int repeatCount = 2;                            // 1-16
+  MacroParam macroRepeatCount{"Multiply N", {}};  // macro mapping
 };

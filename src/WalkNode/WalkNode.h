@@ -10,15 +10,15 @@ class WalkNode : public GraphNode {
   void process() override;
   NodeLayout getLayout() const override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Walk Length", &macroWalkLength}, {"Walk Skew", &macroWalkSkew}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroWalkLength, &macroWalkSkew};
   }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
   int walkLength = 16;
-  int macroWalkLength = -1;
+  MacroParam macroWalkLength{"Walk Length", {}};
   int walkSkewInt = 0;  // -100 to 100
-  int macroWalkSkew = -1;
+  MacroParam macroWalkSkew{"Walk Skew", {}};
 };

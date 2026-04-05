@@ -21,10 +21,10 @@ class SequenceNode : public GraphNode {
   void loadNodeState(juce::XmlElement *xml) override;
 
   int seqLength = 8;
-  int macroSeqLength = -1;
+  MacroParam macroSeqLength{"Seq Length", {}};
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Seq Length", &macroSeqLength}};
+  std::vector<MacroParam *> getMacroParams() override {
+    return {&macroSeqLength};
   }
 
   // Full MIDI range grid: 128 notes × 16 steps

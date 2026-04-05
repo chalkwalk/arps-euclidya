@@ -17,10 +17,8 @@ class SwitchNode : public GraphNode {
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  std::vector<std::pair<juce::String, int *>> getMacroMappings() override {
-    return {{"Switch", &macroSwitch}};
-  }
+  std::vector<MacroParam *> getMacroParams() override { return {&macroSwitch}; }
 
   int switchOn = 1;
-  int macroSwitch = -1;
+  MacroParam macroSwitch{"Switch", {}};
 };
