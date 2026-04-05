@@ -103,6 +103,7 @@ class GraphNode {
   // Hook called by NodeBlock when a UI control mapped to this node changes
   virtual void parameterChanged() {}
 
+  bool isDirty = false;
   std::function<void()> onNodeDirtied;
   std::function<void()> onMappingChanged;
 
@@ -119,6 +120,8 @@ class GraphNode {
 
   void addConnection(int thisOutputPort, GraphNode *targetNode,
                      int targetInputPort);
+  void removeConnectionTo(GraphNode *targetNode, int targetInputPort);
+  void removeAllConnectionsTo(GraphNode *targetNode);
   const std::map<int, std::vector<Connection>> &getConnections() const {
     return connections;
   }

@@ -17,9 +17,10 @@ class MidiInNode : public GraphNode {
 
   int channelFilter = 0;  // 0 means all channels
   int macroChannelFilter = -1;
-  int mpeEnabled = 0;
 
-  NoteExpressionManager &getNoteExpressionManager() { return noteExpressionManager; }
+  NoteExpressionManager &getNoteExpressionManager() {
+    return noteExpressionManager;
+  }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;

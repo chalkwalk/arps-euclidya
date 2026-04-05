@@ -52,7 +52,9 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
   addAndMakeVisible(bypassButton);
   bypassButton.onClick = [this] {
     targetNode->bypassed = bypassButton.getToggleState();
-    parentCanvas.getEngine().recalculate();
+    if (targetNode->onNodeDirtied) {
+      targetNode->onNodeDirtied();
+    }
     repaint();
   };
 

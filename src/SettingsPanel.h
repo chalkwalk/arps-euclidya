@@ -28,12 +28,19 @@ class SettingsPanel : public juce::Component, public juce::Timer {
 
   std::unique_ptr<juce::FileChooser> fileChooser;
 
-  juce::Label diagLabel{"diagLabel", "MIDI Diagnostics (Input):"};
+  juce::Label diagLabel{"diagLabel", "MIDI Diagnostics:"};
   juce::TextEditor diagEditor;
   juce::TextButton clearDiagButton{"Clear Log"};
   juce::TextButton copyDiagButton{"Copy Log"};
+  juce::ToggleButton showDiagToggle{"Show MIDI Log"};
+  bool diagVisible = false;
+
+  juce::ToggleButton mpeEnabledToggle{"Enable MPE"};
   juce::ToggleButton ignoreMpeMasterPressureToggle{
       "Ignore MPE Master Channel Pressure"};
+
+  void updateMpeState();
+
   int logLineCount = 0;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsPanel)

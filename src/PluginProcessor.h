@@ -130,6 +130,8 @@ class ArpsEuclidyaProcessor
   };
 
   PatchMetadata currentPatchMetadata;
+  bool hasLoggedParams = false;
+  std::atomic<bool> graphNeedsRecalculate{false};
 
   // Graph Editor methods
   static constexpr int CURRENT_PATCH_VERSION = 2;

@@ -46,22 +46,15 @@ SettingsPanel::SettingsPanel(ArpsEuclidyaProcessor &p) : processor(p) {
     });
   };
 
-  addAndMakeVisible(diagLabel);
-  addAndMakeVisible(diagEditor);
-  diagEditor.setMultiLine(true);
-  diagEditor.setReadOnly(true);
-  diagEditor.setScrollbarsShown(true);
-  diagEditor.setCaretVisible(false);
-
-  addAndMakeVisible(clearDiagButton);
-  clearDiagButton.onClick = [this]() {
-    diagEditor.clear();
-    logLineCount = 0;
-  };
-
-  addAndMakeVisible(copyDiagButton);
-  copyDiagButton.onClick = [this]() {
-    juce::SystemClipboard::copyTextToClipboard(diagEditor.getText());
+  // --- MPE Settings ---
+  addAndMakeVisible(mpeEnabledToggle);
+  mpeEnabledToggle.setToggleState(AppSettings::getInstance().getMpeEnabled(),
+                                  juce::dontSendNotification);
+  mpeEnabledToggle.onClick = [this]() {
+    bool state = mpeEnabledToggle.getToggleState();
+    AppSettings::getInstance().setMpeEnabled(state);
+    processor.getNoteExpressionManager().setLegacyMode(!state);
+    updateMpeState();
   };
 
   addAndMakeVisible(ignoreMpeMasterPressureToggle);
@@ -72,6 +65,37 @@ SettingsPanel::SettingsPanel(ArpsEuclidyaProcessor &p) : processor(p) {
     bool state = ignoreMpeMasterPressureToggle.getToggleState();
     AppSettings::getInstance().setIgnoreMpeMasterPressure(state);
     processor.getNoteExpressionManager().setIgnoreMpeMasterPressure(state);
+  };
+  updateMpeState();
+
+  // --- Collapsible MIDI Diagnostics ---
+  addAndMakeVisible(showDiagToggle);
+  showDiagToggle.setToggleState(false, juce::dontSendNotification);
+  showDiagToggle.onClick = [this]() {
+    diagVisible = showDiagToggle.getToggleState();
+    diagLabel.setVisible(diagVisible);
+    diagEditor.setVisible(diagVisible);
+    clearDiagButton.setVisible(diagVisible);
+    copyDiagButton.setVisible(diagVisible);
+    resized();
+  };
+
+  addChildComponent(diagLabel);
+  addChildComponent(diagEditor);
+  diagEditor.setMultiLine(true);
+  diagEditor.setReadOnly(true);
+  diagEditor.setScrollbarsShown(true);
+  diagEditor.setCaretVisible(false);
+
+  addChildComponent(clearDiagButton);
+  clearDiagButton.onClick = [this]() {
+    diagEditor.clear();
+    logLineCount = 0;
+  };
+
+  addChildComponent(copyDiagButton);
+  copyDiagButton.onClick = [this]() {
+    juce::SystemClipboard::copyTextToClipboard(diagEditor.getText());
   };
 
   startTimerHz(15);
@@ -104,18 +128,41 @@ void SettingsPanel::resized() {
 
   bounds.removeFromTop(10);
 
-  ignoreMpeMasterPressureToggle.setBounds(bounds.removeFromTop(24));
+  // --- MPE section ---
+  mpeEnabledToggle.setBounds(bounds.removeFromTop(24));
+  bounds.removeFromTop(4);
+  auto ignoreRow = bounds.removeFromTop(24);
+  ignoreRow.removeFromLeft(20);  // indent under MPE toggle
+  ignoreMpeMasterPressureToggle.setBounds(ignoreRow);
 
   bounds.removeFromTop(10);
 
-  auto diagHeaderRow = bounds.removeFromTop(24);
-  diagLabel.setBounds(diagHeaderRow.removeFromLeft(200));
-  copyDiagButton.setBounds(diagHeaderRow.removeFromRight(80));
-  diagHeaderRow.removeFromRight(5);
-  clearDiagButton.setBounds(diagHeaderRow.removeFromRight(80));
+  // --- Collapsible diagnostics ---
+  showDiagToggle.setBounds(bounds.removeFromTop(24));
 
-  bounds.removeFromTop(5);
-  diagEditor.setBounds(bounds);
+  if (diagVisible) {
+    bounds.removeFromTop(5);
+
+    auto diagHeaderRow = bounds.removeFromTop(24);
+    diagLabel.setBounds(diagHeaderRow.removeFromLeft(200));
+    copyDiagButton.setBounds(diagHeaderRow.removeFromRight(80));
+    diagHeaderRow.removeFromRight(5);
+    clearDiagButton.setBounds(diagHeaderRow.removeFromRight(80));
+
+    bounds.removeFromTop(5);
+    diagEditor.setBounds(bounds);
+  }
+}
+
+void SettingsPanel::updateMpeState() {
+  bool mpeOn = mpeEnabledToggle.getToggleState();
+  ignoreMpeMasterPressureToggle.setEnabled(mpeOn);
+  if (!mpeOn) {
+    ignoreMpeMasterPressureToggle.setToggleState(false,
+                                                 juce::dontSendNotification);
+    AppSettings::getInstance().setIgnoreMpeMasterPressure(false);
+    processor.getNoteExpressionManager().setIgnoreMpeMasterPressure(false);
+  }
 }
 
 void SettingsPanel::timerCallback() {

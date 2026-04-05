@@ -16,6 +16,9 @@ class NoteExpressionManager : private juce::MPEInstrument::Listener {
   void processMidi(juce::MidiBuffer &midiMessages);
   void handleMidiMessage(const juce::MidiMessage &message);
 
+  // Note: CLAP events generally use 0-based indexing for channels. This class
+  // standardizes internally on 1-based channels. When calling these methods
+  // from a 0-based source (like CLAP), you MUST add 1 to the channel argument.
   void handleNoteOn(int channel, int noteNumber, float velocity,
                     int32_t noteID = -1);
   void handleNoteOff(int channel, int noteNumber, float velocity,

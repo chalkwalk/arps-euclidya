@@ -10,7 +10,12 @@
 
 void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
   if (onGraphDirtied) {
-    node->onNodeDirtied = onGraphDirtied;
+    auto callback = onGraphDirtied;
+    GraphNode *rawPtr = node.get();
+    node->onNodeDirtied = [rawPtr, callback]() {
+      rawPtr->isDirty = true;
+      callback();
+    };
   }
   nodes.push_back(node);
 }
@@ -39,16 +44,7 @@ void GraphEngine::removeNode(GraphNode *node) {
       n->clearConnections();
     } else {
       // Remove connections that point to the deleted node
-      auto &conns =
-          const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
-              n->getConnections());
-      for (auto &[port, connVec] : conns) {
-        connVec.erase(std::remove_if(connVec.begin(), connVec.end(),
-                                     [node](const GraphNode::Connection &c) {
-                                       return c.targetNode == node;
-                                     }),
-                      connVec.end());
-      }
+      n->removeAllConnectionsTo(node);
     }
   }
 
@@ -197,18 +193,7 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
   // Remove any existing connection to this specific input port
   // (an input port can only have one source)
   for (auto &n : nodes) {
-    auto &conns =
-        const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
-            n->getConnections());
-    for (auto &[port, connVec] : conns) {
-      connVec.erase(
-          std::remove_if(connVec.begin(), connVec.end(),
-                         [target, inPort](const GraphNode::Connection &c) {
-                           return c.targetNode == target &&
-                                  c.targetInputPort == inPort;
-                         }),
-          connVec.end());
-    }
+    n->removeConnectionTo(target, inPort);
   }
 
   source->addConnection(outPort, target, inPort);
@@ -225,22 +210,17 @@ void GraphEngine::removeConnection(GraphNode *source, int outPort,
     return;
   }
 
-  auto &conns = const_cast<std::map<int, std::vector<GraphNode::Connection>> &>(
-      source->getConnections());
-  auto it = conns.find(outPort);
-  if (it != conns.end()) {
+  auto it = source->getConnections().find(outPort);
+  if (it != source->getConnections().end()) {
     auto sizeBefore = it->second.size();
-    it->second.erase(
-        std::remove_if(it->second.begin(), it->second.end(),
-                       [target, inPort](const GraphNode::Connection &c) {
-                         return c.targetNode == target &&
-                                c.targetInputPort == inPort;
-                       }),
-        it->second.end());
+    source->removeConnectionTo(target, inPort);
 
-    // If we actually removed a connection, clear the target's cached input
-    if (it->second.size() < sizeBefore && target != nullptr) {
+    // We need to re-find it because removeConnectionTo doesn't return size
+    auto itAfter = source->getConnections().find(outPort);
+    if (itAfter != source->getConnections().end() &&
+        itAfter->second.size() < sizeBefore && target != nullptr) {
       target->clearInputSequence(inPort);
+      target->isDirty = true;
       if (onTopologyChanged) {
         onTopologyChanged();
       }
@@ -356,6 +336,10 @@ void GraphEngine::recalculate() {
   auto sorted = topologicalSort();
 
   for (GraphNode *node : sorted) {
+    if (!node->isDirty)
+      continue;
+    node->isDirty = false;
+
     if (node->bypassed) {
       if (node->getNumInputPorts() > 0 && node->getNumOutputPorts() > 0) {
         node->setOutputSequence(0, node->getInputSequence(0));
@@ -369,6 +353,7 @@ void GraphEngine::recalculate() {
       const auto &outSeq = node->getOutputSequence(outPort);
       for (const auto &conn : connVec) {
         conn.targetNode->setInputSequence(conn.targetInputPort, outSeq);
+        conn.targetNode->isDirty = true;
       }
     }
   }
@@ -455,6 +440,19 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
         sourceNode->addConnection(sourcePort, targetNode, targetPort);
       }
     }
+  }
+
+  // Wire callbacks and mark dirty
+  for (const auto &node : nodes) {
+    if (onGraphDirtied) {
+      auto callback = onGraphDirtied;
+      GraphNode *rawPtr = node.get();
+      node->onNodeDirtied = [rawPtr, callback]() {
+        rawPtr->isDirty = true;
+        callback();
+      };
+    }
+    node->isDirty = true;
   }
   recalculate();
 }

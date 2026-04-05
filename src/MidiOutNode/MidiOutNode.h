@@ -133,6 +133,10 @@ class MidiOutNode : public GraphNode {
   std::atomic<bool> lastTickPlayedNote{false};
 
  private:
+  int resolveIntMacro(int macroIdx, int localVal, int maxVal) const;
+  float resolveFloatMacro(int macroIdx, float localVal) const;
+  int resolveOffsetMacro(int macroIdx, int localVal, int maxVal) const;
+
   void flushPlayingNotes(NoteEventCollector &collector, int numSamples);
 
   NoteExpressionManager &noteExpressionManager;
@@ -163,4 +167,6 @@ class MidiOutNode : public GraphNode {
 
   // Notes currently playing that need a NoteOff sent later
   std::vector<NoteInfo> playingNotes;
+
+  juce::Random rng;
 };

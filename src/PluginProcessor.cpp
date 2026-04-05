@@ -24,10 +24,7 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
   }
 
   // Create graph engine recalculation callback for internal UI sliders
-  graphEngine.onGraphDirtied = [this]() {
-    const juce::ScopedLock sl(graphLock);
-    graphEngine.recalculate();
-  };
+  graphEngine.onGraphDirtied = [this]() { graphNeedsRecalculate = true; };
 
   // Wire topology changes to force the NoteExpressionManager to become dirty,
   // ensuring current held notes are pushed through new connections instantly
@@ -49,6 +46,8 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
 
   noteExpressionManager.setIgnoreMpeMasterPressure(
       AppSettings::getInstance().getIgnoreMpeMasterPressure());
+  noteExpressionManager.setLegacyMode(
+      !AppSettings::getInstance().getMpeEnabled());
 }
 
 ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
@@ -190,7 +189,6 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   // Step 2: Update Clock and process incoming MPE/Note states
   clockManager.update(getPlayHead(), buffer.getNumSamples(), getSampleRate());
 
-  static bool hasLoggedParams = false;
   if (!hasLoggedParams) {
     logMidiEvent(6, 0, buffer.getNumSamples(), (float)getSampleRate());
     hasLoggedParams = true;
@@ -233,6 +231,18 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
     // Instantaneous graph recalculation
     if (noteExpressionManager.hasChanged()) {
+      graphNeedsRecalculate = true;
+    }
+
+    if (graphNeedsRecalculate.exchange(false)) {
+      // Mark source nodes dirty — they have no upstream connections
+      // and need to re-evaluate when external state changes (MIDI,
+      // macro sliders, etc.).
+      for (const auto &node : graphEngine.getNodes()) {
+        if (node->getNumInputPorts() == 0) {
+          node->isDirty = true;
+        }
+      }
       graphEngine.recalculate();
     }
 
@@ -259,7 +269,20 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
       void addNoteExpression(int channel, int noteNumber,
                              NoteExpressionType type, float value,
                              int sampleOffset, int32_t /*noteID*/) override {
-        juce::ignoreUnused(channel, noteNumber, type, value, sampleOffset);
+        switch (type) {
+          case NoteExpressionType::Pressure:
+            buffer.addEvent(juce::MidiMessage::aftertouchChange(
+                                channel + 1, noteNumber, (int)(value * 127.0f)),
+                            sampleOffset);
+            break;
+          case NoteExpressionType::Brightness:
+            buffer.addEvent(juce::MidiMessage::controllerEvent(
+                                channel + 1, 74, (int)(value * 127.0f)),
+                            sampleOffset);
+            break;
+          default:
+            break;
+        }
       }
 
      private:
@@ -668,8 +691,7 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
 void ArpsEuclidyaProcessor::parameterChanged(const juce::String &parameterID,
                                              float newValue) {
   juce::ignoreUnused(parameterID, newValue);
-  const juce::ScopedLock sl(graphLock);
-  graphEngine.recalculate();
+  graphNeedsRecalculate = true;
 }
 
 bool ArpsEuclidyaProcessor::supportsNoteExpressions() { return true; }

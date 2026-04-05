@@ -1,5 +1,27 @@
 #include "MidiOutNode.h"
 
+int MidiOutNode::resolveIntMacro(int macroIdx, int localVal, int maxVal) const {
+  if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
+    return (int)std::round(macros[(size_t)macroIdx]->load() * maxVal);
+  }
+  return localVal;
+}
+
+float MidiOutNode::resolveFloatMacro(int macroIdx, float localVal) const {
+  if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
+    return macros[(size_t)macroIdx]->load();
+  }
+  return localVal;
+}
+
+int MidiOutNode::resolveOffsetMacro(int macroIdx, int localVal,
+                                    int maxVal) const {
+  if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
+    return (int)std::round((macros[(size_t)macroIdx]->load() - 0.5f) * maxVal);
+  }
+  return localVal;
+}
+
 #include "../EuclideanMath.h"
 
 MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx,
@@ -286,26 +308,12 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     clampParameters();
 
     // --- Retrieve Parameters (Macros etc) ---
-    int actualRSteps =
-        macroRSteps != -1 && macros[static_cast<size_t>(macroRSteps)] != nullptr
-            ? 1 + (int)std::round(
-                      macros[static_cast<size_t>(macroRSteps)]->load() * 31.0f)
-            : rSteps;
+    int actualRSteps = resolveIntMacro(macroRSteps, rSteps - 1, 31) + 1;
     int actualRBeats =
-        macroRBeats != -1 && macros[static_cast<size_t>(macroRBeats)] != nullptr
-            ? 1 + (int)std::round(
-                      macros[static_cast<size_t>(macroRBeats)]->load() *
-                      (float)(actualRSteps - 1))
-            : rBeats;
+        resolveIntMacro(macroRBeats, rBeats - 1, actualRSteps - 1) + 1;
     actualRBeats = std::clamp(actualRBeats, 1, actualRSteps);
     int halfR = (actualRSteps + 1) / 2;
-    int actualROffset =
-        macroROffset != -1 &&
-                macros[static_cast<size_t>(macroROffset)] != nullptr
-            ? (int)std::round(
-                  (macros[static_cast<size_t>(macroROffset)]->load() - 0.5f) *
-                  (float)actualRSteps)
-            : rOffset;
+    int actualROffset = resolveOffsetMacro(macroROffset, rOffset, actualRSteps);
     actualROffset = std::clamp(actualROffset, -halfR, halfR);
 
     std::vector<bool> rhythmPattern = EuclideanMath::generatePattern(
@@ -316,27 +324,12 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     }
 
     // --- Pattern Logic ---
-    int actualPSteps =
-        macroPSteps != -1 && macros[static_cast<size_t>(macroPSteps)] != nullptr
-            ? 1 + (int)std::round(
-                      macros[static_cast<size_t>(macroPSteps)]->load() * 31.0f)
-            : pSteps;
-
+    int actualPSteps = resolveIntMacro(macroPSteps, pSteps - 1, 31) + 1;
     int actualPBeats =
-        macroPBeats != -1 && macros[static_cast<size_t>(macroPBeats)] != nullptr
-            ? 1 + (int)std::round(
-                      macros[static_cast<size_t>(macroPBeats)]->load() *
-                      (float)(actualPSteps - 1))
-            : pBeats;
+        resolveIntMacro(macroPBeats, pBeats - 1, actualPSteps - 1) + 1;
     actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
     int halfP = (actualPSteps + 1) / 2;
-    int actualPOffset =
-        macroPOffset != -1 &&
-                macros[static_cast<size_t>(macroPOffset)] != nullptr
-            ? (int)std::round(
-                  (macros[static_cast<size_t>(macroPOffset)]->load() - 0.5f) *
-                  (float)actualPSteps)
-            : pOffset;
+    int actualPOffset = resolveOffsetMacro(macroPOffset, pOffset, actualPSteps);
     actualPOffset = std::clamp(actualPOffset, -halfP, halfP);
 
     std::vector<bool> pattern = EuclideanMath::generatePattern(
@@ -426,31 +419,16 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         }
 
         float actualPressMod =
-            macroPressureToVelocity != -1 &&
-                    macros[(size_t)macroPressureToVelocity] != nullptr
-                ? macros[(size_t)macroPressureToVelocity]->load()
-                : pressureToVelocity;
+            resolveFloatMacro(macroPressureToVelocity, pressureToVelocity);
 
         float actualTimbMod =
-            macroTimbreToVelocity != -1 &&
-                    macros[(size_t)macroTimbreToVelocity] != nullptr
-                ? macros[(size_t)macroTimbreToVelocity]->load()
-                : timbreToVelocity;
+            resolveFloatMacro(macroTimbreToVelocity, timbreToVelocity);
 
         // --- Humanize Calculation ---
-        float actualHumTiming =
-            macroHumTiming != -1 && macros[(size_t)macroHumTiming] != nullptr
-                ? macros[(size_t)macroHumTiming]->load()
-                : humTiming;
+        float actualHumTiming = resolveFloatMacro(macroHumTiming, humTiming);
         float actualHumVelocity =
-            macroHumVelocity != -1 &&
-                    macros[(size_t)macroHumVelocity] != nullptr
-                ? macros[(size_t)macroHumVelocity]->load()
-                : humVelocity;
-        float actualHumGate =
-            macroHumGate != -1 && macros[(size_t)macroHumGate] != nullptr
-                ? macros[(size_t)macroHumGate]->load()
-                : humGate;
+            resolveFloatMacro(macroHumVelocity, humVelocity);
+        float actualHumGate = resolveFloatMacro(macroHumGate, humGate);
 
         // --- 1. Base + Expression Mapping ---
         float vIntermediate =
@@ -459,8 +437,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
             (actualTimbMod * (currentTimbre - noteTrigger.velocity));
 
         // --- 2. Humanize Velocity (Interpolation Style) ---
-        float randVTarget = static_cast<float>(
-            static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX));
+        float randVTarget = rng.nextFloat();
         float finalVelocity = std::clamp(
             vIntermediate + actualHumVelocity * (randVTarget - vIntermediate),
             0.0f, 1.0f);
@@ -468,9 +445,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         // --- Humanize Timing & Gate ---
         // Timing jitter: up to +/- 50% of the division, max 30ms-ish
         double randTimingShift =
-            (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX) -
-             0.5) *
-            2.0;  // Random in [-1, 1]
+            (rng.nextDouble() - 0.5) * 2.0;  // Random in [-1, 1]
         double jitterPpq = randTimingShift * actualHumTiming * 0.5 * division;
         int tJitter = (int)(jitterPpq * clockManager.getSamplesPerPpq());
 
@@ -478,10 +453,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         double divSamples = division * clockManager.getSamplesPerPpq();
         // Base gate is 100% of division.
         // Randomized shift in [0.1, 2.0]
-        float randGateFactor =
-            0.1f + static_cast<float>(static_cast<double>(std::rand()) /
-                                      static_cast<double>(RAND_MAX)) *
-                       1.9f;
+        float randGateFactor = 0.1f + rng.nextFloat() * 1.9f;
         float finalGateFactor = 1.0f + actualHumGate * (randGateFactor - 1.0f);
         int duration = (int)(divSamples * std::max(0.05f, finalGateFactor));
 
@@ -516,23 +488,13 @@ juce::String MidiOutNode::getCycleLengthInfo() const {
   int L = (int)it->second.size();
 
   // Resolve actual pattern params (accounting for macros)
-  int actualPSteps =
-      macroPSteps != -1 && macros[(size_t)macroPSteps] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroPSteps]->load() * 31.0f)
-          : pSteps;
-
+  int actualPSteps = resolveIntMacro(macroPSteps, pSteps - 1, 31) + 1;
   int actualPBeats =
-      macroPBeats != -1 && macros[(size_t)macroPBeats] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroPBeats]->load() *
-                                (float)(actualPSteps - 1))
-          : pBeats;
+      resolveIntMacro(macroPBeats, pBeats - 1, actualPSteps - 1) + 1;
   actualPBeats = std::clamp(actualPBeats, 1, actualPSteps);
 
   // Resolve actual rhythm params
-  int actualRSteps =
-      macroRSteps != -1 && macros[(size_t)macroRSteps] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroRSteps]->load() * 31.0f)
-          : rSteps;
+  int actualRSteps = resolveIntMacro(macroRSteps, rSteps - 1, 31) + 1;
 
   // Pattern cycle: number of played notes before the melodic sequence repeats
   // Formula: K * L / GCD(L, N) where K=beats, N=steps, L=input length
@@ -675,20 +637,10 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
 }
 
 std::vector<bool> MidiOutNode::getPattern() const {
-  int actualPSteps =
-      macroPSteps != -1 && macros[(size_t)macroPSteps] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroPSteps]->load() * 31.0f)
-          : pSteps;
+  int actualPSteps = resolveIntMacro(macroPSteps, pSteps - 1, 31) + 1;
   int actualPBeats =
-      macroPBeats != -1 && macros[(size_t)macroPBeats] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroPBeats]->load() *
-                                (float)(actualPSteps - 1))
-          : pBeats;
-  int actualPOffset =
-      macroPOffset != -1 && macros[(size_t)macroPOffset] != nullptr
-          ? (int)std::round((macros[(size_t)macroPOffset]->load() - 0.5f) *
-                            (float)actualPSteps)
-          : pOffset;
+      resolveIntMacro(macroPBeats, pBeats - 1, actualPSteps - 1) + 1;
+  int actualPOffset = resolveOffsetMacro(macroPOffset, pOffset, actualPSteps);
 
   return EuclideanMath::generatePattern(
       std::max(1, actualPSteps), std::clamp(actualPBeats, 1, actualPSteps),
@@ -696,20 +648,10 @@ std::vector<bool> MidiOutNode::getPattern() const {
 }
 
 std::vector<bool> MidiOutNode::getRhythm() const {
-  int actualRSteps =
-      macroRSteps != -1 && macros[(size_t)macroRSteps] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroRSteps]->load() * 31.0f)
-          : rSteps;
+  int actualRSteps = resolveIntMacro(macroRSteps, rSteps - 1, 31) + 1;
   int actualRBeats =
-      macroRBeats != -1 && macros[(size_t)macroRBeats] != nullptr
-          ? 1 + (int)std::round(macros[(size_t)macroRBeats]->load() *
-                                (float)(actualRSteps - 1))
-          : rBeats;
-  int actualROffset =
-      macroROffset != -1 && macros[(size_t)macroROffset] != nullptr
-          ? (int)std::round((macros[(size_t)macroROffset]->load() - 0.5f) *
-                            (float)actualRSteps)
-          : rOffset;
+      resolveIntMacro(macroRBeats, rBeats - 1, actualRSteps - 1) + 1;
+  int actualROffset = resolveOffsetMacro(macroROffset, rOffset, actualRSteps);
 
   return EuclideanMath::generatePattern(
       std::max(1, actualRSteps), std::clamp(actualRBeats, 1, actualRSteps),

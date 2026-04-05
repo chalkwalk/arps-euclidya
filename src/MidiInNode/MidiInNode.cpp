@@ -21,8 +21,6 @@ NodeLayout MidiInNode::getLayout() const {
     if (el.label == "channelFilter") {
       el.valueRef = const_cast<int *>(&channelFilter);
       el.macroIndexRef = const_cast<int *>(&macroChannelFilter);
-    } else if (el.label == "mpeEnabled") {
-      el.valueRef = const_cast<int *>(&mpeEnabled);
     }
   }
 
@@ -33,7 +31,6 @@ void MidiInNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("channelFilter", channelFilter);
     xml->setAttribute("macroChannelFilter", macroChannelFilter);
-    xml->setAttribute("mpeEnabled", mpeEnabled);
   }
 }
 
@@ -41,26 +38,17 @@ void MidiInNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     channelFilter = xml->getIntAttribute("channelFilter", 0);
     macroChannelFilter = xml->getIntAttribute("macroChannelFilter", -1);
-
-    // Fallback for old patches that saved "legacyMode"
-    if (xml->hasAttribute("mpeEnabled")) {
-      mpeEnabled = xml->getBoolAttribute("mpeEnabled", false) ? 1 : 0;
-    } else if (xml->hasAttribute("legacyMode")) {
-      mpeEnabled = xml->getBoolAttribute("legacyMode", false) ? 0 : 1;
-    }
   }
 }
 
 void MidiInNode::process() {
-  // NoteExpressionManager's legacy mode means "MPE is off". So we invert mpeEnabled.
-  bool wantLegacy = (mpeEnabled == 0);
-  if (noteExpressionManager.isLegacyModeEnabled() != wantLegacy) {
-    noteExpressionManager.setLegacyMode(wantLegacy);
-  }
+  // MPE mode is now a global setting controlled from SettingsPanel.
+  // Channel filtering is only applied when in legacy (non-MPE) mode.
+  bool isLegacy = noteExpressionManager.isLegacyModeEnabled();
 
   int actualChannel = 0;
 
-  if (mpeEnabled == 0) {
+  if (isLegacy) {
     // Only apply channel filtering if MPE is disabled
     actualChannel =
         macroChannelFilter != -1 &&
@@ -76,11 +64,4 @@ void MidiInNode::process() {
     seq.push_back({note});
   }
   outputSequences[0] = seq;
-
-  auto conn = connections.find(0);
-  if (conn != connections.end()) {
-    for (const auto &c : conn->second) {
-      c.targetNode->setInputSequence(c.targetInputPort, outputSequences[0]);
-    }
-  }
 }

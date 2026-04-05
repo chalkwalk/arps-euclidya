@@ -64,3 +64,12 @@ void AppSettings::setIgnoreMpeMasterPressure(bool shouldIgnore) {
   propertiesFile->setValue("ignoreMpeMasterPressure", shouldIgnore);
   propertiesFile->saveIfNeeded();
 }
+
+bool AppSettings::getMpeEnabled() {
+  return propertiesFile->getBoolValue("mpeEnabled", false);
+}
+
+void AppSettings::setMpeEnabled(bool enabled) {
+  propertiesFile->setValue("mpeEnabled", enabled);
+  propertiesFile->saveIfNeeded();
+}

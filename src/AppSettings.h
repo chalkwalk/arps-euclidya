@@ -27,6 +27,10 @@ class AppSettings {
   bool getIgnoreMpeMasterPressure();
   void setIgnoreMpeMasterPressure(bool shouldIgnore);
 
+  // Global MPE mode toggle
+  bool getMpeEnabled();
+  void setMpeEnabled(bool enabled);
+
   juce::PropertiesFile *getPropertiesFile() { return propertiesFile.get(); }
 
  private:

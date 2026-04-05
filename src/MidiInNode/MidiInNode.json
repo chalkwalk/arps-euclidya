@@ -11,17 +11,7 @@
         0,
         0,
         20,
-        13
-      ]
-    },
-    {
-      "type": "Toggle",
-      "label": "mpeEnabled",
-      "gridBounds": [
-        0,
-        13,
-        20,
-        7
+        20
       ]
     }
   ]
