@@ -4,27 +4,27 @@
  * work well for content-centric websites.
  */
 
-/* You can override the default Infima variables here. */
+/* Arps Euclidya — blue-cyan neon palette, matching the neon-slate UI. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: #1a6ea8;
+  --ifm-color-primary-dark: #175f92;
+  --ifm-color-primary-darker: #155a8a;
+  --ifm-color-primary-darkest: #114a71;
+  --ifm-color-primary-light: #1d7dbe;
+  --ifm-color-primary-lighter: #1f82c6;
+  --ifm-color-primary-lightest: #2490d9;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* Dark mode: neon cyan, matching the hero accent (#38bdf8). */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #38bdf8;
+  --ifm-color-primary-dark: #18b0f6;
+  --ifm-color-primary-darker: #09a9f5;
+  --ifm-color-primary-darkest: #0491d3;
+  --ifm-color-primary-light: #58caff;
+  --ifm-color-primary-lighter: #67cfff;
+  --ifm-color-primary-lightest: #8edaff;
+  --docusaurus-highlighted-code-line-bg: rgba(56, 189, 248, 0.08);
 }

@@ -40,8 +40,8 @@ export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
-      title={`Hello from ${siteConfig.title}`}
-      description="Description will go into a meta tag in <head />">
+      title="Modular MIDI Orchestration"
+      description="Arps Euclidya is a modular, node-based MIDI environment for complex rhythmic and melodic orchestration. Build non-linear MIDI patches with Euclidean rhythms, chord logic, and 32 global macros.">
       <HomepageHeader />
       <main>
         <HomepageFeatures />

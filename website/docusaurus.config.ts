@@ -7,7 +7,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 const config: Config = {
   title: 'Arps Euclidya',
   tagline: 'Modular, node-based MIDI orchestration',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/logo.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -44,21 +44,7 @@ const config: Config = {
           editUrl:
             'https://github.com/chalkwalk/arps-euclidya/tree/main/website/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/chalkwalk/arps-euclidya/tree/main/website/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -68,7 +54,7 @@ const config: Config = {
 
   themeConfig: {
     // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/social-card.png',
     colorMode: {
       respectPrefersColorScheme: true,
     },
@@ -85,7 +71,6 @@ const config: Config = {
           position: 'left',
           label: 'Documentation',
         },
-        { to: '/blog', label: 'Blog', position: 'left' },
         {
           href: 'https://github.com/chalkwalk/arps-euclidya',
           label: 'GitHub',
@@ -97,37 +82,32 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {
               label: 'Introduction',
               to: '/docs/introduction',
             },
-          ],
-        },
-        {
-          title: 'Community',
-          items: [
             {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+              label: 'Node Dictionary',
+              to: '/docs/node-dictionary',
             },
             {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
+              label: 'Tutorials',
+              to: '/docs/tutorials',
             },
           ],
         },
         {
-          title: 'More',
+          title: 'ChalkWalk',
           items: [
             {
-              label: 'Blog',
-              to: '/blog',
+              label: 'ChalkWalk Music',
+              href: 'https://chalkwalkmusic.com/',
+            },
+            {
+              label: 'YouTube',
+              href: 'https://www.youtube.com/chalkwalkmusic',
             },
             {
               label: 'GitHub',
