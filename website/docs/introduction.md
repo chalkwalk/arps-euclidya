@@ -17,7 +17,7 @@ The foundation of Arps Euclidya rests upon five critical pillars:
 1. **Modular Design**
    There is no fixed signal path. You can route any node to any other (acyclically) to create custom generative systems, logic-based switches, or parallel processing chains. The canvas is infinite, allowing for incredibly deep architectures.
 2. **MPE Support (MIDI Polyphonic Expression)**
-   Expression is treated as a first-class citizen. Per-note dimensions (Pitch Bend, Timbre/CC74, and Pressure) pass through the modular chain, morphing dynamically based on the nodes they traverse.
+   Expression is treated as a first-class citizen. Per-note dimensions (Pitch Bend, Timbre/CC74, and Pressure) get captured and remain associated with the relevant notes at output allowing for intuitive and expressive control.
 3. **Multi Input and Output Per Patch**
    A single Arps Euclidya instance can handle multiple incoming MIDI streams and direct its output to multiple distinct MIDI targets, functioning as the central nervous system of a complex MIDI routing setup.
 4. **Chord Support**
