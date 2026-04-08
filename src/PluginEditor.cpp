@@ -60,6 +60,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   addAndMakeVisible(graphCanvas.get());
 
   graphCanvas->setSelectedMacroPtr(&selectedMacro);
+  graphCanvas->onAutoSelectMacro = [this](int idx) { setSelectedMacro(idx); };
 
   graphCanvas->performMutation = [this](std::function<void()> mutation) {
     audioProcessor.performGraphMutation(std::move(mutation));

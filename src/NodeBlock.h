@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "GraphNode.h"
+#include "SharedMacroUI.h"
 
 class GraphCanvas;  // forward declaration
 
@@ -42,10 +43,23 @@ class NodeBlock : public juce::Component, private juce::Timer {
   static constexpr int PORT_MARGIN = 14;
 
   // Called by GraphCanvas after construction to share the editor's selection state
-  void setSelectedMacroPtr(int *ptr) { selectedMacroPtr = ptr; }
+  void setSelectedMacroPtr(int *ptr) {
+    selectedMacroPtr = ptr;
+    // Propagate to all macro-aware sliders and buttons created during construction
+    for (auto &info : sliderMacroInfos)
+      if (auto *s = dynamic_cast<CustomMacroSlider *>(info.slider))
+        s->selectedMacroPtr = ptr;
+    for (auto *comp : dynamicComponents)
+      if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
+        b->selectedMacroPtr = ptr;
+    for (auto *comp : extendedComponents)
+      if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
+        b->selectedMacroPtr = ptr;
+  }
 
   std::function<void()> onDelete;
   std::function<void()> onPositionChanged;
+  std::function<void(int)> onAutoSelectMacro;  // forwarded from canvas → editor
 
   // Callbacks for cable dragging (forwarded to canvas)
   std::function<void(NodeBlock *block, int portIndex, bool isOutput,

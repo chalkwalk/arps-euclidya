@@ -88,6 +88,8 @@ void GraphCanvas::rebuild() {
       repaint();
     };
 
+    block->onAutoSelectMacro = onAutoSelectMacro;
+
     block->onReplaceRequest = [this, n = node.get()](const juce::String &type) {
       if (onNodeReplaceRequest) {
         onNodeReplaceRequest(n, type);

@@ -179,6 +179,25 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                 std::make_unique<MacroAttachment>(apvts, paramID, *slider));
           }
           sliderMacroInfos.push_back({slider, element.macroParamRef});
+
+          // Shift+drag binding wiring
+          slider->selectedMacroPtr = selectedMacroPtr;
+          slider->macroParamRef = element.macroParamRef;
+          slider->getNextFreeMacro = [canvasPtr]() {
+            return canvasPtr->getEngine().getNextFreeMacro();
+          };
+          slider->onAutoSelectMacro = onAutoSelectMacro;
+          slider->onMappingChanged = [node = targetNode]() {
+            node->parameterChanged();
+            if (node->onMappingChanged)
+              node->onMappingChanged();
+          };
+          slider->onBindingChanged = [node = targetNode, canvasPtr]() {
+            node->parameterChanged();
+            if (node->onMappingChanged)
+              node->onMappingChanged();
+            canvasPtr->rebuild();
+          };
         }
         comp = slider;
       } else if (element.type == UIElementType::Label) {
@@ -288,6 +307,25 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             attachments.push_back(
                 std::make_unique<ButtonAttachment>(apvts, paramID, *button));
           }
+
+          // Shift+click binding wiring
+          button->selectedMacroPtr = selectedMacroPtr;
+          button->macroParamRef = element.macroParamRef;
+          button->getNextFreeMacro = [canvasPtr]() {
+            return canvasPtr->getEngine().getNextFreeMacro();
+          };
+          button->onAutoSelectMacro = onAutoSelectMacro;
+          button->onMappingChanged = [node = targetNode]() {
+            node->parameterChanged();
+            if (node->onMappingChanged)
+              node->onMappingChanged();
+          };
+          button->onBindingChanged = [node = targetNode, canvasPtr]() {
+            node->parameterChanged();
+            if (node->onMappingChanged)
+              node->onMappingChanged();
+            canvasPtr->rebuild();
+          };
         }
         comp = button;
       } else if (element.type == UIElementType::ComboBox) {
@@ -556,6 +594,62 @@ void NodeBlock::paint(juce::Graphics &g) {
 }
 
 void NodeBlock::paintOverChildren(juce::Graphics &g) {
+  // Always draw intensity arcs for existing bindings, regardless of selection
+  for (const auto &info : sliderMacroInfos) {
+    if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty())
+      continue;
+
+    auto sliderBounds = info.slider->getBounds().toFloat().reduced(2.0f);
+    float radius =
+        (juce::jmin(sliderBounds.getWidth(), sliderBounds.getHeight()) / 2.0f) -
+        2.0f;
+    if (radius <= 0.0f)
+      continue;
+
+    float cx = sliderBounds.getCentreX();
+    float cy = sliderBounds.getCentreY();
+    auto rp = info.slider->getRotaryParameters();
+    float sweep = rp.endAngleRadians - rp.startAngleRadians;
+    float trackWidth = radius * 0.4f;
+    float arcStroke = 2.5f;
+    float arcGap = arcStroke + 1.0f;  // gap between concentric rings
+    float firstArcRadius = radius + trackWidth * 0.5f + 2.0f;
+
+    int ringIndex = 0;
+    for (const auto &binding : info.macroParamRef->bindings) {
+      float absIntensity = std::abs(binding.intensity);
+      if (absIntensity < 0.001f)
+        continue;
+
+      float arcRadius = firstArcRadius + static_cast<float>(ringIndex) * arcGap;
+      ++ringIndex;
+
+      auto colour = getMacroColour(binding.macroIndex);
+      // Arc extent: intensity 1.0 = half the sweep
+      float arcAngle = absIntensity * sweep * 0.5f;
+
+      float arcStart, arcEnd;
+      if (binding.intensity >= 0.0f) {
+        // Positive: extends from start angle clockwise
+        arcStart = rp.startAngleRadians;
+        arcEnd = rp.startAngleRadians + arcAngle;
+      } else {
+        // Negative: extends from end angle counter-clockwise
+        arcEnd = rp.endAngleRadians;
+        arcStart = rp.endAngleRadians - arcAngle;
+      }
+
+      juce::Path arc;
+      arc.addCentredArc(cx, cy, arcRadius, arcRadius, 0.0f, arcStart, arcEnd,
+                        true);
+      g.setColour(colour.withAlpha(0.7f));
+      g.strokePath(arc, juce::PathStrokeType(arcStroke,
+                                             juce::PathStrokeType::curved,
+                                             juce::PathStrokeType::rounded));
+    }
+  }
+
+  // Draw faint "bindable" rings when a macro is selected
   if (selectedMacroPtr == nullptr || *selectedMacroPtr == -1)
     return;
 
@@ -563,7 +657,6 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
   auto colour = getMacroColour(macroIdx);
 
   for (const auto &info : sliderMacroInfos) {
-    // Check if this slider already has a binding to the selected macro
     bool alreadyBound = false;
     if (info.macroParamRef != nullptr) {
       for (const auto &b : info.macroParamRef->bindings) {
@@ -575,9 +668,9 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
     }
 
     if (!alreadyBound) {
-      // Draw a faint colored ring over the slider to indicate "bindable"
       auto bounds = info.slider->getBounds().toFloat();
-      float r = (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) - 1.0f;
+      float r =
+          (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) - 1.0f;
       if (r > 0.0f) {
         auto centre = bounds.getCentre();
         g.setColour(colour.withAlpha(0.30f));

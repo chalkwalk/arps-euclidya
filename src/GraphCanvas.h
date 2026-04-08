@@ -115,6 +115,9 @@ class GraphCanvas : public juce::Component,
   // Share the editor's macro selection state with the canvas and all NodeBlocks
   void setSelectedMacroPtr(int *ptr);
 
+  // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider
+  std::function<void(int)> onAutoSelectMacro;
+
  private:
   GraphEngine &graphEngine;
   juce::AudioProcessorValueTreeState &apvts;
