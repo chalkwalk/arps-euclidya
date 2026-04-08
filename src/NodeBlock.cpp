@@ -171,13 +171,6 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                 });
           };
 
-          if (!element.macroParamRef->bindings.empty()) {
-            juce::String paramID =
-                "macro_" +
-                juce::String(element.macroParamRef->bindings[0].macroIndex + 1);
-            attachments.push_back(
-                std::make_unique<MacroAttachment>(apvts, paramID, *slider));
-          }
           sliderMacroInfos.push_back({slider, element.macroParamRef});
 
           // Shift+drag binding wiring
@@ -494,9 +487,17 @@ void NodeBlock::timerCallback() {
     syncElements(layout.extendedElements, extendedComponents);
   }
 
-  // Repaint when macro selection state changes
+  // Repaint when macro selection state changes, or when any slider has active
+  // bindings (effective value indicator follows live macro knob movement)
   int currentSelected = selectedMacroPtr ? *selectedMacroPtr : -1;
-  if (currentSelected != lastKnownSelectedMacro) {
+  bool hasActiveBindings = false;
+  for (const auto &info : sliderMacroInfos) {
+    if (info.macroParamRef != nullptr && !info.macroParamRef->bindings.empty()) {
+      hasActiveBindings = true;
+      break;
+    }
+  }
+  if (currentSelected != lastKnownSelectedMacro || hasActiveBindings) {
     lastKnownSelectedMacro = currentSelected;
     repaint();
   }
@@ -646,6 +647,50 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       g.strokePath(arc, juce::PathStrokeType(arcStroke,
                                              juce::PathStrokeType::curved,
                                              juce::PathStrokeType::rounded));
+    }
+
+    // Effective value indicator: arc from set value to effective value + ring
+    {
+      auto setVal = (float)info.slider->getValue();
+      auto minVal = (float)info.slider->getMinimum();
+      auto maxVal = (float)info.slider->getMaximum();
+      float range = maxVal - minVal;
+      float effectiveVal = targetNode->resolveMacroFloat(
+          *info.macroParamRef, setVal, minVal, maxVal);
+
+      float setPos =
+          range > 0.0f
+              ? juce::jlimit(0.0f, 1.0f, (setVal - minVal) / range)
+              : 0.0f;
+      float effectivePos =
+          range > 0.0f
+              ? juce::jlimit(0.0f, 1.0f, (effectiveVal - minVal) / range)
+              : 0.0f;
+
+      float setAngle = rp.startAngleRadians + setPos * sweep;
+      float effectiveAngle = rp.startAngleRadians + effectivePos * sweep;
+
+      // Arc bridging set → effective on the track circle
+      if (std::abs(effectiveAngle - setAngle) > 0.01f) {
+        float arcFrom = juce::jmin(setAngle, effectiveAngle);
+        float arcTo = juce::jmax(setAngle, effectiveAngle);
+        juce::Path bridgeArc;
+        bridgeArc.addCentredArc(cx, cy, radius, radius, 0.0f, arcFrom, arcTo,
+                                true);
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.strokePath(bridgeArc,
+                     juce::PathStrokeType(trackWidth * 0.35f,
+                                          juce::PathStrokeType::curved,
+                                          juce::PathStrokeType::rounded));
+      }
+
+      // Hollow ring at effective value position
+      float ex = cx + radius * std::cos(effectiveAngle -
+                                        juce::MathConstants<float>::halfPi);
+      float ey = cy + radius * std::sin(effectiveAngle -
+                                        juce::MathConstants<float>::halfPi);
+      g.setColour(juce::Colours::white.withAlpha(0.9f));
+      g.drawEllipse(ex - 4.0f, ey - 4.0f, 8.0f, 8.0f, 1.5f);
     }
   }
 

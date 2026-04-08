@@ -85,11 +85,6 @@ class SequenceNodeEditor : public juce::Component,
     };
 
     if (!node.macroSeqLength.bindings.empty()) {
-      lengthAttachment = std::make_unique<MacroAttachment>(
-          apvts,
-          "macro_" +
-              juce::String(node.macroSeqLength.bindings[0].macroIndex + 1),
-          lengthSlider);
       lengthSlider.setColour(juce::Slider::rotarySliderFillColourId,
                              juce::Colours::orange);
       lengthSlider.setColour(juce::Slider::rotarySliderOutlineColourId,
@@ -267,7 +262,6 @@ class SequenceNodeEditor : public juce::Component,
   SequenceNode &seqNode;
   CustomMacroSlider lengthSlider;
   juce::Label lengthLabel;
-  std::unique_ptr<MacroAttachment> lengthAttachment;
 
   static constexpr int visibleRows = 13;  // Just over one octave
   int scrollOffset = 128 - 13 - 60;       // Start around C4 area
