@@ -178,6 +178,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             attachments.push_back(
                 std::make_unique<MacroAttachment>(apvts, paramID, *slider));
           }
+          sliderMacroInfos.push_back({slider, element.macroParamRef});
         }
         comp = slider;
       } else if (element.type == UIElementType::Label) {
@@ -454,6 +455,13 @@ void NodeBlock::timerCallback() {
   if (isExpanded) {
     syncElements(layout.extendedElements, extendedComponents);
   }
+
+  // Repaint when macro selection state changes
+  int currentSelected = selectedMacroPtr ? *selectedMacroPtr : -1;
+  if (currentSelected != lastKnownSelectedMacro) {
+    lastKnownSelectedMacro = currentSelected;
+    repaint();
+  }
 }
 
 void NodeBlock::paint(juce::Graphics &g) {
@@ -544,6 +552,38 @@ void NodeBlock::paint(juce::Graphics &g) {
     g.strokePath(p, juce::PathStrokeType(1.5f));
 
     g.restoreState();
+  }
+}
+
+void NodeBlock::paintOverChildren(juce::Graphics &g) {
+  if (selectedMacroPtr == nullptr || *selectedMacroPtr == -1)
+    return;
+
+  int macroIdx = *selectedMacroPtr;
+  auto colour = getMacroColour(macroIdx);
+
+  for (const auto &info : sliderMacroInfos) {
+    // Check if this slider already has a binding to the selected macro
+    bool alreadyBound = false;
+    if (info.macroParamRef != nullptr) {
+      for (const auto &b : info.macroParamRef->bindings) {
+        if (b.macroIndex == macroIdx) {
+          alreadyBound = true;
+          break;
+        }
+      }
+    }
+
+    if (!alreadyBound) {
+      // Draw a faint colored ring over the slider to indicate "bindable"
+      auto bounds = info.slider->getBounds().toFloat();
+      float r = (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) - 1.0f;
+      if (r > 0.0f) {
+        auto centre = bounds.getCentre();
+        g.setColour(colour.withAlpha(0.30f));
+        g.drawEllipse(centre.x - r, centre.y - r, r * 2.0f, r * 2.0f, 2.0f);
+      }
+    }
   }
 }
 

@@ -2,6 +2,7 @@
 
 #include "ArpsLookAndFeel.h"
 #include "LayoutConstants.h"
+#include "MacroColours.h"
 #include "NodeFactory.h"
 
 GraphCanvas::GraphCanvas(GraphEngine &engine,
@@ -53,6 +54,7 @@ void GraphCanvas::rebuild() {
 
   for (const auto &node : nodes) {
     auto *block = new NodeBlock(node, apvts, *this);
+    block->setSelectedMacroPtr(selectedMacroPtr);
     // The bounds are set via updateTransforms later
     // block->setTopLeftPosition((int)node->nodeX, (int)node->nodeY);
 
@@ -349,6 +351,14 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   g.restoreState();  // Pop the camera transform to draw tooltips in screen
                      // space
 
+  // Draw a macro-colored border when a macro is selected
+  if (selectedMacroPtr != nullptr && *selectedMacroPtr != -1) {
+    auto c = getMacroColour(*selectedMacroPtr);
+    g.setColour(c.withAlpha(0.6f));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1.5f), 4.0f,
+                           3.0f);
+  }
+
   // Draw cable hover tooltip
   if (showCableTooltip) {
     auto font = juce::Font(juce::FontOptions(12.0f));
@@ -366,6 +376,13 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     g.setFont(font);
     g.drawText(cableTooltipText, tooltipRect, juce::Justification::centred);
   }
+}
+
+void GraphCanvas::setSelectedMacroPtr(int *ptr) {
+  selectedMacroPtr = ptr;
+  for (auto *block : nodeBlocks)
+    block->setSelectedMacroPtr(ptr);
+  repaint();
 }
 
 void GraphCanvas::refreshCableCache() {

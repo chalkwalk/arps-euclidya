@@ -12,7 +12,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
  public:
   NodeBlock(const std::shared_ptr<GraphNode> &node,
             juce::AudioProcessorValueTreeState &apvts, GraphCanvas &canvas);
-  ~NodeBlock() override = default;
+  ~NodeBlock() override { stopTimer(); }
 
   void paint(juce::Graphics &g) override;
   void resized() override;
@@ -40,6 +40,9 @@ class NodeBlock : public juce::Component, private juce::Timer {
   static constexpr int PORT_SPACING = 24;
   static constexpr int HEADER_HEIGHT = 28;
   static constexpr int PORT_MARGIN = 14;
+
+  // Called by GraphCanvas after construction to share the editor's selection state
+  void setSelectedMacroPtr(int *ptr) { selectedMacroPtr = ptr; }
 
   std::function<void()> onDelete;
   std::function<void()> onPositionChanged;
@@ -80,6 +83,19 @@ class NodeBlock : public juce::Component, private juce::Timer {
   juce::OwnedArray<juce::Component> extendedComponents;
   std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::Listener>>
       extendedAttachments;
+
+  // Selected-macro state (pointer into editor's selectedMacro field)
+  int *selectedMacroPtr = nullptr;
+  int lastKnownSelectedMacro = -1;
+
+  // Tracks sliders that have a macroParamRef, for overlay rendering
+  struct SliderMacroInfo {
+    juce::Slider *slider;
+    MacroParam *macroParamRef;
+  };
+  std::vector<SliderMacroInfo> sliderMacroInfos;
+
+  void paintOverChildren(juce::Graphics &g) override;
 
   int dragStartGridX = 0;
   int dragStartGridY = 0;

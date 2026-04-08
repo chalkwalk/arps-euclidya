@@ -112,6 +112,9 @@ class GraphCanvas : public juce::Component,
   // Refresh the cached cable paths
   void refreshCableCache();
 
+  // Share the editor's macro selection state with the canvas and all NodeBlocks
+  void setSelectedMacroPtr(int *ptr);
+
  private:
   GraphEngine &graphEngine;
   juce::AudioProcessorValueTreeState &apvts;
@@ -199,6 +202,9 @@ class GraphCanvas : public juce::Component,
              targetNode == c.targetNode && targetPort == c.targetPort;
     }
   };
+
+  // Macro selection state (pointer into editor's selectedMacro field)
+  int *selectedMacroPtr = nullptr;
 
   // Selection & Highlight state
   GraphNode *selectedNode = nullptr;

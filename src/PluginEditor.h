@@ -27,6 +27,9 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
 
  private:
   void addNodeFromLibrary(const juce::String &nodeType);
+  void setSelectedMacro(int index);
+
+  int selectedMacro = -1;
 
   ArpsEuclidyaProcessor &audioProcessor;
 
@@ -52,6 +55,8 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
       addAndMakeVisible(slider);
       slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
       slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+      // Listen to slider mouse events so we can detect a click on the knob
+      slider.addMouseListener(this, false);
 
       addAndMakeVisible(label);
       label.setJustificationType(juce::Justification::centred);
@@ -59,16 +64,30 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
       label.setColour(juce::Label::textColourId, juce::Colour(0xffaaaaaa));
     }
 
+    void mouseUp(const juce::MouseEvent &e) override {
+      if (e.mouseWasClicked() && onClicked)
+        onClicked(macroIndex);
+    }
+
     void paint(juce::Graphics &g) override {
       auto colour = getMacroColour(macroIndex);
+      bool isSelected = (selectedMacroPtr && *selectedMacroPtr == macroIndex);
 
       // Draw background wrapper
       g.setColour(juce::Colour(0xff222222));
       g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
 
-      if (isMapped) {
-        // Draw mapped highlight in this macro's color
-        g.setColour(colour.withAlpha(0.7f));
+      if (isSelected) {
+        // Bright solid outline for the selected macro
+        g.setColour(colour);
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f,
+                               2.5f);
+        // Inner glow fill
+        g.setColour(colour.withAlpha(0.12f));
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
+      } else if (isMapped) {
+        // Dim colored border for mapped-but-not-selected
+        g.setColour(colour.withAlpha(0.55f));
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f,
                                1.5f);
       } else {
@@ -88,6 +107,8 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     juce::Label label;
     bool isMapped = false;
     int macroIndex = 0;
+    int *selectedMacroPtr = nullptr;
+    std::function<void(int)> onClicked;
   };
 
   juce::Component macroBar;

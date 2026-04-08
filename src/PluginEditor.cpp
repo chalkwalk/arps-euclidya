@@ -17,6 +17,8 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   for (int i = 0; i < 32; ++i) {
     auto *wrapper = new MacroControl();
     wrapper->macroIndex = i;
+    wrapper->selectedMacroPtr = &selectedMacro;
+    wrapper->onClicked = [this](int idx) { setSelectedMacro(idx); };
     wrapper->slider.setColour(juce::Slider::rotarySliderFillColourId,
                               getMacroColour(i));
     macroBar.addAndMakeVisible(wrapper);
@@ -56,6 +58,8 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
                                               audioProcessor.apvts,
                                               audioProcessor.graphLock);
   addAndMakeVisible(graphCanvas.get());
+
+  graphCanvas->setSelectedMacroPtr(&selectedMacro);
 
   graphCanvas->performMutation = [this](std::function<void()> mutation) {
     audioProcessor.performGraphMutation(std::move(mutation));
@@ -306,4 +310,15 @@ void ArpsEuclidyaEditor::rebuildCanvas() {
   if (graphCanvas != nullptr) {
     graphCanvas->rebuild();
   }
+}
+
+void ArpsEuclidyaEditor::setSelectedMacro(int index) {
+  // Toggle: clicking the already-selected macro deselects it
+  selectedMacro = (selectedMacro == index) ? -1 : index;
+
+  for (auto *ctrl : macroControls)
+    ctrl->repaint();
+
+  if (graphCanvas != nullptr)
+    graphCanvas->repaint();
 }
