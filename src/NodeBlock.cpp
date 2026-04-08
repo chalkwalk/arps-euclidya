@@ -5,6 +5,7 @@
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
+#include "MacroColours.h"
 #include "MacroMappingMenu.h"
 #include "MacroParameter.h"
 #include "NodeFactory.h"
@@ -103,19 +104,19 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
         }
 
         if (element.macroParamRef != nullptr) {
-          auto updateSliderVisibility = [slider](bool isMapped) {
-            if (!isMapped) {
+          auto updateSliderVisibility = [slider](const MacroParam *param) {
+            if (param->bindings.empty()) {
               slider->removeColour(juce::Slider::rotarySliderFillColourId);
               slider->removeColour(juce::Slider::rotarySliderOutlineColourId);
             } else {
-              slider->setColour(juce::Slider::rotarySliderFillColourId,
-                                juce::Colours::orange);
+              auto c = getMacroColour(param->bindings[0].macroIndex);
+              slider->setColour(juce::Slider::rotarySliderFillColourId, c);
               slider->setColour(juce::Slider::rotarySliderOutlineColourId,
-                                juce::Colours::orange.withAlpha(0.3f));
+                                c.withAlpha(0.3f));
             }
           };
 
-          updateSliderVisibility(!element.macroParamRef->bindings.empty());
+          updateSliderVisibility(element.macroParamRef);
 
           GraphCanvas *canvasPtr = &parentCanvas;
           slider->onRightClick = [node = targetNode, slider,

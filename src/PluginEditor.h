@@ -6,6 +6,7 @@
 
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
+#include "MacroColours.h"
 #include "ModuleLibraryPanel.h"
 #include "PatchBrowserPanel.h"
 #include "PluginProcessor.h"
@@ -59,13 +60,15 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     }
 
     void paint(juce::Graphics &g) override {
+      auto colour = getMacroColour(macroIndex);
+
       // Draw background wrapper
       g.setColour(juce::Colour(0xff222222));
       g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
 
       if (isMapped) {
-        // Draw mapped highlight (cyan/teal border)
-        g.setColour(juce::Colour(0xff00ffff).withAlpha(0.6f));
+        // Draw mapped highlight in this macro's color
+        g.setColour(colour.withAlpha(0.7f));
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f,
                                1.5f);
       } else {
@@ -84,6 +87,7 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     juce::Slider slider;
     juce::Label label;
     bool isMapped = false;
+    int macroIndex = 0;
   };
 
   juce::Component macroBar;

@@ -74,12 +74,13 @@ void ArpsLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                           rotaryStartAngle, angle, true);
 
   // Outer glow for the filled arc
-  g.setColour(getNeonColor().withAlpha(0.2f));
+  auto fillColour = slider.findColour(juce::Slider::rotarySliderFillColourId);
+  g.setColour(fillColour.withAlpha(0.2f));
   g.strokePath(filledArc, juce::PathStrokeType(trackWidth * 1.5f,
                                                juce::PathStrokeType::curved,
                                                juce::PathStrokeType::rounded));
 
-  g.setColour(getNeonColor());
+  g.setColour(fillColour);
   g.strokePath(filledArc,
                juce::PathStrokeType(trackWidth, juce::PathStrokeType::curved,
                                     juce::PathStrokeType::rounded));

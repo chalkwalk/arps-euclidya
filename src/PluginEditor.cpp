@@ -16,6 +16,9 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   addAndMakeVisible(macroBar);
   for (int i = 0; i < 32; ++i) {
     auto *wrapper = new MacroControl();
+    wrapper->macroIndex = i;
+    wrapper->slider.setColour(juce::Slider::rotarySliderFillColourId,
+                              getMacroColour(i));
     macroBar.addAndMakeVisible(wrapper);
     macroControls.add(wrapper);
 
