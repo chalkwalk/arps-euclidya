@@ -153,10 +153,9 @@ juce::Point<int> GraphEngine::findClosestFreeSpot(
 int GraphEngine::getNextFreeMacro() const {
   std::set<int> usedMacros;
   for (const auto &node : nodes) {
-    auto mappings = node->getMacroMappings();
-    for (const auto &mapping : mappings) {
-      if (mapping.second != nullptr && *mapping.second != -1) {
-        usedMacros.insert(*mapping.second);
+    for (auto *param : node->getMacroParams()) {
+      for (const auto &binding : param->bindings) {
+        usedMacros.insert(binding.macroIndex);
       }
     }
   }

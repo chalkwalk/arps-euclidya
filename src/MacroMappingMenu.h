@@ -2,19 +2,23 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "GraphNode.h"
+
 class MacroMappingMenu {
  public:
-  static void showMenu(juce::Component *targetComponent, int currentMappedMacro,
+  static void showMenu(juce::Component *targetComponent, const MacroParam &param,
                        std::function<void(int)> onMacroMapped) {
     juce::PopupMenu menu;
-    menu.addItem(1, "Clear Mapping", true, currentMappedMacro == -1);
+    menu.addItem(1, "Clear Mapping", true, param.bindings.empty());
     menu.addItem(35, "Map to Next Free Macro");
     menu.addSeparator();
 
     juce::PopupMenu subMenu;
     for (int i = 1; i <= 32; ++i) {
-      subMenu.addItem(i + 1, "Macro " + juce::String(i), true,
-                      currentMappedMacro == (i - 1));
+      bool isBound = false;
+      for (const auto &b : param.bindings)
+        if (b.macroIndex == (i - 1)) { isBound = true; break; }
+      subMenu.addItem(i + 1, "Macro " + juce::String(i), true, isBound);
     }
     menu.addSubMenu("Map to Specific Macro...", subMenu);
 

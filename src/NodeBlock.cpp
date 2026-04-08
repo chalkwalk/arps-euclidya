@@ -102,9 +102,9 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
           }
         }
 
-        if (element.macroIndexRef != nullptr) {
-          auto updateSliderVisibility = [slider](int macro) {
-            if (macro == -1) {
+        if (element.macroParamRef != nullptr) {
+          auto updateSliderVisibility = [slider](bool isMapped) {
+            if (!isMapped) {
               slider->removeColour(juce::Slider::rotarySliderFillColourId);
               slider->removeColour(juce::Slider::rotarySliderOutlineColourId);
             } else {
@@ -115,51 +115,65 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             }
           };
 
-          updateSliderVisibility(*element.macroIndexRef);
+          updateSliderVisibility(!element.macroParamRef->bindings.empty());
 
           GraphCanvas *canvasPtr = &parentCanvas;
           slider->onRightClick = [node = targetNode, slider,
-                                  macroRef = element.macroIndexRef, canvasPtr,
+                                  macroParam = element.macroParamRef, canvasPtr,
                                   &apvts]() {
             MacroMappingMenu::showMenu(
-                slider, *macroRef,
-                [node, macroRef, canvasPtr, slider, &apvts](int macroIndex) {
-                  canvasPtr->performMutation([node, macroRef, canvasPtr, slider,
-                                              &apvts, macroIndex]() {
-                    int finalMacroIndex = macroIndex;
-                    if (finalMacroIndex == -2) {
-                      finalMacroIndex =
-                          canvasPtr->getEngine().getNextFreeMacro();
-                      if (finalMacroIndex == -1) {
-                        return;
-                      }
-                    }
+                slider, *macroParam,
+                [node, macroParam, canvasPtr, slider, &apvts](int macroIndex) {
+                  canvasPtr->performMutation(
+                      [node, macroParam, canvasPtr, slider, &apvts,
+                       macroIndex]() {
+                        if (macroIndex == -1) {
+                          macroParam->bindings.clear();
+                        } else {
+                          int finalIndex = macroIndex;
+                          if (finalIndex == -2) {
+                            finalIndex =
+                                canvasPtr->getEngine().getNextFreeMacro();
+                            if (finalIndex == -1)
+                              return;
+                          }
 
-                    auto *param =
-                        dynamic_cast<MacroParameter *>(apvts.getParameter(
-                            "macro_" + juce::String(finalMacroIndex + 1)));
-                    if (param != nullptr && !param->isMapped()) {
-                      float norm =
-                          (float)((slider->getValue() - slider->getMinimum()) /
-                                  (slider->getMaximum() -
-                                   slider->getMinimum()));
-                      param->setValueNotifyingHost(norm);
-                    }
+                          auto &bindings = macroParam->bindings;
+                          auto it = std::find_if(
+                              bindings.begin(), bindings.end(),
+                              [finalIndex](const MacroBinding &b) {
+                                return b.macroIndex == finalIndex;
+                              });
+                          if (it != bindings.end()) {
+                            bindings.erase(it);
+                          } else {
+                            auto *ap = dynamic_cast<MacroParameter *>(
+                                apvts.getParameter("macro_" +
+                                                   juce::String(finalIndex +
+                                                                1)));
+                            if (ap != nullptr && !ap->isMapped()) {
+                              float norm = (float)(
+                                  (slider->getValue() - slider->getMinimum()) /
+                                  (slider->getMaximum() - slider->getMinimum()));
+                              ap->setValueNotifyingHost(norm);
+                            }
+                            bindings.push_back({finalIndex, 1.0f});
+                          }
+                        }
 
-                    *macroRef = finalMacroIndex;
-                    node->parameterChanged();
-                    if (node->onMappingChanged) {
-                      node->onMappingChanged();
-                    }
+                        node->parameterChanged();
+                        if (node->onMappingChanged)
+                          node->onMappingChanged();
 
-                    canvasPtr->rebuild();
-                  });
+                        canvasPtr->rebuild();
+                      });
                 });
           };
 
-          if (*element.macroIndexRef != -1) {
+          if (!element.macroParamRef->bindings.empty()) {
             juce::String paramID =
-                "macro_" + juce::String(*element.macroIndexRef + 1);
+                "macro_" +
+                juce::String(element.macroParamRef->bindings[0].macroIndex + 1);
             attachments.push_back(
                 std::make_unique<MacroAttachment>(apvts, paramID, *slider));
           }
@@ -194,8 +208,8 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
 
           button->onClick = [node = targetNode, button,
                              valRef = element.valueRef, element]() {
-            if (element.macroIndexRef != nullptr &&
-                *element.macroIndexRef != -1) {
+            if (element.macroParamRef != nullptr &&
+                !element.macroParamRef->bindings.empty()) {
               return;
             }
 
@@ -212,47 +226,63 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
           };
         }
 
-        if (element.macroIndexRef != nullptr) {
+        if (element.macroParamRef != nullptr) {
           GraphCanvas *canvasPtr = &parentCanvas;
           button->onRightClick = [node = targetNode, button,
-                                  macroRef = element.macroIndexRef, canvasPtr,
+                                  macroParam = element.macroParamRef, canvasPtr,
                                   &apvts]() {
             MacroMappingMenu::showMenu(
-                button, *macroRef,
-                [node, macroRef, canvasPtr, button, &apvts](int macroIndex) {
-                  canvasPtr->performMutation([node, macroRef, canvasPtr, button,
-                                              &apvts, macroIndex]() {
-                    int finalMacroIndex = macroIndex;
-                    if (finalMacroIndex == -2) {
-                      finalMacroIndex =
-                          canvasPtr->getEngine().getNextFreeMacro();
-                      if (finalMacroIndex == -1) {
-                        return;
-                      }
-                    }
+                button, *macroParam,
+                [node, macroParam, canvasPtr, button, &apvts](int macroIndex) {
+                  canvasPtr->performMutation(
+                      [node, macroParam, canvasPtr, button, &apvts,
+                       macroIndex]() {
+                        if (macroIndex == -1) {
+                          macroParam->bindings.clear();
+                        } else {
+                          int finalIndex = macroIndex;
+                          if (finalIndex == -2) {
+                            finalIndex =
+                                canvasPtr->getEngine().getNextFreeMacro();
+                            if (finalIndex == -1)
+                              return;
+                          }
 
-                    auto *param =
-                        dynamic_cast<MacroParameter *>(apvts.getParameter(
-                            "macro_" + juce::String(finalMacroIndex + 1)));
-                    if (param != nullptr && !param->isMapped()) {
-                      float norm = button->getToggleState() ? 1.0f : 0.0f;
-                      param->setValueNotifyingHost(norm);
-                    }
+                          auto &bindings = macroParam->bindings;
+                          auto it = std::find_if(
+                              bindings.begin(), bindings.end(),
+                              [finalIndex](const MacroBinding &b) {
+                                return b.macroIndex == finalIndex;
+                              });
+                          if (it != bindings.end()) {
+                            bindings.erase(it);
+                          } else {
+                            auto *ap = dynamic_cast<MacroParameter *>(
+                                apvts.getParameter("macro_" +
+                                                   juce::String(finalIndex +
+                                                                1)));
+                            if (ap != nullptr && !ap->isMapped()) {
+                              float norm =
+                                  button->getToggleState() ? 1.0f : 0.0f;
+                              ap->setValueNotifyingHost(norm);
+                            }
+                            bindings.push_back({finalIndex, 1.0f});
+                          }
+                        }
 
-                    *macroRef = finalMacroIndex;
-                    node->parameterChanged();
-                    if (node->onMappingChanged) {
-                      node->onMappingChanged();
-                    }
+                        node->parameterChanged();
+                        if (node->onMappingChanged)
+                          node->onMappingChanged();
 
-                    canvasPtr->rebuild();
-                  });
+                        canvasPtr->rebuild();
+                      });
                 });
           };
 
-          if (*element.macroIndexRef != -1) {
+          if (!element.macroParamRef->bindings.empty()) {
             juce::String paramID =
-                "macro_" + juce::String(*element.macroIndexRef + 1);
+                "macro_" +
+                juce::String(element.macroParamRef->bindings[0].macroIndex + 1);
             attachments.push_back(
                 std::make_unique<ButtonAttachment>(apvts, paramID, *button));
           }

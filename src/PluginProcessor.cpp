@@ -645,13 +645,14 @@ void ArpsEuclidyaProcessor::updateMacroNames() {
 
   const auto &nodes = graphEngine.getNodes();
   for (const auto &node : nodes) {
-    auto mappings = node->getMacroMappings();
-    for (auto &[paramName, macroIndexPtr] : mappings) {
-      int idx = *macroIndexPtr;
-      if (idx >= 0 && idx < 32) {
-        mappingCount[(size_t)idx]++;
-        if (mappingCount[(size_t)idx] == 1) {
-          mappingNames[(size_t)idx] = paramName;
+    for (auto *param : node->getMacroParams()) {
+      for (const auto &binding : param->bindings) {
+        int idx = binding.macroIndex;
+        if (idx >= 0 && idx < 32) {
+          mappingCount[(size_t)idx]++;
+          if (mappingCount[(size_t)idx] == 1) {
+            mappingNames[(size_t)idx] = param->name;
+          }
         }
       }
     }

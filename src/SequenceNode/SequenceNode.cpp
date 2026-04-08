@@ -40,38 +40,44 @@ class SequenceNodeEditor : public juce::Component,
       }
 
       MacroMappingMenu::showMenu(
-          &lengthSlider,
-          node.macroSeqLength.bindings.empty()
-              ? -1
-              : node.macroSeqLength.bindings[0].macroIndex,
+          &lengthSlider, node.macroSeqLength,
           [&node, canvasPtr, &apvts, this](int macroIndex) {
             canvasPtr->performMutation([&node, canvasPtr, &apvts, macroIndex,
                                         this]() {
-              int finalMacroIndex = macroIndex;
-              if (finalMacroIndex == -2) {
-                finalMacroIndex = canvasPtr->getEngine().getNextFreeMacro();
-                if (finalMacroIndex < 0) {
-                  return;
+              if (macroIndex == -1) {
+                node.macroSeqLength.bindings.clear();
+              } else {
+                int finalIndex = macroIndex;
+                if (finalIndex == -2) {
+                  finalIndex = canvasPtr->getEngine().getNextFreeMacro();
+                  if (finalIndex < 0)
+                    return;
+                }
+
+                auto &bindings = node.macroSeqLength.bindings;
+                auto it =
+                    std::find_if(bindings.begin(), bindings.end(),
+                                 [finalIndex](const MacroBinding &b) {
+                                   return b.macroIndex == finalIndex;
+                                 });
+                if (it != bindings.end()) {
+                  bindings.erase(it);
+                } else {
+                  auto *ap = dynamic_cast<MacroParameter *>(apvts.getParameter(
+                      "macro_" + juce::String(finalIndex + 1)));
+                  if (ap != nullptr && !ap->isMapped()) {
+                    float norm = (float)((lengthSlider.getValue() -
+                                          lengthSlider.getMinimum()) /
+                                         (lengthSlider.getMaximum() -
+                                          lengthSlider.getMinimum()));
+                    ap->setValueNotifyingHost(norm);
+                  }
+                  bindings.push_back({finalIndex, 1.0f});
                 }
               }
 
-              auto *param = dynamic_cast<MacroParameter *>(apvts.getParameter(
-                  "macro_" + juce::String(finalMacroIndex + 1)));
-              if (param != nullptr && !param->isMapped()) {
-                float norm = (float)((lengthSlider.getValue() -
-                                      lengthSlider.getMinimum()) /
-                                     (lengthSlider.getMaximum() -
-                                      lengthSlider.getMinimum()));
-                param->setValueNotifyingHost(norm);
-              }
-
-              node.macroSeqLength.bindings.clear();
-              if (finalMacroIndex >= 0) {
-                node.macroSeqLength.bindings.push_back({finalMacroIndex, 1.0f});
-              }
-              if (node.onMappingChanged) {
+              if (node.onMappingChanged)
                 node.onMappingChanged();
-              }
 
               canvasPtr->rebuild();
             });

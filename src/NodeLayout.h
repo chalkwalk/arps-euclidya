@@ -19,7 +19,6 @@ struct UIElement {
   UIElementType type;
   juce::String label;
   int *valueRef = nullptr;
-  int *macroIndexRef = nullptr;
   MacroParam *macroParamRef = nullptr;
   int minValue = 0;
   int maxValue = 0;

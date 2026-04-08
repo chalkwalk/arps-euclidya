@@ -146,12 +146,6 @@ class GraphNode {
     return nullptr;
   }
 
-  // Return pairs of (parameter display name, pointer to macro index field)
-  // Used by PluginProcessor to build dynamic macro parameter names
-  virtual std::vector<std::pair<juce::String, int *>> getMacroMappings() {
-    return {};
-  }
-
   virtual std::vector<MacroParam *> getMacroParams() { return {}; }
 
   // Hook called by NodeBlock when a UI control mapped to this node changes

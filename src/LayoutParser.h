@@ -7,7 +7,7 @@
 class LayoutParser {
  public:
   /// Parse a NodeLayout from a JSON byte buffer (e.g. BinaryData).
-  /// Runtime pointers (valueRef, macroIndexRef) are left null;
+  /// Runtime pointers (valueRef, macroParamRef) are left null;
   /// the caller must bind them after parsing.
   static NodeLayout parseFromJSON(const char *data, int size) {
     NodeLayout layout;
