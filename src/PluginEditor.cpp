@@ -18,6 +18,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     auto *wrapper = new MacroControl();
     wrapper->macroIndex = i;
     wrapper->selectedMacroPtr = &selectedMacro;
+    wrapper->highlightedMacrosPtr = &highlightedMacros;
     wrapper->onClicked = [this](int idx) { setSelectedMacro(idx); };
     wrapper->slider.setColour(juce::Slider::rotarySliderFillColourId,
                               getMacroColour(i));
@@ -61,6 +62,11 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
 
   graphCanvas->setSelectedMacroPtr(&selectedMacro);
   graphCanvas->onAutoSelectMacro = [this](int idx) { setSelectedMacro(idx); };
+  graphCanvas->onHoverMacros = [this](std::vector<int> indices) {
+    highlightedMacros = std::move(indices);
+    for (auto *m : macroControls)
+      m->repaint();
+  };
 
   graphCanvas->performMutation = [this](std::function<void()> mutation) {
     audioProcessor.performGraphMutation(std::move(mutation));

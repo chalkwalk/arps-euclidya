@@ -117,6 +117,7 @@ class GraphCanvas : public juce::Component,
 
   // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider
   std::function<void(int)> onAutoSelectMacro;
+  std::function<void(std::vector<int>)> onHoverMacros;
 
  private:
   GraphEngine &graphEngine;

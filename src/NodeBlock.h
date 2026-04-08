@@ -59,7 +59,8 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   std::function<void()> onDelete;
   std::function<void()> onPositionChanged;
-  std::function<void(int)> onAutoSelectMacro;  // forwarded from canvas → editor
+  std::function<void(int)> onAutoSelectMacro;               // forwarded from canvas → editor
+  std::function<void(std::vector<int>)> onHoverMacros;      // forwarded from canvas → editor
 
   // Callbacks for cable dragging (forwarded to canvas)
   std::function<void(NodeBlock *block, int portIndex, bool isOutput,

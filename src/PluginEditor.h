@@ -30,6 +30,7 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
   void setSelectedMacro(int index);
 
   int selectedMacro = -1;
+  std::vector<int> highlightedMacros;
 
   ArpsEuclidyaProcessor &audioProcessor;
 
@@ -62,6 +63,7 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
       label.setJustificationType(juce::Justification::centred);
       label.setFont(juce::Font(juce::FontOptions(10.0f)));
       label.setColour(juce::Label::textColourId, juce::Colour(0xffaaaaaa));
+      label.setInterceptsMouseClicks(false, false);
     }
 
     void mouseUp(const juce::MouseEvent &e) override {
@@ -76,6 +78,17 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
       // Draw background wrapper
       g.setColour(juce::Colour(0xff222222));
       g.fillRoundedRectangle(getLocalBounds().toFloat(), 4.0f);
+
+      // Hover highlight: bright white outer ring when a bound control is hovered
+      bool isHovered =
+          highlightedMacrosPtr != nullptr &&
+          std::find(highlightedMacrosPtr->begin(), highlightedMacrosPtr->end(),
+                    macroIndex) != highlightedMacrosPtr->end();
+      if (isHovered) {
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f,
+                               2.0f);
+      }
 
       if (isSelected) {
         // Bright solid outline for the selected macro
@@ -108,6 +121,7 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     bool isMapped = false;
     int macroIndex = 0;
     int *selectedMacroPtr = nullptr;
+    const std::vector<int> *highlightedMacrosPtr = nullptr;
     std::function<void(int)> onClicked;
   };
 

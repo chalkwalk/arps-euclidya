@@ -180,6 +180,10 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             return canvasPtr->getEngine().getNextFreeMacro();
           };
           slider->onAutoSelectMacro = onAutoSelectMacro;
+          slider->onHoverMacros = [this](std::vector<int> v) {
+            if (onHoverMacros)
+              onHoverMacros(std::move(v));
+          };
           slider->onMappingChanged = [node = targetNode]() {
             node->parameterChanged();
             if (node->onMappingChanged)
