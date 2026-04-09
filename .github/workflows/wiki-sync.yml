@@ -1,0 +1,61 @@
+name: Synchronize Documentation to Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "website/docs/**"
+      - "website/sidebars.ts"
+      - ".github/scripts/wiki_transform.py"
+      - ".github/workflows/wiki-sync.yml"
+
+# Sets permissions of the GITHUB_TOKEN to allow writing to the wiki repo
+permissions:
+  contents: write
+
+# Allow only one concurrent synchronization
+concurrency:
+  group: "wiki-sync"
+  cancel-in-progress: true
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Clone Wiki Repository
+        run: |
+          # Use GITHUB_TOKEN for authentication
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git wiki-repo
+
+      - name: Synchronize Files
+        run: |
+          # Ensure a clean slate in the wiki-repo (excluding .git)
+          # This removes files that might have been deleted in the source
+          find wiki-repo -maxdepth 1 -type f -not -name ".git" -delete
+
+          # Copy all docs from the website/docs directory
+          cp -R website/docs/* wiki-repo/
+
+      - name: Execute Python Transformation
+        run: |
+          # Run the transformation script to strip frontmatter, fix links, and generate _Sidebar.md
+          python .github/scripts/wiki_transform.py wiki-repo website/sidebars.ts
+
+      - name: Commit and Push to Wiki
+        run: |
+          cd wiki-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+
+          # Only commit and push if there are actual changes
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "Automated sync from Docusaurus docs [skip ci]"
+            git push origin master
+          else
+            echo "No changes to sync."
+          fi

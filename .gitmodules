@@ -4,6 +4,3 @@
 [submodule "modules/clap-juce-extensions"]
 	path = modules/clap-juce-extensions
 	url = https://github.com/free-audio/clap-juce-extensions.git
-[submodule "wiki"]
-	path = wiki
-	url = https://github.com/chalkwalk/arps-euclidya.wiki.git
