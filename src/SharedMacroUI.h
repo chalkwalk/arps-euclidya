@@ -13,7 +13,6 @@ class CustomMacroSlider : public juce::Slider {
   int *selectedMacroPtr = nullptr;
   MacroParam *macroParamRef = nullptr;
   std::function<int()> getNextFreeMacro;                    // → free macro index or -1
-  std::function<void(int)> onAutoSelectMacro;               // notify editor of auto-selection
   std::function<void(std::vector<int>)> onHoverMacros;      // notify editor of hover state
   std::function<void()> onMappingChanged;                   // update DAW names + repaint
   std::function<void()> onBindingChanged;                   // deferred rebuild
@@ -83,16 +82,8 @@ class CustomMacroSlider : public juce::Slider {
 
   void startShiftDrag() {
     int macroIdx = (selectedMacroPtr != nullptr) ? *selectedMacroPtr : -1;
-    if (macroIdx == -1) {
-      // Prefer an existing binding over allocating a new macro
-      if (macroParamRef != nullptr && !macroParamRef->bindings.empty()) {
-        macroIdx = macroParamRef->bindings[0].macroIndex;
-      } else if (getNextFreeMacro) {
-        macroIdx = getNextFreeMacro();
-      }
-      if (macroIdx != -1 && onAutoSelectMacro)
-        onAutoSelectMacro(macroIdx);
-    }
+    if (macroIdx == -1 && getNextFreeMacro)
+      macroIdx = getNextFreeMacro();
     if (macroIdx < 0)
       return;
 
@@ -138,9 +129,25 @@ class CustomMacroButton : public juce::TextButton {
   int *selectedMacroPtr = nullptr;
   MacroParam *macroParamRef = nullptr;
   std::function<int()> getNextFreeMacro;
-  std::function<void(int)> onAutoSelectMacro;
+  std::function<void(std::vector<int>)> onHoverMacros;
   std::function<void()> onMappingChanged;
   std::function<void()> onBindingChanged;
+
+  void mouseEnter(const juce::MouseEvent &e) override {
+    juce::TextButton::mouseEnter(e);
+    if (onHoverMacros && macroParamRef != nullptr) {
+      std::vector<int> indices;
+      for (const auto &b : macroParamRef->bindings)
+        indices.push_back(b.macroIndex);
+      onHoverMacros(std::move(indices));
+    }
+  }
+
+  void mouseExit(const juce::MouseEvent &e) override {
+    juce::TextButton::mouseExit(e);
+    if (onHoverMacros)
+      onHoverMacros({});
+  }
 
   void mouseDown(const juce::MouseEvent &e) override {
     if (e.mods.isPopupMenu()) {
@@ -158,12 +165,8 @@ class CustomMacroButton : public juce::TextButton {
  private:
   void handleShiftClick() {
     int macroIdx = (selectedMacroPtr != nullptr) ? *selectedMacroPtr : -1;
-    if (macroIdx == -1) {
-      if (getNextFreeMacro)
-        macroIdx = getNextFreeMacro();
-      if (macroIdx != -1 && onAutoSelectMacro)
-        onAutoSelectMacro(macroIdx);
-    }
+    if (macroIdx == -1 && getNextFreeMacro)
+      macroIdx = getNextFreeMacro();
     if (macroIdx < 0 || macroParamRef == nullptr)
       return;
 

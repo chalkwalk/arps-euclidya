@@ -4,7 +4,7 @@
 
 class SequenceNode : public GraphNode {
  public:
-  SequenceNode() = default;
+  SequenceNode() { addMacroParam(&macroSeqLength); }
   ~SequenceNode() override = default;
 
   std::string getName() const override { return "Sequence"; }
@@ -22,10 +22,6 @@ class SequenceNode : public GraphNode {
 
   int seqLength = 8;
   MacroParam macroSeqLength{"Seq Length", {}};
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroSeqLength};
-  }
 
   // Full MIDI range grid: 128 notes × 16 steps
   bool grid[128][16] = {{false}};

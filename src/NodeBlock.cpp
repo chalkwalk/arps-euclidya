@@ -61,10 +61,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
 
   auto createComponents = [this, &apvts](
                               const std::vector<UIElement> &elements,
-                              juce::OwnedArray<juce::Component> &components,
-                              std::vector<std::unique_ptr<
-                                  juce::AudioProcessorValueTreeState::Listener>>
-                                  &attachments) {
+                              juce::OwnedArray<juce::Component> &components) {
     for (const auto &element : elements) {
       juce::Component *comp = nullptr;
 
@@ -132,13 +129,6 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                           macroParam->bindings.clear();
                         } else {
                           int finalIndex = macroIndex;
-                          if (finalIndex == -2) {
-                            finalIndex =
-                                canvasPtr->getEngine().getNextFreeMacro();
-                            if (finalIndex == -1)
-                              return;
-                          }
-
                           auto &bindings = macroParam->bindings;
                           auto it = std::find_if(
                               bindings.begin(), bindings.end(),
@@ -163,8 +153,9 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                         }
 
                         node->parameterChanged();
-                        if (node->onMappingChanged)
+                        if (node->onMappingChanged) {
                           node->onMappingChanged();
+                        }
 
                         canvasPtr->rebuild();
                       });
@@ -179,20 +170,22 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
           slider->getNextFreeMacro = [canvasPtr]() {
             return canvasPtr->getEngine().getNextFreeMacro();
           };
-          slider->onAutoSelectMacro = onAutoSelectMacro;
           slider->onHoverMacros = [this](std::vector<int> v) {
-            if (onHoverMacros)
+            if (onHoverMacros) {
               onHoverMacros(std::move(v));
+            }
           };
           slider->onMappingChanged = [node = targetNode]() {
             node->parameterChanged();
-            if (node->onMappingChanged)
+            if (node->onMappingChanged) {
               node->onMappingChanged();
+            }
           };
           slider->onBindingChanged = [node = targetNode, canvasPtr]() {
             node->parameterChanged();
-            if (node->onMappingChanged)
+            if (node->onMappingChanged) {
               node->onMappingChanged();
+            }
             canvasPtr->rebuild();
           };
         }
@@ -226,11 +219,6 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
 
           button->onClick = [node = targetNode, button,
                              valRef = element.valueRef, element]() {
-            if (element.macroParamRef != nullptr &&
-                !element.macroParamRef->bindings.empty()) {
-              return;
-            }
-
             if (element.type == UIElementType::Toggle) {
               *valRef = button->getToggleState() ? 1 : 0;
             } else {
@@ -259,13 +247,6 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                           macroParam->bindings.clear();
                         } else {
                           int finalIndex = macroIndex;
-                          if (finalIndex == -2) {
-                            finalIndex =
-                                canvasPtr->getEngine().getNextFreeMacro();
-                            if (finalIndex == -1)
-                              return;
-                          }
-
                           auto &bindings = macroParam->bindings;
                           auto it = std::find_if(
                               bindings.begin(), bindings.end(),
@@ -289,21 +270,14 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                         }
 
                         node->parameterChanged();
-                        if (node->onMappingChanged)
+                        if (node->onMappingChanged) {
                           node->onMappingChanged();
+                        }
 
                         canvasPtr->rebuild();
                       });
                 });
           };
-
-          if (!element.macroParamRef->bindings.empty()) {
-            juce::String paramID =
-                "macro_" +
-                juce::String(element.macroParamRef->bindings[0].macroIndex + 1);
-            attachments.push_back(
-                std::make_unique<ButtonAttachment>(apvts, paramID, *button));
-          }
 
           // Shift+click binding wiring
           button->selectedMacroPtr = selectedMacroPtr;
@@ -311,18 +285,27 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
           button->getNextFreeMacro = [canvasPtr]() {
             return canvasPtr->getEngine().getNextFreeMacro();
           };
-          button->onAutoSelectMacro = onAutoSelectMacro;
           button->onMappingChanged = [node = targetNode]() {
             node->parameterChanged();
-            if (node->onMappingChanged)
+            if (node->onMappingChanged) {
               node->onMappingChanged();
+            }
           };
           button->onBindingChanged = [node = targetNode, canvasPtr]() {
             node->parameterChanged();
-            if (node->onMappingChanged)
+            if (node->onMappingChanged) {
               node->onMappingChanged();
+            }
             canvasPtr->rebuild();
           };
+          button->onHoverMacros = [this](std::vector<int> v) {
+            if (onHoverMacros) {
+              onHoverMacros(std::move(v));
+            }
+          };
+
+          buttonMacroInfos.push_back(
+              {button, element.macroParamRef, element.valueRef});
         }
         comp = button;
       } else if (element.type == UIElementType::ComboBox) {
@@ -359,7 +342,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
   };
 
   auto layout = node->getLayout();
-  createComponents(layout.elements, dynamicComponents, dynamicAttachments);
+  createComponents(layout.elements, dynamicComponents);
 
   if (layout.extendedGridWidth > 0 && layout.extendedGridHeight > 0) {
     addAndMakeVisible(expandButton);
@@ -374,8 +357,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                            juce::Colours::white);
     expandButton.onClick = [this] { toggleExpansion(); };
 
-    createComponents(layout.extendedElements, extendedComponents,
-                     extendedAttachments);
+    createComponents(layout.extendedElements, extendedComponents);
     for (auto *comp : extendedComponents) {
       comp->setVisible(false);
     }
@@ -436,7 +418,7 @@ void NodeBlock::timerCallback() {
                          const juce::OwnedArray<juce::Component> &components) {
     for (int i = 0; i < components.size(); ++i) {
       if (i < (int)elements.size()) {
-        auto &element = elements[(size_t)i];
+        const auto &element = elements[(size_t)i];
         auto *comp = components[i];
 
         if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
@@ -444,8 +426,9 @@ void NodeBlock::timerCallback() {
               element.dynamicMaxRef != nullptr) {
             int curMin = *element.dynamicMinRef;
             int curMax = *element.dynamicMaxRef;
-            if (curMin == curMax)
+            if (curMin == curMax) {
               curMax = curMin + 1;
+            }
             if (slider->getMinimum() != curMin ||
                 slider->getMaximum() != curMax) {
               slider->setRange(curMin, curMax, element.step);
@@ -499,6 +482,15 @@ void NodeBlock::timerCallback() {
     if (info.macroParamRef != nullptr && !info.macroParamRef->bindings.empty()) {
       hasActiveBindings = true;
       break;
+    }
+  }
+  if (!hasActiveBindings) {
+    for (const auto &info : buttonMacroInfos) {
+      if (info.macroParamRef != nullptr &&
+          !info.macroParamRef->bindings.empty()) {
+        hasActiveBindings = true;
+        break;
+      }
     }
   }
   if (currentSelected != lastKnownSelectedMacro || hasActiveBindings) {
@@ -601,15 +593,17 @@ void NodeBlock::paint(juce::Graphics &g) {
 void NodeBlock::paintOverChildren(juce::Graphics &g) {
   // Always draw intensity arcs for existing bindings, regardless of selection
   for (const auto &info : sliderMacroInfos) {
-    if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty())
+    if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty()) {
       continue;
+    }
 
     auto sliderBounds = info.slider->getBounds().toFloat().reduced(2.0f);
     float radius =
         (juce::jmin(sliderBounds.getWidth(), sliderBounds.getHeight()) / 2.0f) -
         2.0f;
-    if (radius <= 0.0f)
+    if (radius <= 0.0f) {
       continue;
+    }
 
     float cx = sliderBounds.getCentreX();
     float cy = sliderBounds.getCentreY();
@@ -618,32 +612,34 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
     float trackWidth = radius * 0.4f;
     float arcStroke = 2.5f;
     float arcGap = arcStroke + 1.0f;  // gap between concentric rings
-    float firstArcRadius = radius + trackWidth * 0.5f + 2.0f;
+    float firstArcRadius = radius + (trackWidth * 0.5f) + 2.0f;
 
     int ringIndex = 0;
     for (const auto &binding : info.macroParamRef->bindings) {
       float absIntensity = std::abs(binding.intensity);
-      if (absIntensity < 0.001f)
+      if (absIntensity < 0.001f) {
         continue;
+      }
 
-      float arcRadius = firstArcRadius + static_cast<float>(ringIndex) * arcGap;
+      float arcRadius = firstArcRadius + (static_cast<float>(ringIndex) * arcGap);
       ++ringIndex;
 
       auto colour = getMacroColour(binding.macroIndex);
       // Arc extent: intensity 1.0 = half the sweep
-      float arcAngle = absIntensity * sweep * 0.5f;
+      float arcAngle = (absIntensity * sweep) * 0.5f;
 
       bool isBipolar =
           (targetNode->macroBipolarMask.load(std::memory_order_relaxed) >>
            (unsigned)binding.macroIndex) &
           1u;
 
-      float arcStart, arcEnd;
+      float arcStart = 0.0f;
+      float arcEnd = 0.0f;
       if (isBipolar) {
         // Bipolar: arc is symmetric around the centre (value = 0.5 = no
         // contribution), extending in both directions regardless of intensity
         // sign. The half-extent represents the maximum possible contribution.
-        float centre = rp.startAngleRadians + sweep * 0.5f;
+        float centre = rp.startAngleRadians + (sweep * 0.5f);
         arcStart = centre - arcAngle;
         arcEnd = centre + arcAngle;
       } else if (binding.intensity >= 0.0f) {
@@ -683,8 +679,8 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
               ? juce::jlimit(0.0f, 1.0f, (effectiveVal - minVal) / range)
               : 0.0f;
 
-      float setAngle = rp.startAngleRadians + setPos * sweep;
-      float effectiveAngle = rp.startAngleRadians + effectivePos * sweep;
+      float setAngle = rp.startAngleRadians + (setPos * sweep);
+      float effectiveAngle = rp.startAngleRadians + (effectivePos * sweep);
 
       // Arc bridging set → effective on the track circle
       if (std::abs(effectiveAngle - setAngle) > 0.01f) {
@@ -701,18 +697,89 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       }
 
       // Hollow ring at effective value position
-      float ex = cx + radius * std::cos(effectiveAngle -
-                                        juce::MathConstants<float>::halfPi);
-      float ey = cy + radius * std::sin(effectiveAngle -
-                                        juce::MathConstants<float>::halfPi);
+      float ex = cx + (radius * std::cos(effectiveAngle -
+                                         juce::MathConstants<float>::halfPi));
+      float ey = cy + (radius * std::sin(effectiveAngle -
+                                         juce::MathConstants<float>::halfPi));
       g.setColour(juce::Colours::white.withAlpha(0.9f));
       g.drawEllipse(ex - 4.0f, ey - 4.0f, 8.0f, 8.0f, 1.5f);
     }
   }
 
+  // Button binding indicators — all drawn inside the button bounds so they
+  // are never clipped by the node panel edge.
+  for (const auto &info : buttonMacroInfos) {
+    if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty()) {
+      continue;
+    }
+
+    auto bounds = info.button->getBoundsInParent().toFloat();
+    auto primaryColour =
+        getMacroColour(info.macroParamRef->bindings[0].macroIndex);
+
+    // 1. Colored border ring per binding (outermost visual layer).
+    {
+      int borderIndex = 0;
+      for (const auto &binding : info.macroParamRef->bindings) {
+        auto bindColour = getMacroColour(binding.macroIndex);
+        float inset = 0.5f + (static_cast<float>(borderIndex) * 2.5f);
+        g.setColour(bindColour.withAlpha(0.75f));
+        g.drawRoundedRectangle(bounds.reduced(inset), 3.0f, 1.5f);
+        ++borderIndex;
+      }
+    }
+
+    // 2. Intensity bar — thin horizontal bar along the bottom interior.
+    //    Width = abs(intensity) / 2.0 * available width (so intensity 2.0
+    //    = full width, intensity 1.0 = half width, the normal default).
+    {
+      float totalIntensity = 0.0f;
+      for (const auto &b : info.macroParamRef->bindings) {
+        totalIntensity += b.intensity;
+}
+      float absI = juce::jlimit(0.0f, 2.0f, std::abs(totalIntensity));
+      if (absI > 0.01f) {
+        float pad = 4.0f;
+        float maxW = bounds.getWidth() - (pad * 2.0f);
+        float barW = (absI / 2.0f) * maxW;
+        float barX = bounds.getX() + pad;
+        float barY = bounds.getBottom() - 3.5f;
+        auto barColour = (totalIntensity >= 0.0f)
+                             ? primaryColour
+                             : primaryColour.darker(0.4f);
+        g.setColour(barColour.withAlpha(0.85f));
+        g.fillRoundedRectangle(barX, barY, barW, 2.0f, 1.0f);
+      }
+    }
+
+    // 3. Effective-state indicator — a small dot on the right interior.
+    //    Filled macro-color = effectively ON; hollow ring = effectively OFF.
+    //    Only drawn when the macro is currently changing the button's state.
+    if (info.valueRef != nullptr) {
+      int localVal = *info.valueRef;
+      int effectiveVal =
+          targetNode->resolveMacroInt(*info.macroParamRef, localVal, 0, 1);
+      if (effectiveVal != localVal) {
+        float dotR = 3.5f;
+        float dotX = bounds.getRight() - (dotR * 2.0f) - 3.0f;
+        float dotY = bounds.getCentreY() - dotR;
+        if (effectiveVal == 1) {
+          // Effectively ON: solid colored dot
+          g.setColour(primaryColour.withAlpha(0.95f));
+          g.fillEllipse(dotX, dotY, dotR * 2.0f, dotR * 2.0f);
+        } else {
+          // Effectively OFF: hollow ring in macro color
+          g.setColour(primaryColour.withAlpha(0.95f));
+          g.drawEllipse(dotX, dotY, dotR * 2.0f, dotR * 2.0f, 1.5f);
+        }
+      }
+    }
+  }
+
   // Draw faint "bindable" rings when a macro is selected
-  if (selectedMacroPtr == nullptr || *selectedMacroPtr == -1)
+  if (selectedMacroPtr == nullptr || *selectedMacroPtr == -1) {
     return;
+  }
 
   int macroIdx = *selectedMacroPtr;
   auto colour = getMacroColour(macroIdx);
@@ -737,6 +804,22 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
         g.setColour(colour.withAlpha(0.30f));
         g.drawEllipse(centre.x - r, centre.y - r, r * 2.0f, r * 2.0f, 2.0f);
       }
+    }
+  }
+
+  // Faint "bindable" outline on unbound buttons when a macro is selected
+  for (const auto &info : buttonMacroInfos) {
+    bool alreadyBound = false;
+    for (const auto &b : info.macroParamRef->bindings) {
+      if (b.macroIndex == macroIdx) {
+        alreadyBound = true;
+        break;
+      }
+    }
+    if (!alreadyBound) {
+      auto bounds = info.button->getBoundsInParent().toFloat().reduced(0.5f);
+      g.setColour(colour.withAlpha(0.30f));
+      g.drawRoundedRectangle(bounds, 3.0f, 2.0f);
     }
   }
 }
@@ -783,13 +866,14 @@ void NodeBlock::resized() {
 
     for (int i = 0; i < components.size(); ++i) {
       if (i < (int)elements.size()) {
-        auto &element = elements[(size_t)i];
+        const auto &element = elements[(size_t)i];
         auto eb = element.gridBounds;
 
-        components[i]->setBounds(startX + (int)(eb.getX() * subGridX),
-                                 startY + (int)(eb.getY() * subGridY),
-                                 (int)(eb.getWidth() * subGridX),
-                                 (int)(eb.getHeight() * subGridY));
+        components[i]->setBounds(
+            startX + (int)(static_cast<float>(eb.getX()) * subGridX),
+            startY + (int)(static_cast<float>(eb.getY()) * subGridY),
+            (int)(static_cast<float>(eb.getWidth()) * subGridX),
+            (int)(static_cast<float>(eb.getHeight()) * subGridY));
       }
     }
   };
@@ -927,10 +1011,10 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     // We ALWAYS move the floating physical coordinate of the node to follow
     // the mouse linearly. This must be outside the if block so it updates
     // continuously!
-    targetNode->nodeX = dragStartGridX * Layout::GridPitchFloat +
-                        Layout::TramlineOffset + deltaX;
-    targetNode->nodeY = dragStartGridY * Layout::GridPitchFloat +
-                        Layout::TramlineOffset + deltaY;
+    targetNode->nodeX = (static_cast<float>(dragStartGridX) * Layout::GridPitchFloat) +
+                        Layout::TramlineOffset + static_cast<float>(deltaX);
+    targetNode->nodeY = (static_cast<float>(dragStartGridY) * Layout::GridPitchFloat) +
+                        Layout::TramlineOffset + static_cast<float>(deltaY);
 
     if (onPositionChanged) {
       onPositionChanged();
@@ -961,8 +1045,8 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
     }
 
     // Snap to the ghost slot if it's valid...
-    int finalGridX = dragStartGridX;
-    int finalGridY = dragStartGridY;
+    int finalGridX = 0;
+    int finalGridY = 0;
 
     if (parentCanvas.isGhostValid()) {
       finalGridX = parentCanvas.getGhostX();

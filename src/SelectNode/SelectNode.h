@@ -4,7 +4,7 @@
 
 class SelectNode : public GraphNode {
  public:
-  SelectNode() = default;
+  SelectNode() { addMacroParam(&macroSelectSource); }
   ~SelectNode() override = default;
 
   std::string getName() const override { return "Select"; }
@@ -16,10 +16,6 @@ class SelectNode : public GraphNode {
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroSelectSource};
-  }
 
   int selectSource = 0;
   MacroParam macroSelectSource{"Select", {}};

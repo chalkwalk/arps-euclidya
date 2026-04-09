@@ -10,7 +10,6 @@ class MacroMappingMenu {
                        std::function<void(int)> onMacroMapped) {
     juce::PopupMenu menu;
     menu.addItem(1, "Clear Mapping", true, param.bindings.empty());
-    menu.addItem(35, "Map to Next Free Macro");
     menu.addSeparator();
 
     juce::PopupMenu subMenu;
@@ -39,9 +38,6 @@ class MacroMappingMenu {
       if (result == 1) {
         if (onMacroMapped)
           onMacroMapped(-1);
-      } else if (result == 35) {
-        if (onMacroMapped)
-          onMacroMapped(-2);  // Sentinel for "Next Free"
       } else {
         int macroIndex = result - 2;
         if (onMacroMapped)

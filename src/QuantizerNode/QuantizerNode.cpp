@@ -26,7 +26,12 @@ const std::vector<std::vector<int>> SCALES = {
 
 // --- QuantizerNode Impl
 
-QuantizerNode::QuantizerNode() = default;
+QuantizerNode::QuantizerNode() {
+  macroMode.name = "Quant Mode";
+  macroRestOnDrop.name = "Quant Rest";
+  addMacroParam(&macroMode);
+  addMacroParam(&macroRestOnDrop);
+}
 
 NodeLayout QuantizerNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::QuantizerNode_json,
@@ -40,8 +45,10 @@ NodeLayout QuantizerNode::getLayout() const {
       el.valueRef = const_cast<int *>(&rootNote);
     } else if (el.label == "mode") {
       el.valueRef = const_cast<int *>(&mode);
+      el.macroParamRef = const_cast<MacroParam *>(&macroMode);
     } else if (el.label == "restOnDrop") {
       el.valueRef = const_cast<int *>(&restOnDrop);
+      el.macroParamRef = const_cast<MacroParam *>(&macroRestOnDrop);
     }
   }
 
@@ -54,6 +61,7 @@ void QuantizerNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("rootNote", rootNote);
     xml->setAttribute("mode", mode);
     xml->setAttribute("restOnDrop", restOnDrop);
+    saveMacroBindings(xml);
   }
 }
 
@@ -63,10 +71,14 @@ void QuantizerNode::loadNodeState(juce::XmlElement *xml) {
     rootNote = xml->getIntAttribute("rootNote", 0);
     mode = xml->getIntAttribute("mode", 0);
     restOnDrop = xml->getIntAttribute("restOnDrop", 1);
+    loadMacroBindings(xml);
   }
 }
 
 void QuantizerNode::process() {
+  int effectiveMode = resolveMacroInt(macroMode, mode, 0, 1);
+  int effectiveRestOnDrop = resolveMacroInt(macroRestOnDrop, restOnDrop, 0, 1);
+
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty()) {
     outputSequences[0] = NoteSequence();
@@ -94,7 +106,7 @@ void QuantizerNode::process() {
         bool inScale = std::find(scalePattern.begin(), scalePattern.end(),
                                  pitchClass) != scalePattern.end();
 
-        if (mode == 0) {  // Filter
+        if (effectiveMode == 0) {  // Filter
           if (inScale) {
             processedStep.push_back(quantizedNote);
           }
@@ -147,7 +159,7 @@ void QuantizerNode::process() {
                                 });
         processedStep.erase(last, processedStep.end());
         outSeq.push_back(processedStep);
-      } else if (mode == 0 && restOnDrop == 1) {
+      } else if (effectiveMode == 0 && effectiveRestOnDrop == 1) {
         outSeq.emplace_back();  // Keep length if entirely filtered out
       }
     }

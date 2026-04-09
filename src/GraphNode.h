@@ -146,7 +146,11 @@ class GraphNode {
     return nullptr;
   }
 
-  virtual std::vector<MacroParam *> getMacroParams() { return {}; }
+  // Returns all MacroParam members registered via addMacroParam().
+  // Non-virtual: subclasses must call addMacroParam() in their constructors
+  // instead of overriding this function. That way the compiler enforces
+  // registration and it's impossible to forget a param.
+  std::vector<MacroParam *> getMacroParams() { return macroParamList; }
 
   // Hook called by NodeBlock when a UI control mapped to this node changes
   virtual void parameterChanged() {}
@@ -258,8 +262,14 @@ class GraphNode {
   }
 
  protected:
+  // Call once per MacroParam member in each subclass constructor.
+  void addMacroParam(MacroParam *p) { macroParamList.push_back(p); }
+
   std::map<int, NoteSequence> inputSequences;
   std::map<int, NoteSequence> outputSequences;
 
   std::map<int, std::vector<Connection>> connections;
+
+ private:
+  std::vector<MacroParam *> macroParamList;
 };

@@ -68,7 +68,6 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   addAndMakeVisible(graphCanvas.get());
 
   graphCanvas->setSelectedMacroPtr(&selectedMacro);
-  graphCanvas->onAutoSelectMacro = [this](int idx) { setSelectedMacro(idx); };
   graphCanvas->onHoverMacros = [this](std::vector<int> indices) {
     highlightedMacros = std::move(indices);
     for (auto *m : macroControls)
@@ -88,6 +87,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
           nodeType.toStdString(), audioProcessor.noteExpressionManager,
           audioProcessor.clockManager);
       if (newNode) {
+        newNode->onMappingChanged = [this]() { audioProcessor.updateMacroNames(); };
         graphCanvas->addNodeAtPosition(newNode, screenPos);
         if (!graphCanvas->attemptSignalPathInsertion(newNode.get(),
                                                      screenPos)) {

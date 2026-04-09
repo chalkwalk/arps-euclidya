@@ -5,14 +5,10 @@
 
 class OctaveStackNode : public GraphNode {
  public:
-  OctaveStackNode() = default;
+  OctaveStackNode() { addMacroParam(&macroOctaves); }
   std::string getName() const override { return "Octave Stack"; }
   void process() override;
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroOctaves};
-  }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;

@@ -4,7 +4,7 @@
 
 class RouteNode : public GraphNode {
  public:
-  RouteNode() = default;
+  RouteNode() { addMacroParam(&macroRouteDest); }
   ~RouteNode() override = default;
 
   std::string getName() const override { return "Route"; }
@@ -16,10 +16,6 @@ class RouteNode : public GraphNode {
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroRouteDest};
-  }
 
   int routeDest = 0;
   MacroParam macroRouteDest{"Route", {}};

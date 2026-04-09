@@ -9,7 +9,9 @@
 // --- MidiInNode Impl
 
 MidiInNode::MidiInNode(NoteExpressionManager &handler)
-    : noteExpressionManager(handler) {}
+    : noteExpressionManager(handler) {
+  addMacroParam(&macroChannelFilter);
+}
 
 NodeLayout MidiInNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::MidiInNode_json,

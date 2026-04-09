@@ -59,7 +59,6 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   std::function<void()> onDelete;
   std::function<void()> onPositionChanged;
-  std::function<void(int)> onAutoSelectMacro;               // forwarded from canvas → editor
   std::function<void(std::vector<int>)> onHoverMacros;      // forwarded from canvas → editor
 
   // Callbacks for cable dragging (forwarded to canvas)
@@ -92,12 +91,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   // Dynamic UI Elements (Layout-driven)
   juce::OwnedArray<juce::Component> dynamicComponents;
-  std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::Listener>>
-      dynamicAttachments;
-
   juce::OwnedArray<juce::Component> extendedComponents;
-  std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::Listener>>
-      extendedAttachments;
 
   // Selected-macro state (pointer into editor's selectedMacro field)
   int *selectedMacroPtr = nullptr;
@@ -109,6 +103,14 @@ class NodeBlock : public juce::Component, private juce::Timer {
     MacroParam *macroParamRef;
   };
   std::vector<SliderMacroInfo> sliderMacroInfos;
+
+  // Tracks buttons that have a macroParamRef, for overlay rendering
+  struct ButtonMacroInfo {
+    CustomMacroButton *button;
+    MacroParam *macroParamRef;
+    int *valueRef;  // pointer to the node's local int value (may be nullptr)
+  };
+  std::vector<ButtonMacroInfo> buttonMacroInfos;
 
   void paintOverChildren(juce::Graphics &g) override;
 

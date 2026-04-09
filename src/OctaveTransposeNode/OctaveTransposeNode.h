@@ -5,15 +5,11 @@
 
 class OctaveTransposeNode : public GraphNode {
  public:
-  OctaveTransposeNode() = default;
+  OctaveTransposeNode() { addMacroParam(&macroOctaves); }
   ~OctaveTransposeNode() override = default;
 
   void process() override;
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroOctaves};
-  }
 
   std::string getName() const override { return "Octave Transpose"; }
 

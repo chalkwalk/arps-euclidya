@@ -5,13 +5,11 @@
 
 class FoldNode : public GraphNode {
  public:
-  FoldNode() = default;
+  FoldNode() { addMacroParam(&macroNValue); }
   ~FoldNode() override = default;
 
   void process() override;
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override { return {&macroNValue}; }
 
   std::string getName() const override { return "Fold"; }
 

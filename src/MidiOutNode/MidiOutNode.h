@@ -62,20 +62,6 @@ class MidiOutNode : public GraphNode {
 
   std::function<void()> onParameterChanged;
 
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroPSteps,
-            &macroPBeats,
-            &macroPOffset,
-            &macroRSteps,
-            &macroRBeats,
-            &macroROffset,
-            &macroPressureToVelocity,
-            &macroTimbreToVelocity,
-            &macroHumTiming,
-            &macroHumVelocity,
-            &macroHumGate};
-  }
-
   int pSteps = 16;
   int pBeats = 11;
   int pOffset = 0;

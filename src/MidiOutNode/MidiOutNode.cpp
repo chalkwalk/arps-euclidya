@@ -3,7 +3,19 @@
 #include "../EuclideanMath.h"
 
 MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
-    : noteExpressionManager(midiCtx), clockManager(clockCtx) {}
+    : noteExpressionManager(midiCtx), clockManager(clockCtx) {
+  addMacroParam(&macroPSteps);
+  addMacroParam(&macroPBeats);
+  addMacroParam(&macroPOffset);
+  addMacroParam(&macroRSteps);
+  addMacroParam(&macroRBeats);
+  addMacroParam(&macroROffset);
+  addMacroParam(&macroPressureToVelocity);
+  addMacroParam(&macroTimbreToVelocity);
+  addMacroParam(&macroHumTiming);
+  addMacroParam(&macroHumVelocity);
+  addMacroParam(&macroHumGate);
+}
 
 namespace {
 bool stepsAreEqual(const std::vector<HeldNote> &a,

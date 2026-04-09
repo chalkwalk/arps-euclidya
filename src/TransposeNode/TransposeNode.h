@@ -5,15 +5,11 @@
 
 class TransposeNode : public GraphNode {
  public:
-  TransposeNode() = default;
+  TransposeNode() { addMacroParam(&macroSemitones); }
   ~TransposeNode() override = default;
 
   void process() override;
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroSemitones};
-  }
 
   std::string getName() const override { return "Transpose"; }
 

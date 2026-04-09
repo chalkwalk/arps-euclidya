@@ -48,12 +48,6 @@ class SequenceNodeEditor : public juce::Component,
                 node.macroSeqLength.bindings.clear();
               } else {
                 int finalIndex = macroIndex;
-                if (finalIndex == -2) {
-                  finalIndex = canvasPtr->getEngine().getNextFreeMacro();
-                  if (finalIndex < 0)
-                    return;
-                }
-
                 auto &bindings = node.macroSeqLength.bindings;
                 auto it =
                     std::find_if(bindings.begin(), bindings.end(),

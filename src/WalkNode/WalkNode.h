@@ -5,14 +5,10 @@
 
 class WalkNode : public GraphNode {
  public:
-  WalkNode() = default;
+  WalkNode() { addMacroParam(&macroWalkLength); addMacroParam(&macroWalkSkew); }
   std::string getName() const override { return "Walk"; }
   void process() override;
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroWalkLength, &macroWalkSkew};
-  }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;

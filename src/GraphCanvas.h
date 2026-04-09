@@ -116,7 +116,6 @@ class GraphCanvas : public juce::Component,
   void setSelectedMacroPtr(int *ptr);
 
   // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider
-  std::function<void(int)> onAutoSelectMacro;
   std::function<void(std::vector<int>)> onHoverMacros;
 
  private:

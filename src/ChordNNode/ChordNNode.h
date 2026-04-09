@@ -4,14 +4,12 @@
 
 class ChordNNode : public GraphNode {
  public:
-  ChordNNode() = default;
+  ChordNNode() { addMacroParam(&macroNValue); }
   ~ChordNNode() override = default;
 
   std::string getName() const override { return "ChordN"; }
   void process() override;
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override { return {&macroNValue}; }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;

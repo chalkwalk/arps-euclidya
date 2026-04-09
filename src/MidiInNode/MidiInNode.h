@@ -24,10 +24,6 @@ class MidiInNode : public GraphNode {
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
 
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroChannelFilter};
-  }
-
  private:
   NoteExpressionManager &noteExpressionManager;
 };

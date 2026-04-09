@@ -88,7 +88,6 @@ void GraphCanvas::rebuild() {
       repaint();
     };
 
-    block->onAutoSelectMacro = onAutoSelectMacro;
     block->onHoverMacros = onHoverMacros;
 
     block->onReplaceRequest = [this, n = node.get()](const juce::String &type) {

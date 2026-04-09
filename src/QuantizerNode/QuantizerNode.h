@@ -21,4 +21,7 @@ class QuantizerNode : public GraphNode {
   int rootNote = 0;
   int mode = 0;
   int restOnDrop = 1;
+
+  MacroParam macroMode{};
+  MacroParam macroRestOnDrop{};
 };

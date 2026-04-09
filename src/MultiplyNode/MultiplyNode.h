@@ -6,7 +6,7 @@
 // A,B,C with N=3 becomes A,A,A,B,B,B,C,C,C
 class MultiplyNode : public GraphNode {
  public:
-  MultiplyNode() = default;
+  MultiplyNode() { addMacroParam(&macroRepeatCount); }
   ~MultiplyNode() override = default;
 
   std::string getName() const override { return "Multiply"; }
@@ -14,10 +14,6 @@ class MultiplyNode : public GraphNode {
   void process() override;
 
   NodeLayout getLayout() const override;
-
-  std::vector<MacroParam *> getMacroParams() override {
-    return {&macroRepeatCount};
-  }
 
   void saveNodeState(juce::XmlElement *xml) override;
   void loadNodeState(juce::XmlElement *xml) override;
