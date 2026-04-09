@@ -633,13 +633,25 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       // Arc extent: intensity 1.0 = half the sweep
       float arcAngle = absIntensity * sweep * 0.5f;
 
+      bool isBipolar =
+          (targetNode->macroBipolarMask.load(std::memory_order_relaxed) >>
+           (unsigned)binding.macroIndex) &
+          1u;
+
       float arcStart, arcEnd;
-      if (binding.intensity >= 0.0f) {
-        // Positive: extends from start angle clockwise
+      if (isBipolar) {
+        // Bipolar: arc is symmetric around the centre (value = 0.5 = no
+        // contribution), extending in both directions regardless of intensity
+        // sign. The half-extent represents the maximum possible contribution.
+        float centre = rp.startAngleRadians + sweep * 0.5f;
+        arcStart = centre - arcAngle;
+        arcEnd = centre + arcAngle;
+      } else if (binding.intensity >= 0.0f) {
+        // Unipolar positive: extends from start angle clockwise
         arcStart = rp.startAngleRadians;
         arcEnd = rp.startAngleRadians + arcAngle;
       } else {
-        // Negative: extends from end angle counter-clockwise
+        // Unipolar negative: extends from end angle counter-clockwise
         arcEnd = rp.endAngleRadians;
         arcStart = rp.endAngleRadians - arcAngle;
       }

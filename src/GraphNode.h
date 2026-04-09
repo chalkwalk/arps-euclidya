@@ -180,6 +180,11 @@ class GraphNode {
   // in process() instead of reading the array directly.
   std::array<std::atomic<float> *, 32> macros = {nullptr};
 
+  // Bit i = 1 means macro i is bipolar (center-zero, range contribution is
+  // (value-0.5)*2*intensity*range). Updated atomically by the processor when
+  // the user toggles a macro's polarity.
+  std::atomic<uint32_t> macroBipolarMask{0};
+
   // Scale macro [0,1] → [0, maxVal] as int, or return localVal if unmapped.
   int resolveMacroInt(int macroIdx, int localVal, int maxVal) const {
     if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
@@ -213,11 +218,14 @@ class GraphNode {
       return std::clamp(localVal, minVal, maxVal);
     float range = (float)(maxVal - minVal);
     float effective = (float)localVal;
+    uint32_t bipolarMask = macroBipolarMask.load(std::memory_order_relaxed);
     for (const auto &binding : param.bindings) {
       if (binding.macroIndex >= 0 && binding.macroIndex < 32 &&
           macros[(size_t)binding.macroIndex] != nullptr) {
-        effective += macros[(size_t)binding.macroIndex]->load() *
-                     binding.intensity * range;
+        float macroVal = macros[(size_t)binding.macroIndex]->load();
+        bool isBipolar = (bipolarMask >> (unsigned)binding.macroIndex) & 1u;
+        effective += isBipolar ? (macroVal - 0.5f) * 2.0f * binding.intensity * range
+                               : macroVal * binding.intensity * range;
       }
     }
     return std::clamp((int)std::round(effective), minVal, maxVal);
@@ -229,11 +237,14 @@ class GraphNode {
       return std::clamp(localVal, minVal, maxVal);
     float range = maxVal - minVal;
     float effective = localVal;
+    uint32_t bipolarMask = macroBipolarMask.load(std::memory_order_relaxed);
     for (const auto &binding : param.bindings) {
       if (binding.macroIndex >= 0 && binding.macroIndex < 32 &&
           macros[(size_t)binding.macroIndex] != nullptr) {
-        effective += macros[(size_t)binding.macroIndex]->load() *
-                     binding.intensity * range;
+        float macroVal = macros[(size_t)binding.macroIndex]->load();
+        bool isBipolar = (bipolarMask >> (unsigned)binding.macroIndex) & 1u;
+        effective += isBipolar ? (macroVal - 0.5f) * 2.0f * binding.intensity * range
+                               : macroVal * binding.intensity * range;
       }
     }
     return std::clamp(effective, minVal, maxVal);

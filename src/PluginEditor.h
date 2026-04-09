@@ -7,6 +7,7 @@
 #include "ArpsLookAndFeel.h"
 #include "GraphCanvas.h"
 #include "MacroColours.h"
+#include "MacroParameter.h"
 #include "ModuleLibraryPanel.h"
 #include "PatchBrowserPanel.h"
 #include "PluginProcessor.h"
@@ -67,8 +68,19 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     }
 
     void mouseUp(const juce::MouseEvent &e) override {
-      if (e.mouseWasClicked() && onClicked)
+      if (e.mouseWasClicked() && onClicked) {
         onClicked(macroIndex);
+      }
+    }
+
+    void mouseDoubleClick(const juce::MouseEvent &) override {
+      if (onToggleBipolar) {
+        onToggleBipolar(macroIndex);
+      }
+      // Re-select after the toggle-off caused by the second click in the pair
+      if (onClicked) {
+        onClicked(macroIndex);
+      }
     }
 
     void paint(juce::Graphics &g) override {
@@ -108,6 +120,42 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
         g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 4.0f,
                                1.0f);
       }
+
+      // Bipolar indicator: "±" in the top-right corner
+      bool isBipolar =
+          (macroParamPtr != nullptr && macroParamPtr->isBipolar());
+      if (isBipolar) {
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.setFont(juce::FontOptions(7.0f));
+        g.drawText(juce::String::fromUTF8("\xc2\xb1"),
+                   getLocalBounds().removeFromTop(10).removeFromRight(10),
+                   juce::Justification::centred, false);
+      }
+    }
+
+    // Draw a small tick at 12 o'clock on the slider to mark the bipolar zero
+    // point (value = 0.5).
+    void paintOverChildren(juce::Graphics &g) override {
+      if (macroParamPtr == nullptr || !macroParamPtr->isBipolar()) {
+        return;
+      }
+
+      auto sliderBounds = slider.getBoundsInParent().toFloat();
+      float cx = sliderBounds.getCentreX();
+      float cy = sliderBounds.getCentreY();
+      float radius =
+          (juce::jmin(sliderBounds.getWidth(), sliderBounds.getHeight()) / 2.0f) -
+          2.0f;
+      // 12 o'clock is straight up from centre (angle = -π/2)
+      float tickAngle = -juce::MathConstants<float>::halfPi;
+      float trackWidth = radius * 0.4f;
+      float inner = radius - (trackWidth * 0.5f);
+      float outer = radius + (trackWidth * 0.5f);
+      g.setColour(juce::Colours::white.withAlpha(0.7f));
+      g.drawLine(cx + (inner * std::cos(tickAngle)),
+                 cy + (inner * std::sin(tickAngle)),
+                 cx + (outer * std::cos(tickAngle)),
+                 cy + (outer * std::sin(tickAngle)), 1.5f);
     }
 
     void resized() override {
@@ -122,7 +170,9 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     int macroIndex = 0;
     int *selectedMacroPtr = nullptr;
     const std::vector<int> *highlightedMacrosPtr = nullptr;
+    MacroParameter *macroParamPtr = nullptr;
     std::function<void(int)> onClicked;
+    std::function<void(int)> onToggleBipolar;
   };
 
   juce::Component macroBar;

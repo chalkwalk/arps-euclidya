@@ -19,7 +19,14 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     wrapper->macroIndex = i;
     wrapper->selectedMacroPtr = &selectedMacro;
     wrapper->highlightedMacrosPtr = &highlightedMacros;
+    wrapper->macroParamPtr = audioProcessor.macroParams[(size_t)i];
     wrapper->onClicked = [this](int idx) { setSelectedMacro(idx); };
+    wrapper->onToggleBipolar = [this](int idx) {
+      audioProcessor.toggleMacroBipolar(idx);
+      for (auto *m : macroControls) {
+        m->repaint();
+      }
+    };
     wrapper->slider.setColour(juce::Slider::rotarySliderFillColourId,
                               getMacroColour(i));
     macroBar.addAndMakeVisible(wrapper);

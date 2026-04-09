@@ -6,11 +6,14 @@
 // mappings. Always stays automatable (safe for VST3 hosts that cache metadata).
 class MacroParameter : public juce::AudioParameterFloat {
  public:
+  // macroIndex is 1-based (1–32). Macros 17–32 (UI indices 16–31) default
+  // to bipolar so the upper half of the palette works center-zero out of the box.
   MacroParameter(int macroIndex)
       : juce::AudioParameterFloat(
             juce::ParameterID("macro_" + juce::String(macroIndex), 1),
             "Macro " + juce::String(macroIndex), 0.0f, 1.0f, 0.0f),
-        index(macroIndex) {}
+        index(macroIndex),
+        bipolar(macroIndex > 16) {}
 
   juce::String getName(int maximumStringLength) const override {
     juce::String name;
@@ -29,7 +32,12 @@ class MacroParameter : public juce::AudioParameterFloat {
 
   int getMacroIndex() const { return index; }
 
+  void toggleBipolar() { bipolar = !bipolar; }
+  void setBipolar(bool b) { bipolar = b; }
+  bool isBipolar() const { return bipolar; }
+
  private:
   int index;
   juce::String mappingName;
+  bool bipolar = false;
 };

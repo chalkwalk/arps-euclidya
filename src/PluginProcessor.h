@@ -102,6 +102,8 @@ class ArpsEuclidyaProcessor
                                 int sampleOffset) override;
 
   void updateMacroNames();
+  void toggleMacroBipolar(int index);
+  bool getMacroBipolar(int index) const;
 
   juce::AbstractFifo midiLogFifo{512};
   std::array<MidiLogEvent, 512> midiLogBuffer;

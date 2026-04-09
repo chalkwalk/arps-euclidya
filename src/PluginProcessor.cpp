@@ -370,6 +370,14 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
     wrapper->addChildElement(apvtsXml.release());
   }
 
+  // Save macro bipolar flags as a 32-bit bitmask
+  uint32_t bipolarMask = 0;
+  for (int i = 0; i < 32; ++i) {
+    if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+      bipolarMask |= (1u << i);
+  }
+  xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
+
   // Save Graph State
   auto *graphXml = xmlRoot.createNewChildElement("Graph");
   {
@@ -423,6 +431,14 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
     auto *wrapper = xmlRoot.createNewChildElement("APVTS");
     wrapper->addChildElement(apvtsXml.release());
   }
+
+  // Save macro bipolar flags as a 32-bit bitmask
+  uint32_t bipolarMask = 0;
+  for (int i = 0; i < 32; ++i) {
+    if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+      bipolarMask |= (1u << i);
+  }
+  xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
 
   // Save Graph State
   auto *graphXml = xmlRoot.createNewChildElement("Graph");
@@ -490,13 +506,31 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     }
   }
 
+  // Restore bipolar flags (only if the patch explicitly saved them; otherwise
+  // keep the constructor defaults so old patches stay all-unipolar).
+  if (xmlState->hasAttribute("macroBipolarMask")) {
+    auto bipolarMask = (uint32_t)xmlState->getIntAttribute("macroBipolarMask", 0);
+    for (int i = 0; i < 32; ++i) {
+      if (macroParams[(size_t)i] != nullptr)
+        macroParams[(size_t)i]->setBipolar((bipolarMask >> i) & 1u);
+    }
+  }
+
   // Restore Graph State
   auto *graphXml = xmlState->getChildByName("Graph");
   if (graphXml != nullptr) {
     const juce::ScopedLock sl(graphLock);
     graphEngine.loadState(graphXml, noteExpressionManager, clockManager,
                           macros);
+
+    // Propagate current bipolar flags to all loaded nodes
+    uint32_t bipolarMask = 0;
+    for (int i = 0; i < 32; ++i) {
+      if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+        bipolarMask |= (1u << i);
+    }
     for (const auto &node : graphEngine.getNodes()) {
+      node->macroBipolarMask.store(bipolarMask, std::memory_order_relaxed);
       node->onMappingChanged = [this]() { updateMacroNames(); };
     }
     updateMacroNames();
@@ -625,9 +659,41 @@ void ArpsEuclidyaProcessor::addNode(const std::shared_ptr<GraphNode> &node) {
   performGraphMutation([this, node]() {
     const juce::ScopedLock sl(graphLock);
     node->onMappingChanged = [this]() { updateMacroNames(); };
+
+    // Propagate the current bipolar bitmask to the new node
+    uint32_t mask = 0;
+    for (int i = 0; i < 32; ++i) {
+      if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+        mask |= (1u << i);
+    }
+    node->macroBipolarMask.store(mask, std::memory_order_relaxed);
+
     graphEngine.addNode(node);
     updateMacroNames();
   });
+}
+
+void ArpsEuclidyaProcessor::toggleMacroBipolar(int index) {
+  if (index < 0 || index >= 32 || macroParams[(size_t)index] == nullptr)
+    return;
+  macroParams[(size_t)index]->toggleBipolar();
+  bool isBipolar = macroParams[(size_t)index]->isBipolar();
+  uint32_t bit = 1u << index;
+
+  const juce::ScopedLock sl(graphLock);
+  for (const auto &node : graphEngine.getNodes()) {
+    if (isBipolar)
+      node->macroBipolarMask.fetch_or(bit, std::memory_order_relaxed);
+    else
+      node->macroBipolarMask.fetch_and(~bit, std::memory_order_relaxed);
+  }
+  macrosDirty.store(true);
+}
+
+bool ArpsEuclidyaProcessor::getMacroBipolar(int index) const {
+  if (index < 0 || index >= 32 || macroParams[(size_t)index] == nullptr)
+    return false;
+  return macroParams[(size_t)index]->isBipolar();
 }
 
 void ArpsEuclidyaProcessor::removeNode(GraphNode *node) {
