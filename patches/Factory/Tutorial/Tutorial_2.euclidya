@@ -44,31 +44,37 @@
       <Node type="Midi In" uuid="a3f3bb06eb394b6fbc7a2d27208a4f69" gridX="1"
             gridY="1" bypassed="0" channelFilter="1" macroChannelFilter="-1"
             mpeEnabled="0"/>
-      <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="4"
-            gridY="1" bypassed="0" pSteps="1" pBeats="1" pOffset="0" rSteps="8"
-            rBeats="5" rOffset="4" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
+      <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="5"
+            gridY="1" bypassed="0" pSteps="6" pBeats="5" pOffset="-3" rSteps="8"
+            rBeats="5" rOffset="1" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
             macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
-            patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="5" triplet="0" outputChannel="1" pressureToVelocity="0.0"
             timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
-      <Node type="Note" uuid="9d1e6823dd654bf19a1f0538f413badf" gridX="2"
-            gridY="0" bypassed="0" noteText="MIDI input from channel 1, sorted into ascending order, then reversed."
+      <Node type="Note" uuid="69fbbc6a6a2e424e99c1c98e185b23f9" gridX="6"
+            gridY="0" bypassed="0" noteText="MIDI output to channel 1, played with a simple euclidean rhythm, and euclidean note skipping."
             sizeW="2" sizeH="1"/>
-      <Node type="Note" uuid="69fbbc6a6a2e424e99c1c98e185b23f9" gridX="4"
-            gridY="0" bypassed="0" noteText="MIDI output to channel 1, played with a simple euclidean rhythm."
-            sizeW="2" sizeH="1"/>
-      <Node type="Reverse" uuid="d976dd2a73cd463090586003e441f5b8" gridX="3"
+      <Node type="Reverse" uuid="d976dd2a73cd463090586003e441f5b8" gridX="2"
+            gridY="2" bypassed="0"/>
+      <Node type="Concatenate" uuid="7390d35fea27423eb7d4cf539e13ff69" gridX="4"
             gridY="1" bypassed="0"/>
+      <Node type="Note Large" uuid="4d9d2d8eb12b46eea13ac88bf483e4ca" gridX="2"
+            gridY="-1" bypassed="0" noteText="MIDI input from channel 1, sorted into ascending order, then reversed: the forward and the reverse version are then concatenated."
+            sizeW="3" sizeH="2"/>
     </Nodes>
     <Connections>
       <Connection sourceUuid="00000000000000000000000000000000" sourcePort="0"
                   targetUuid="d976dd2a73cd463090586003e441f5b8" targetPort="0"/>
+      <Connection sourceUuid="00000000000000000000000000000000" sourcePort="0"
+                  targetUuid="7390d35fea27423eb7d4cf539e13ff69" targetPort="0"/>
       <Connection sourceUuid="a3f3bb06eb394b6fbc7a2d27208a4f69" sourcePort="0"
                   targetUuid="00000000000000000000000000000000" targetPort="0"/>
       <Connection sourceUuid="d976dd2a73cd463090586003e441f5b8" sourcePort="0"
+                  targetUuid="7390d35fea27423eb7d4cf539e13ff69" targetPort="1"/>
+      <Connection sourceUuid="7390d35fea27423eb7d4cf539e13ff69" sourcePort="0"
                   targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
     </Connections>
   </Graph>
-  <Metadata name="02: Transformations" author="ChalkWalkMusic" description="Using the Reverse node to flip sequence order."
-            tags="tutorial reverse" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+  <Metadata name="03: Parallelism" author="ChalkWalkMusic" description="Fork the signal: pass the sorted notes through both the original and a Reverse branch, then join them with Concatenate to play ascending then descending in one sequence."
+            tags="tutorial parallel concatenate branch" created="2026-03-28T00:00:00" modified="2026-04-10T00:00:00"/>
 </ArpsEuclidyaState>

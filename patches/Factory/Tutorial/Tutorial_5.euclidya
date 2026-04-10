@@ -106,6 +106,6 @@
                   targetUuid="25ffa0aca88e461a9ac1d33e36e814d5" targetPort="0"/>
     </Connections>
   </Graph>
-  <Metadata name="06: Multi-Output" author="ChalkWalkMusic" description="Routing different sequence parts to multiple MIDI channels."
-            tags="tutorial routing polyrhythm" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+  <Metadata name="06: Multi-Output" author="ChalkWalkMusic" description="Use Chord Split to separate the top and bottom voices of a chord, then route each to its own MIDI Out on a different channel with independent Euclidean rhythms and time divisions."
+            tags="tutorial multi-output chord-split routing polyrhythm layering" created="2026-03-28T00:00:00" modified="2026-04-10T00:00:00"/>
 </ArpsEuclidyaState>

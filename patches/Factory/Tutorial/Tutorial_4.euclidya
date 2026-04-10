@@ -106,6 +106,6 @@
                   targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
     </Connections>
   </Graph>
-  <Metadata name="05: Generative" author="ChalkWalkMusic" description="Autonomous chord generation using Symmetries and All Notes."
-            tags="tutorial generative symmetry" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+  <Metadata name="05: Generative" author="ChalkWalkMusic" description="No keyboard input needed. All Notes generates the full chromatic scale, Quantizer locks it to C Aeolian, then Converge/Diverge and Zip build symmetric 4-note chords automatically."
+            tags="tutorial generative symmetry all-notes autonomous" created="2026-03-28T00:00:00" modified="2026-04-10T00:00:00"/>
 </ArpsEuclidyaState>

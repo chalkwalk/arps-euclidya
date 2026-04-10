@@ -24,6 +24,7 @@ class PatchBrowserPanel : public juce::Component, public juce::ListBoxModel {
  private:
   void toggleBrowser();
   void updateList();
+  void repopulateCategories();
   void loadPatchAtIndex(int index);
   void prevPatch();
   void nextPatch();
@@ -46,6 +47,7 @@ class PatchBrowserPanel : public juce::Component, public juce::ListBoxModel {
   juce::Component browserOverlay;
   juce::TextEditor searchBox;
   juce::ComboBox bankSelector;
+  juce::ComboBox categoryFilter;
   juce::ListBox patchList;
 
   std::unique_ptr<juce::FileChooser> fileChooser;

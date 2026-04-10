@@ -65,6 +65,6 @@
                   targetUuid="00000000000000000000000000000000" targetPort="0"/>
     </Connections>
   </Graph>
-  <Metadata name="01: Basic Routing" author="ChalkWalkMusic" description="Introduction to MIDI In, Sorting, and the Euclidean Engine."
-            tags="tutorial intro" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+  <Metadata name="01: Basic Routing" author="ChalkWalkMusic" description="Start here. Wire a MIDI In through a Sort node to a MIDI Out. Covers the node graph basics: adding nodes, making connections, and the Sort node."
+            tags="tutorial intro routing sort" created="2026-03-28T00:00:00" modified="2026-04-10T00:00:00"/>
 </ArpsEuclidyaState>

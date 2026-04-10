@@ -99,6 +99,6 @@
                   targetUuid="90edf60ac08c43389b4806779bb069d5" targetPort="0"/>
     </Connections>
   </Graph>
-  <Metadata name="07: MPE Dynamics" author="ChalkWalkMusic" description="Using MPE pressure to control note velocity."
-            tags="tutorial mpe expression" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+  <Metadata name="07: MPE Dynamics" author="ChalkWalkMusic" description="Enable MPE on the MIDI In node and map per-note pressure to velocity on MIDI Out. Each note in a chord can carry independent dynamics driven by how hard you press."
+            tags="tutorial mpe expression pressure dynamics expressive" created="2026-03-28T00:00:00" modified="2026-04-10T00:00:00"/>
 </ArpsEuclidyaState>

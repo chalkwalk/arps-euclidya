@@ -213,12 +213,19 @@ PatchBrowserPanel::PatchBrowserPanel(ArpsEuclidyaProcessor &p,
   bankSelector.addItem("Factory", 2);
   bankSelector.addItem("User", 3);
   bankSelector.setSelectedId(1, juce::dontSendNotification);
-  bankSelector.onChange = [this] { updateList(); };
+  bankSelector.onChange = [this] {
+    repopulateCategories();
+    updateList();
+  };
+
+  browserOverlay.addAndMakeVisible(categoryFilter);
+  categoryFilter.onChange = [this] { updateList(); };
 
   browserOverlay.addAndMakeVisible(patchList);
   patchList.setModel(this);
   patchList.setRowHeight(36);
 
+  repopulateCategories();
   updateList();
 }
 
@@ -262,6 +269,9 @@ void PatchBrowserPanel::resized() {
     searchBox.setBounds(searchRow);
 
     overlayBounds.removeFromTop(4);
+    categoryFilter.setBounds(overlayBounds.removeFromTop(24));
+
+    overlayBounds.removeFromTop(4);
     patchList.setBounds(overlayBounds);
   } else {
     browserOverlay.setBounds(0, 0, 0, 0);
@@ -285,14 +295,24 @@ void PatchBrowserPanel::toggleBrowser() {
   repaint();
 }
 
+void PatchBrowserPanel::repopulateCategories() {
+  PatchLibrary::Bank bank = PatchLibrary::Bank::All;
+  if (bankSelector.getSelectedId() == 2) bank = PatchLibrary::Bank::Factory;
+  if (bankSelector.getSelectedId() == 3) bank = PatchLibrary::Bank::User;
+
+  categoryFilter.clear(juce::dontSendNotification);
+  categoryFilter.addItem("All Categories", 1);
+  int id = 2;
+  for (const auto &cat : library.getCategories(bank)) {
+    categoryFilter.addItem(cat, id++);
+  }
+  categoryFilter.setSelectedId(1, juce::dontSendNotification);
+}
+
 void PatchBrowserPanel::updateList() {
   PatchLibrary::Bank bank = PatchLibrary::Bank::All;
-  if (bankSelector.getSelectedId() == 2) {
-    bank = PatchLibrary::Bank::Factory;
-  }
-  if (bankSelector.getSelectedId() == 3) {
-    bank = PatchLibrary::Bank::User;
-  }
+  if (bankSelector.getSelectedId() == 2) bank = PatchLibrary::Bank::Factory;
+  if (bankSelector.getSelectedId() == 3) bank = PatchLibrary::Bank::User;
 
   juce::String query = searchBox.getText();
   if (query.isEmpty()) {
@@ -300,6 +320,18 @@ void PatchBrowserPanel::updateList() {
   } else {
     currentResults = library.search(query, bank);
   }
+
+  // Apply category filter (ID 1 = "All Categories" = no filter)
+  if (categoryFilter.getSelectedId() > 1) {
+    juce::String selectedCat = categoryFilter.getText();
+    currentResults.erase(
+        std::remove_if(currentResults.begin(), currentResults.end(),
+                       [&](const PatchLibrary::PatchInfo &p) {
+                         return p.category != selectedCat;
+                       }),
+        currentResults.end());
+  }
+
   patchList.updateContent();
   repaint();
 }
@@ -424,6 +456,7 @@ void PatchBrowserPanel::savePatch() {
         if (processor.savePatch(file)) {
           currentPatchButton.setButtonText(meta.name);
           library.scan();
+          repopulateCategories();
           updateList();
         }
       });
@@ -468,6 +501,7 @@ void PatchBrowserPanel::showMenu() {
               });
         } else if (result == 2) {
           library.scan();
+          repopulateCategories();
           updateList();
         } else if (result == 3) {
           library.getFactoryPatchDirectory().revealToUser();

@@ -85,6 +85,6 @@
                   targetUuid="eb946e5e9b1f4134b06c31afc5c17768" targetPort="0"/>
     </Connections>
   </Graph>
-  <Metadata name="04: Chords &amp; Scales" author="ChalkWalkMusic" description="Building chords with Zip and forcing them to a scale with Quantizer."
-            tags="tutorial chord scale" created="2026-03-28T00:00:00" modified="2026-03-31T01:13:00"/>
+  <Metadata name="04: Chords &amp; Scales" author="ChalkWalkMusic" description="Transpose copies of the input up and down, then combine them into chords using Zip. Run the result through a Quantizer to lock everything to D Dorian."
+            tags="tutorial chord scale zip quantize harmony" created="2026-03-28T00:00:00" modified="2026-04-10T00:00:00"/>
 </ArpsEuclidyaState>
