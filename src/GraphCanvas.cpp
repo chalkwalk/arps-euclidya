@@ -387,6 +387,11 @@ void GraphCanvas::setSelectedMacroPtr(int *ptr) {
   repaint();
 }
 
+void GraphCanvas::setHighlightedMacro(int macroIndex) {
+  for (auto *block : nodeBlocks)
+    block->setHighlightedMacro(macroIndex);
+}
+
 void GraphCanvas::refreshCableCache() {
   cachedCables.clear();
   const juce::ScopedLock sl(graphLock);

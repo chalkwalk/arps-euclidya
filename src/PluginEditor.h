@@ -67,10 +67,33 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
       label.setInterceptsMouseClicks(false, false);
     }
 
+    void mouseDown(const juce::MouseEvent &e) override {
+      if (e.mods.isPopupMenu()) {
+        juce::PopupMenu menu;
+        menu.addItem(1, "Clear all bindings for Macro " +
+                            juce::String(macroIndex + 1));
+        menu.showMenuAsync(
+            juce::PopupMenu::Options().withTargetComponent(this),
+            [this](int result) {
+              if (result == 1 && onClearMacro) onClearMacro();
+            });
+      }
+    }
+
     void mouseUp(const juce::MouseEvent &e) override {
-      if (e.mouseWasClicked() && onClicked) {
+      if (e.mouseWasClicked() && !e.mods.isPopupMenu() && onClicked) {
         onClicked(macroIndex);
       }
+    }
+
+    void mouseEnter(const juce::MouseEvent &e) override {
+      juce::Component::mouseEnter(e);
+      if (onHoverMacro) onHoverMacro(macroIndex);
+    }
+
+    void mouseExit(const juce::MouseEvent &e) override {
+      juce::Component::mouseExit(e);
+      if (onHoverMacro) onHoverMacro(-1);
     }
 
     void mouseDoubleClick(const juce::MouseEvent &) override {
@@ -173,6 +196,8 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
     MacroParameter *macroParamPtr = nullptr;
     std::function<void(int)> onClicked;
     std::function<void(int)> onToggleBipolar;
+    std::function<void()> onClearMacro;
+    std::function<void(int)> onHoverMacro;
   };
 
   juce::Component macroBar;

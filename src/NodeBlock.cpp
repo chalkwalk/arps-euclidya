@@ -754,6 +754,41 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
     }
   }
 
+  // Palette hover: bright white ring around controls bound to the hovered macro
+  if (highlightedMacroIndex != -1) {
+    for (const auto &info : sliderMacroInfos) {
+      if (info.macroParamRef == nullptr) continue;
+      bool bound =
+          std::any_of(info.macroParamRef->bindings.begin(),
+                      info.macroParamRef->bindings.end(),
+                      [this](const MacroBinding &b) {
+                        return b.macroIndex == highlightedMacroIndex;
+                      });
+      if (bound) {
+        auto bounds = info.slider->getBounds().toFloat();
+        float r =
+            (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) + 2.0f;
+        auto centre = bounds.getCentre();
+        g.setColour(juce::Colours::white);
+        g.drawEllipse(centre.x - r, centre.y - r, r * 2.0f, r * 2.0f, 2.0f);
+      }
+    }
+    for (const auto &info : buttonMacroInfos) {
+      if (info.macroParamRef == nullptr) continue;
+      bool bound =
+          std::any_of(info.macroParamRef->bindings.begin(),
+                      info.macroParamRef->bindings.end(),
+                      [this](const MacroBinding &b) {
+                        return b.macroIndex == highlightedMacroIndex;
+                      });
+      if (bound) {
+        auto bounds = info.button->getBoundsInParent().toFloat();
+        g.setColour(juce::Colours::white);
+        g.drawRoundedRectangle(bounds.expanded(2.0f), 3.0f, 2.0f);
+      }
+    }
+  }
+
   // Draw faint "bindable" rings when a macro is selected
   if (selectedMacroPtr == nullptr || *selectedMacroPtr == -1) {
     return;

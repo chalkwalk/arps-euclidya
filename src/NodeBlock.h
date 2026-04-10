@@ -97,6 +97,17 @@ class NodeBlock : public juce::Component, private juce::Timer {
   int *selectedMacroPtr = nullptr;
   int lastKnownSelectedMacro = -1;
 
+  // Macro index being hovered in the palette (-1 = none)
+  int highlightedMacroIndex = -1;
+
+ public:
+  void setHighlightedMacro(int idx) {
+    highlightedMacroIndex = idx;
+    repaint();
+  }
+
+ private:
+
   // Tracks sliders that have a macroParamRef, for overlay rendering
   struct SliderMacroInfo {
     juce::Slider *slider;

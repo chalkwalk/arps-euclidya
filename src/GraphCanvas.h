@@ -115,6 +115,9 @@ class GraphCanvas : public juce::Component,
   // Share the editor's macro selection state with the canvas and all NodeBlocks
   void setSelectedMacroPtr(int *ptr);
 
+  // Highlight controls bound to the given macro index (-1 to clear)
+  void setHighlightedMacro(int macroIndex);
+
   // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider
   std::function<void(std::vector<int>)> onHoverMacros;
 

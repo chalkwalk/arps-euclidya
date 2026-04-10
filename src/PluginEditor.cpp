@@ -27,6 +27,31 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
         m->repaint();
       }
     };
+    wrapper->onClearMacro = [this, idx = i]() {
+      graphCanvas->performMutation([this, idx]() {
+        for (const auto &node : audioProcessor.graphEngine.getNodes()) {
+          bool changed = false;
+          for (auto *param : node->getMacroParams()) {
+            auto &b = param->bindings;
+            auto before = b.size();
+            b.erase(std::remove_if(b.begin(), b.end(),
+                                   [idx](const MacroBinding &bnd) {
+                                     return bnd.macroIndex == idx;
+                                   }),
+                    b.end());
+            if (b.size() != before) changed = true;
+          }
+          if (changed) {
+            node->parameterChanged();
+            if (node->onMappingChanged) node->onMappingChanged();
+          }
+        }
+      });
+      graphCanvas->rebuild();
+    };
+    wrapper->onHoverMacro = [this](int idx) {
+      graphCanvas->setHighlightedMacro(idx);
+    };
     wrapper->slider.setColour(juce::Slider::rotarySliderFillColourId,
                               getMacroColour(i));
     macroBar.addAndMakeVisible(wrapper);
