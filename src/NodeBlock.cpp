@@ -495,7 +495,7 @@ void NodeBlock::paint(juce::Graphics &g) {
   }
 
   // Border (Neon tinted)
-  if (parentCanvas.getSelectedNode() == targetNode.get()) {
+  if (parentCanvas.isNodeSelected(targetNode.get())) {
     // Outer glow for selected node
     g.setColour(juce::Colour(0xff0df0e3));
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
@@ -909,6 +909,28 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
     return;
   }
 
+  // Shift-click: toggle this node in/out of the multi-selection
+  if (e.mods.isShiftDown() && !e.mods.isRightButtonDown()) {
+    if (onAddToSelection) {
+      onAddToSelection();
+    }
+    return;
+  }
+
+  // If this node is already in a multi-selection, defer the selection change.
+  // We need to start the group drag on first mouse movement without clearing
+  // the selection here, so we set a flag and return early.
+  if (parentCanvas.isNodeSelected(targetNode.get()) &&
+      parentCanvas.getSelectionSize() > 1) {
+    wasInGroupSelection = true;
+    dragStartGridX = targetNode->gridX;
+    dragStartGridY = targetNode->gridY;
+    dragStartWorldX = targetNode->nodeX;
+    dragStartWorldY = targetNode->nodeY;
+    return;
+  }
+  wasInGroupSelection = false;
+
   // Notify canvas of selection (for z-ordering and cable highlighting)
   if (onSelected) {
     onSelected();
@@ -967,7 +989,7 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
     return;
   }
 
-  // Otherwise, start dragging the node
+  // Start dragging the node
   isDraggingNode = true;
   isDraggingCable = false;
 
@@ -985,6 +1007,19 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
 
 void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
   if (e.mods.isMiddleButtonDown()) {
+    return;
+  }
+
+  // Lazily start the group drag on first movement after mouseDown saw a
+  // multi-selected node (we deferred it to avoid calling onSelected first).
+  if (wasInGroupSelection) {
+    wasInGroupSelection = false;
+    parentCanvas.beginGroupDrag(targetNode.get(), e);
+  }
+
+  // Delegate to canvas for group drags
+  if (parentCanvas.isGroupDragging()) {
+    parentCanvas.updateGroupDrag(e);
     return;
   }
 
@@ -1049,6 +1084,22 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
 
 void NodeBlock::mouseUp(const juce::MouseEvent &e) {
   if (e.mods.isMiddleButtonDown()) {
+    return;
+  }
+
+  // Delegate to canvas for group drags
+  if (parentCanvas.isGroupDragging()) {
+    parentCanvas.commitGroupDrag(e.mods.isCtrlDown());
+    return;
+  }
+
+  // Plain click on a node that was in a group selection (no drag occurred):
+  // now single-select it.
+  if (wasInGroupSelection) {
+    wasInGroupSelection = false;
+    if (onSelected) {
+      onSelected();
+    }
     return;
   }
 

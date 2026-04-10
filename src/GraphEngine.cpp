@@ -85,6 +85,25 @@ bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
   return false;
 }
 
+bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
+                                  const std::unordered_set<GraphNode *> &ignoreSet) const {
+  for (const auto &node : nodes) {
+    if (ignoreSet.count(node.get()) > 0) {
+      continue;
+    }
+    int curX = node->gridX;
+    int curY = node->gridY;
+    int curW = node->getGridWidth();
+    int curH = node->getGridHeight();
+    bool overlapX = (gridX < curX + curW) && (gridX + gridW > curX);
+    bool overlapY = (gridY < curY + curH) && (gridY + gridH > curY);
+    if (overlapX && overlapY) {
+      return true;
+    }
+  }
+  return false;
+}
+
 juce::Point<int> GraphEngine::findClosestFreeSpot(
     int startX, int startY, int gridW, int gridH, GraphNode *ignoreNode,
     juce::Point<int> preferredPoint) const {

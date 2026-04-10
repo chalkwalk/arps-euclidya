@@ -2,6 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <unordered_set>
+
 #include "GraphEngine.h"
 #include "NodeBlock.h"
 
@@ -75,12 +77,29 @@ class GraphCanvas : public juce::Component,
   // Check if any cable carries a sequence >10K steps
   void checkForLargeSequences();
 
-  // Select a node (bring to front and highlight its cables)
-  void selectNode(GraphNode *node);
-  GraphNode *getSelectedNode() const { return selectedNode; }
+  // Selection API
+  void selectNode(GraphNode *node);                // clear set, select one node
+  void addToSelection(GraphNode *node);            // toggle node in selection
+  void clearSelection();                            // deselect everything
+  [[nodiscard]] GraphNode *getSelectedNode() const {
+    return selectedNodes.size() == 1 ? *selectedNodes.begin() : nullptr;
+  }
+  [[nodiscard]] bool isNodeSelected(GraphNode *node) const {
+    return selectedNodes.count(node) > 0;
+  }
+  [[nodiscard]] int getSelectionSize() const {
+    return static_cast<int>(selectedNodes.size());
+  }
 
   // Callback when the graph structure changes
   std::function<void()> onGraphChanged;
+
+  // Group drag API — called from NodeBlock when multiple nodes are selected
+  void beginGroupDrag(GraphNode *anchor, const juce::MouseEvent &e);
+  void updateGroupDrag(const juce::MouseEvent &e);
+  void commitGroupDrag(bool isClone);
+  void cancelGroupDrag();
+  [[nodiscard]] bool isGroupDragging() const { return isGroupDragging_; }
 
   // Ghost Rendering API for Node Dragging Preview
   void setGhostTarget(int gridX, int gridY, int gridW, int gridH,
@@ -213,10 +232,35 @@ class GraphCanvas : public juce::Component,
   int *selectedMacroPtr = nullptr;
 
   // Selection & Highlight state
-  GraphNode *selectedNode = nullptr;
+  std::unordered_set<GraphNode *> selectedNodes;
   GraphNode *proximityTargetNode = nullptr;
   ProximityZone proximityZone = ProximityZone::None;
   CableID proximityCableID;
+
+  // Box-selection (rubber-band) state
+  bool isBoxSelecting = false;
+  juce::Point<float> boxSelectStartScreen;
+  juce::Point<float> boxSelectCurrentScreen;
+
+  // Group drag state
+  bool isGroupDragging_ = false;
+  GraphNode *groupDragAnchor = nullptr;
+  struct GroupDragNodeData {
+    GraphNode *node;
+    int startGridX;
+    int startGridY;
+    float startWorldX;
+    float startWorldY;
+  };
+  std::vector<GroupDragNodeData> groupDragNodes;
+  int groupDragBBoxMinX = 0;
+  int groupDragBBoxMinY = 0;
+  int groupDragBBoxW = 0;
+  int groupDragBBoxH = 0;
+  int groupDragCurrentDeltaX = 0;
+  int groupDragCurrentDeltaY = 0;
+
+  void setGroupGhostTarget(int bboxGridX, int bboxGridY);
 
   std::vector<CachedCable> cachedCables;
 

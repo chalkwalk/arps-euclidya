@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 #include "GraphNode.h"
@@ -36,6 +37,8 @@ class GraphEngine {
   // Grid collision detection
   bool isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
                       GraphNode *ignoreNode = nullptr) const;
+  bool isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
+                      const std::unordered_set<GraphNode *> &ignoreSet) const;
 
   // Helpers to get specific node types
   std::vector<class MidiOutNode *> getMidiOutNodes() const;

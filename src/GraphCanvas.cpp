@@ -88,6 +88,14 @@ void GraphCanvas::rebuild() {
       repaint();
     };
 
+    block->onAddToSelection = [this, b = block]() {
+      addToSelection(b->getNode().get());
+      b->toFront(false);
+      hScroll.toFront(false);
+      vScroll.toFront(false);
+      zoomFitButton.toFront(false);
+    };
+
     block->onHoverMacros = onHoverMacros;
 
     block->onReplaceRequest = [this, n = node.get()](const juce::String &type) {
@@ -353,6 +361,19 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   g.restoreState();  // Pop the camera transform to draw tooltips in screen
                      // space
 
+  // Draw rubber-band selection box (screen-space, after camera pop)
+  if (isBoxSelecting) {
+    auto boxRect = juce::Rectangle<float>::leftTopRightBottom(
+        std::min(boxSelectStartScreen.x, boxSelectCurrentScreen.x),
+        std::min(boxSelectStartScreen.y, boxSelectCurrentScreen.y),
+        std::max(boxSelectStartScreen.x, boxSelectCurrentScreen.x),
+        std::max(boxSelectStartScreen.y, boxSelectCurrentScreen.y));
+    g.setColour(juce::Colour(0xff00ffff).withAlpha(0.06f));
+    g.fillRect(boxRect);
+    g.setColour(juce::Colour(0xff00ffff).withAlpha(0.5f));
+    g.drawRect(boxRect, 1.0f);
+  }
+
   // Draw a macro-colored border when a macro is selected
   if (selectedMacroPtr != nullptr && *selectedMacroPtr != -1) {
     auto c = getMacroColour(*selectedMacroPtr);
@@ -452,8 +473,9 @@ void GraphCanvas::refreshCableCache() {
         cable.hasNotes = (cable.activeStepCount > 0);
         cable.isLarge = (cable.stepCount > 10000);
         cable.isSelected =
-            (selectedNode != nullptr) &&
-            (node.get() == selectedNode || conn.targetNode == selectedNode);
+            !selectedNodes.empty() &&
+            (selectedNodes.count(node.get()) > 0 ||
+             selectedNodes.count(conn.targetNode) > 0);
 
         cachedCables.push_back(std::move(cable));
       }
@@ -485,12 +507,12 @@ void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
   }
 
   // Dimming for background (non-selected) cables
-  if (!isForeground && !highlighted && selectedNode != nullptr) {
+  if (!isForeground && !highlighted && !selectedNodes.empty()) {
     baseColor = baseColor.withMultipliedAlpha(0.4f);
   }
 
   // Multi-stroke Bloom
-  if (isForeground || highlighted || (selectedNode == nullptr && !warning)) {
+  if (isForeground || highlighted || (selectedNodes.empty() && !warning)) {
     // Large outer glow
     g.setColour(baseColor.withAlpha(0.15f));
     g.strokePath(path, juce::PathStrokeType(8.0f));
@@ -565,12 +587,17 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
     return;
   }
 
-  if (e.mods.isMiddleButtonDown() ||
-      (!e.mods.isPopupMenu() && !e.mods.isAnyModifierKeyDown())) {
-    // If we click empty background, initiate pan
+  if (e.mods.isMiddleButtonDown()) {
     grabKeyboardFocus();
     isPanning = true;
     lastPanScreenPos = e.getScreenPosition();
+  } else if (!e.mods.isPopupMenu() && !e.mods.isAnyModifierKeyDown() &&
+             e.eventComponent == this) {
+    // Left-click on empty canvas: start a rubber-band selection
+    grabKeyboardFocus();
+    isBoxSelecting = true;
+    boxSelectStartScreen = e.position.toFloat();
+    boxSelectCurrentScreen = e.position.toFloat();
   }
 }
 
@@ -586,17 +613,59 @@ void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
     lastPanScreenPos = e.getScreenPosition();
     updateTransforms();
     repaint();
+    return;
+  }
+
+  if (isBoxSelecting) {
+    boxSelectCurrentScreen = e.position.toFloat();
+    repaint();
   }
 }
 
 void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
   if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) {
     return;
   }
 
   if (isPanning) {
     isPanning = false;
+    return;
+  }
+
+  if (isBoxSelecting) {
+    isBoxSelecting = false;
+    float distSq = boxSelectStartScreen.getDistanceSquaredFrom(boxSelectCurrentScreen);
+    if (distSq < 16.0f) {
+      // Negligible drag — treat as background click, clear selection
+      clearSelection();
+    } else {
+      // Build a normalised screen-space rect then convert to world space
+      auto screenRect = juce::Rectangle<float>::leftTopRightBottom(
+          std::min(boxSelectStartScreen.x, boxSelectCurrentScreen.x),
+          std::min(boxSelectStartScreen.y, boxSelectCurrentScreen.y),
+          std::max(boxSelectStartScreen.x, boxSelectCurrentScreen.x),
+          std::max(boxSelectStartScreen.y, boxSelectCurrentScreen.y));
+
+      // Convert two corners to world space via inverse camera transform
+      auto inv = getCameraTransform().inverted();
+      float x1 = screenRect.getX(), y1 = screenRect.getY();
+      float x2 = screenRect.getRight(), y2 = screenRect.getBottom();
+      inv.transformPoint(x1, y1);
+      inv.transformPoint(x2, y2);
+      juce::Rectangle<float> worldRect(x1, y1, x2 - x1, y2 - y1);
+
+      for (auto *block : nodeBlocks) {
+        auto *node = block->getNode().get();
+        juce::Rectangle<float> nodeBounds(node->nodeX, node->nodeY,
+                                          (float)block->getWidth(),
+                                          (float)block->getHeight());
+        if (worldRect.intersects(nodeBounds)) {
+          selectedNodes.insert(node);
+        }
+      }
+      refreshCableCache();
+      repaint();
+    }
   }
 }
 
@@ -899,14 +968,22 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
       return false;
     }
 
-    if (selectedNode != nullptr) {
+    if (!selectedNodes.empty()) {
+      // Capture a copy so the lambda can use it safely
+      std::vector<GraphNode *> toRemove(selectedNodes.begin(), selectedNodes.end());
+      selectedNodes.clear();
       const juce::ScopedLock sl(graphLock);
       if (performMutation) {
-        performMutation([this]() { graphEngine.removeNode(selectedNode); });
+        performMutation([this, toRemove]() {
+          for (auto *n : toRemove) {
+            graphEngine.removeNode(n);
+          }
+        });
       } else {
-        graphEngine.removeNode(selectedNode);
+        for (auto *n : toRemove) {
+          graphEngine.removeNode(n);
+        }
       }
-      selectedNode = nullptr;
       rebuild();
       if (onGraphChanged) {
         onGraphChanged();
@@ -940,17 +1017,17 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
     return true;
   }
 
-  // Ctrl+D / Cmd+D to clone selected node
+  // Ctrl+D / Cmd+D to clone selected node(s)
   if ((key.getKeyCode() == 'd' || key.getKeyCode() == 'D') &&
       key.getModifiers().isCommandDown()) {
-    if (selectedNode != nullptr) {
-      auto gw = selectedNode->getGridWidth();
-      auto gh = selectedNode->getGridHeight();
-      // Find the closest free spot starting from the current node's position
-      auto nearest = graphEngine.findClosestFreeSpot(
-          selectedNode->gridX, selectedNode->gridY, gw, gh, nullptr,
-          getViewportGridCenter());
-      requestNodeClone(selectedNode, nearest.x, nearest.y);
+    if (!selectedNodes.empty()) {
+      for (auto *node : selectedNodes) {
+        auto nearest = graphEngine.findClosestFreeSpot(
+            node->gridX + node->getGridWidth(), node->gridY,
+            node->getGridWidth(), node->getGridHeight(), nullptr,
+            getViewportGridCenter());
+        requestNodeClone(node, nearest.x, nearest.y);
+      }
       return true;
     }
   }
@@ -1331,14 +1408,223 @@ void GraphCanvas::itemDropped(const SourceDetails &details) {
 }
 
 void GraphCanvas::selectNode(GraphNode *node) {
-  if (selectedNode != node) {
-    selectedNode = node;
-    grabKeyboardFocus();
+  bool changed = !(selectedNodes.size() == 1 && selectedNodes.count(node) > 0);
+  selectedNodes.clear();
+  if (node != nullptr) {
+    selectedNodes.insert(node);
+  }
+  grabKeyboardFocus();
+  if (changed) {
     refreshCableCache();
     repaint();
-  } else {
-    grabKeyboardFocus();
   }
+}
+
+void GraphCanvas::addToSelection(GraphNode *node) {
+  if (selectedNodes.count(node) > 0) {
+    selectedNodes.erase(node);
+  } else {
+    selectedNodes.insert(node);
+  }
+  refreshCableCache();
+  repaint();
+}
+
+void GraphCanvas::clearSelection() {
+  if (!selectedNodes.empty()) {
+    selectedNodes.clear();
+    refreshCableCache();
+    repaint();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Group drag
+// ---------------------------------------------------------------------------
+
+void GraphCanvas::setGroupGhostTarget(int bboxGridX, int bboxGridY) {
+  bool posChanged = (bboxGridX != ghostTargetX || bboxGridY != ghostTargetY);
+
+  showGhostTarget = true;
+  ghostTargetX = bboxGridX;
+  ghostTargetY = bboxGridY;
+  ghostTargetW = groupDragBBoxW;
+  ghostTargetH = groupDragBBoxH;
+
+  const juce::ScopedLock sl(graphLock);
+  ghostIsValid = !graphEngine.isAreaOccupied(bboxGridX, bboxGridY,
+                                              groupDragBBoxW, groupDragBBoxH,
+                                              selectedNodes);
+  if (ghostIsValid) {
+    ghostResolvedX = bboxGridX;
+    ghostResolvedY = bboxGridY;
+    hasGhostResolved = true;
+  } else if (posChanged || !hasGhostResolved) {
+    // Find nearest free spot for the bounding box, ignoring all selected nodes
+    GraphNode *firstSelected = selectedNodes.empty() ? nullptr : *selectedNodes.begin();
+    auto resolved = graphEngine.findClosestFreeSpot(
+        bboxGridX, bboxGridY, groupDragBBoxW, groupDragBBoxH,
+        firstSelected, getViewportGridCenter());
+    ghostResolvedX = resolved.x;
+    ghostResolvedY = resolved.y;
+    hasGhostResolved = true;
+  }
+  repaint();
+}
+
+void GraphCanvas::beginGroupDrag(GraphNode *anchor, const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  isGroupDragging_ = true;
+  groupDragAnchor = anchor;
+  groupDragNodes.clear();
+  groupDragCurrentDeltaX = 0;
+  groupDragCurrentDeltaY = 0;
+
+  int minX = std::numeric_limits<int>::max();
+  int minY = std::numeric_limits<int>::max();
+  int maxX = std::numeric_limits<int>::min();
+  int maxY = std::numeric_limits<int>::min();
+
+  for (auto *node : selectedNodes) {
+    GroupDragNodeData d;
+    d.node = node;
+    d.startGridX = node->gridX;
+    d.startGridY = node->gridY;
+    d.startWorldX = node->nodeX;
+    d.startWorldY = node->nodeY;
+    groupDragNodes.push_back(d);
+
+    minX = std::min(minX, node->gridX);
+    minY = std::min(minY, node->gridY);
+    maxX = std::max(maxX, node->gridX + node->getGridWidth());
+    maxY = std::max(maxY, node->gridY + node->getGridHeight());
+  }
+
+  groupDragBBoxMinX = minX;
+  groupDragBBoxMinY = minY;
+  groupDragBBoxW = maxX - minX;
+  groupDragBBoxH = maxY - minY;
+
+  setGroupGhostTarget(minX, minY);
+}
+
+void GraphCanvas::updateGroupDrag(const juce::MouseEvent &e) {
+  if (!isGroupDragging_) {
+    return;
+  }
+
+  int deltaX = e.getDistanceFromDragStartX();
+  int deltaY = e.getDistanceFromDragStartY();
+  groupDragCurrentDeltaX =
+      (int)std::round((float)deltaX / Layout::GridPitchFloat);
+  groupDragCurrentDeltaY =
+      (int)std::round((float)deltaY / Layout::GridPitchFloat);
+
+  const bool isClone = e.mods.isCtrlDown();
+  for (auto &d : groupDragNodes) {
+    if (isClone) {
+      // Original stays in place
+      d.node->nodeX = d.startWorldX;
+      d.node->nodeY = d.startWorldY;
+    } else {
+      d.node->nodeX = (static_cast<float>(d.startGridX) * Layout::GridPitchFloat) +
+                      Layout::TramlineOffset + static_cast<float>(deltaX);
+      d.node->nodeY = (static_cast<float>(d.startGridY) * Layout::GridPitchFloat) +
+                      Layout::TramlineOffset + static_cast<float>(deltaY);
+    }
+  }
+
+  setGroupGhostTarget(groupDragBBoxMinX + groupDragCurrentDeltaX,
+                      groupDragBBoxMinY + groupDragCurrentDeltaY);
+  updateTransforms();
+  refreshCableCache();
+  repaint();
+}
+
+void GraphCanvas::commitGroupDrag(bool isClone) {
+  if (!isGroupDragging_) {
+    return;
+  }
+  isGroupDragging_ = false;
+
+  // Compute the resolve offset (if bounding box had a collision)
+  int resolveOffsetX = 0;
+  int resolveOffsetY = 0;
+  if (!ghostIsValid && hasGhostResolved) {
+    int requestedBBoxX = groupDragBBoxMinX + groupDragCurrentDeltaX;
+    int requestedBBoxY = groupDragBBoxMinY + groupDragCurrentDeltaY;
+    resolveOffsetX = ghostResolvedX - requestedBBoxX;
+    resolveOffsetY = ghostResolvedY - requestedBBoxY;
+  }
+
+  int finalDeltaX = groupDragCurrentDeltaX + resolveOffsetX;
+  int finalDeltaY = groupDragCurrentDeltaY + resolveOffsetY;
+
+  clearGhostTarget();
+
+  if (isClone) {
+    // Revert all nodes to their start positions, then clone each to the
+    // computed target position.
+    for (auto &d : groupDragNodes) {
+      d.node->nodeX = d.startWorldX;
+      d.node->nodeY = d.startWorldY;
+    }
+    updateTransforms();
+
+    for (auto &d : groupDragNodes) {
+      int targetX = d.startGridX + finalDeltaX;
+      int targetY = d.startGridY + finalDeltaY;
+      requestNodeClone(d.node, targetX, targetY);
+    }
+  } else {
+    if (performMutation) {
+      performMutation([this, finalDeltaX, finalDeltaY]() {
+        for (auto &d : groupDragNodes) {
+          d.node->gridX = d.startGridX + finalDeltaX;
+          d.node->gridY = d.startGridY + finalDeltaY;
+          d.node->nodeX = (float)(d.node->gridX * Layout::GridPitch) +
+                          Layout::TramlineOffset;
+          d.node->nodeY = (float)(d.node->gridY * Layout::GridPitch) +
+                          Layout::TramlineOffset;
+        }
+      });
+    } else {
+      for (auto &d : groupDragNodes) {
+        d.node->gridX = d.startGridX + finalDeltaX;
+        d.node->gridY = d.startGridY + finalDeltaY;
+        d.node->nodeX = (float)(d.node->gridX * Layout::GridPitch) +
+                        Layout::TramlineOffset;
+        d.node->nodeY = (float)(d.node->gridY * Layout::GridPitch) +
+                        Layout::TramlineOffset;
+      }
+    }
+    updateTransforms();
+    refreshCableCache();
+    repaint();
+    if (onGraphChanged) {
+      onGraphChanged();
+    }
+  }
+
+  groupDragNodes.clear();
+  groupDragAnchor = nullptr;
+}
+
+void GraphCanvas::cancelGroupDrag() {
+  if (!isGroupDragging_) {
+    return;
+  }
+  isGroupDragging_ = false;
+  for (auto &d : groupDragNodes) {
+    d.node->nodeX = d.startWorldX;
+    d.node->nodeY = d.startWorldY;
+  }
+  clearGhostTarget();
+  updateTransforms();
+  refreshCableCache();
+  repaint();
+  groupDragNodes.clear();
+  groupDragAnchor = nullptr;
 }
 
 void GraphCanvas::setGhostTarget(int gridX, int gridY, int gridW, int gridH,

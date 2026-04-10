@@ -70,6 +70,8 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   // Called when the node is clicked/selected
   std::function<void()> onSelected;
+  // Called on shift-click: toggles node in/out of the multi-selection
+  std::function<void()> onAddToSelection;
   std::function<void(const juce::String &)> onReplaceRequest;
 
  private:
@@ -129,6 +131,11 @@ class NodeBlock : public juce::Component, private juce::Timer {
   int dragStartGridY = 0;
   float dragStartWorldX = 0.0f;
   float dragStartWorldY = 0.0f;
+
+  // True when mouseDown saw a node already in a multi-selection.
+  // We defer the selection change to mouseUp so drag can start group drag
+  // without clearing the selection first.
+  bool wasInGroupSelection = false;
 
   juce::ComponentDragger dragger;
   bool isDraggingNode = false;
