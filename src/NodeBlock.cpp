@@ -1012,22 +1012,31 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
     int newGridX = dragStartGridX + gridDeltaX;
     int newGridY = dragStartGridY + gridDeltaY;
 
+    // For a clone drag the original stays in place, so its own cells ARE
+    // occupied and should block placement. For a move drag the node is
+    // vacating its spot, so we ignore it in the collision check.
+    const bool isCloneDrag = e.mods.isCtrlDown();
+    GraphNode *ghostIgnoreNode = isCloneDrag ? nullptr : targetNode.get();
+
     if (newGridX != parentCanvas.getGhostX() ||
         newGridY != parentCanvas.getGhostY()) {
-      // Set ghost target; parentCanvas handles the overlap check to tint it
-      // red/green
-      parentCanvas.setGhostTarget(
-          newGridX, newGridY, targetNode->getGridWidth(),
-          targetNode->getGridHeight(), targetNode.get());
+      parentCanvas.setGhostTarget(newGridX, newGridY, targetNode->getGridWidth(),
+                                  targetNode->getGridHeight(), ghostIgnoreNode);
     }
 
-    // We ALWAYS move the floating physical coordinate of the node to follow
-    // the mouse linearly. This must be outside the if block so it updates
-    // continuously!
-    targetNode->nodeX = (static_cast<float>(dragStartGridX) * Layout::GridPitchFloat) +
-                        Layout::TramlineOffset + static_cast<float>(deltaX);
-    targetNode->nodeY = (static_cast<float>(dragStartGridY) * Layout::GridPitchFloat) +
-                        Layout::TramlineOffset + static_cast<float>(deltaY);
+    // When Ctrl is held the drag is a clone: the original stays in place and
+    // only the ghost target shows where the copy will land. Actively reset to
+    // the start position each frame so that pressing Ctrl mid-drag snaps the
+    // block back immediately rather than freezing in a half-moved state.
+    if (isCloneDrag) {
+      targetNode->nodeX = dragStartWorldX;
+      targetNode->nodeY = dragStartWorldY;
+    } else {
+      targetNode->nodeX = (static_cast<float>(dragStartGridX) * Layout::GridPitchFloat) +
+                          Layout::TramlineOffset + static_cast<float>(deltaX);
+      targetNode->nodeY = (static_cast<float>(dragStartGridY) * Layout::GridPitchFloat) +
+                          Layout::TramlineOffset + static_cast<float>(deltaY);
+    }
 
     if (onPositionChanged) {
       onPositionChanged();
