@@ -1,6 +1,6 @@
 # Node Dictionary
 
-The Arps Euclidya environment offers 25+ specialized nodes, broken down into functional categories. Nodes that take `(Macros)` can have their core parameters mapped to DAW automation via the right-click menu. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
+The Arps Euclidya environment offers 25+ specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
 
 ## Core I/O & Generation
 
@@ -32,7 +32,7 @@ The Arps Euclidya environment offers 25+ specialized nodes, broken down into fun
 
 - **Transpose Node `(Macros)`**: Shifts the entire sequence chromatically by +/- N semitones. *(Inputs: 1, Outputs: 1)*
 - **Octave Transpose Node `(Macros)`**: Shifts the sequence by +/- N full octaves. *(Inputs: 1, Outputs: 1)*
-- **Quantizer Node**: Forces every note in the sequence onto a specific musical scale and key. *(Inputs: 1, Outputs: 1)*
+- **Quantizer Node `(Macros)`**: Forces every note in the sequence onto a specific musical scale and key. Scale mode and "rest on drop" behavior are macro-bindable. *(Inputs: 1, Outputs: 1)*
 - **Fold Node `(Macros)`**: Constrains sequences that drift out of bounds back into a target octave range by "folding" or wrapping the overflowing pitches. *(Inputs: 1, Outputs: 1)*
 - **Unfold Node**: Expands the pitch range iteratively by pushing subsequent steps into higher or lower sub-octaves. *(Inputs: 1, Outputs: 1)*
 

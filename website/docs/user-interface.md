@@ -33,7 +33,8 @@ Access rapid actions without moving your cursor to the sidebar:
 
 - **Canvas Background**: Right-click any empty space to instantly **Insert a Module** at that position.
 - **Module Header**: Right-click the title bar of any node to **Replace** it with a different module type while preserving compatible connections, or use the **Bypass** toggle on the header to temporarily disable its effects.
-- **Node Knobs**: Right-click any parameter knob to **Map to Macro**.
+- **Node Knobs / Buttons**: Right-click any bound parameter to see a "Remove: Macro N" option for each existing binding. Removing a binding is fully undoable.
+- **Macro Palette Slot**: Right-click any macro in the Macro Panel to **clear all bindings** that macro holds across the entire patch.
 
 ### 2. Module Library (Sidebar)
 
@@ -43,8 +44,13 @@ Located in a collapsible sidebar, this is your toolbox. It contains every node a
 
 ### 3. Macro Control Panel
 
-Depending on your DAW and window configuration, this panel surfaces the 32 global "Macro" knobs.
+The panel along the top of the plugin window surfaces the 32 global "Macro" knobs. Each macro has a distinct color that propagates throughout the UI.
 
+- **Selecting**: Click a macro slot to select it (it glows in its color). Click it again to deselect. Only one macro can be selected at a time.
+- **Binding**: With a macro selected, shift+drag any node parameter knob to create a binding. The drag amount sets the binding's intensity. See [The Macro System](user-experience.md#the-macro-system-daw-automation) for the full workflow.
+- **Bipolar toggle**: Double-click any macro slot to switch between unipolar and bipolar modulation.
+- **Hover feedback**: Hovering over a macro slot highlights every canvas control that is currently bound to it.
+- **Clearing**: Right-click a macro slot to clear all of its bindings across the entire patch.
 - Because the node graph is deep inside the plugin, your DAW cannot naturally see the internal parameters. These 32 macros act as the "bridge" between your DAW's automation system and your custom patch.
 
 ## Reading the Graph
