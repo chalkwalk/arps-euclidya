@@ -399,6 +399,7 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
   metaXml->setAttribute("author", currentPatchMetadata.author);
   metaXml->setAttribute("description", currentPatchMetadata.description);
   metaXml->setAttribute("tags", currentPatchMetadata.tags);
+  metaXml->setAttribute("category", currentPatchMetadata.category);
   metaXml->setAttribute("created", currentPatchMetadata.created);
   metaXml->setAttribute("modified", currentPatchMetadata.modified);
 
@@ -464,6 +465,7 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   metaXml->setAttribute("author", currentPatchMetadata.author);
   metaXml->setAttribute("description", currentPatchMetadata.description);
   metaXml->setAttribute("tags", currentPatchMetadata.tags);
+  metaXml->setAttribute("category", currentPatchMetadata.category);
   metaXml->setAttribute("created", currentPatchMetadata.created);
   metaXml->setAttribute("modified", currentPatchMetadata.modified);
 
@@ -548,6 +550,7 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     currentPatchMetadata.description =
         metaXml->getStringAttribute("description");
     currentPatchMetadata.tags = metaXml->getStringAttribute("tags");
+    currentPatchMetadata.category = metaXml->getStringAttribute("category");
     currentPatchMetadata.created = metaXml->getStringAttribute("created");
     currentPatchMetadata.modified = metaXml->getStringAttribute("modified");
   } else {

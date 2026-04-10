@@ -3,6 +3,191 @@
 #include "AppSettings.h"
 #include "SettingsPanel.h"
 
+// ---------------------------------------------------------------------------
+// Modal dialog for editing patch metadata before saving
+// ---------------------------------------------------------------------------
+class PatchSaveDialog : public juce::Component {
+ public:
+  using Metadata = ArpsEuclidyaProcessor::PatchMetadata;
+
+  PatchSaveDialog(const Metadata &meta,
+                  const std::vector<juce::String> &existingCategories,
+                  std::function<void(Metadata, juce::String)> onSave)
+      : onSaveCallback(std::move(onSave)) {
+    auto setupLabel = [this](juce::Label &lbl, const char *text) {
+      addAndMakeVisible(lbl);
+      lbl.setText(text, juce::dontSendNotification);
+      lbl.setFont(juce::Font(juce::FontOptions(13.0f)));
+      lbl.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+      lbl.setJustificationType(juce::Justification::centredRight);
+    };
+
+    auto setupEditor = [this](juce::TextEditor &ed, const juce::String &text) {
+      addAndMakeVisible(ed);
+      ed.setText(text, false);
+      ed.setColour(juce::TextEditor::backgroundColourId,
+                   juce::Colour(0xff2a2a3e));
+      ed.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff404060));
+      ed.setColour(juce::TextEditor::focusedOutlineColourId,
+                   juce::Colour(0xff00cccc));
+      ed.setColour(juce::TextEditor::textColourId, juce::Colours::white);
+    };
+
+    setupLabel(nameLabel, "Name");
+    setupEditor(nameEditor, meta.name);
+    nameEditor.setSelectAllWhenFocused(true);
+
+    setupLabel(authorLabel, "Author");
+    juce::String authorText = meta.author.isNotEmpty()
+                                  ? meta.author
+                                  : AppSettings::getInstance().getDefaultAuthor();
+    setupEditor(authorEditor, authorText);
+
+    setupLabel(descLabel, "Description");
+    setupEditor(descEditor, meta.description);
+
+    setupLabel(tagsLabel, "Tags");
+    setupEditor(tagsEditor, meta.tags);
+    tagsEditor.setTextToShowWhenEmpty("space-separated",
+                                      juce::Colours::dimgrey);
+
+    setupLabel(categoryLabel, "Category");
+    addAndMakeVisible(categoryCombo);
+    categoryCombo.setColour(juce::ComboBox::backgroundColourId,
+                            juce::Colour(0xff2a2a3e));
+    categoryCombo.setColour(juce::ComboBox::outlineColourId,
+                            juce::Colour(0xff404060));
+    categoryCombo.setColour(juce::ComboBox::textColourId, juce::Colours::white);
+    categoryCombo.setColour(juce::ComboBox::arrowColourId,
+                            juce::Colours::lightgrey);
+
+    categoryCombo.addItem("(none)", 1);
+    int comboId = 2;
+    int preSelectId = 1;
+    for (const auto &cat : existingCategories) {
+      categoryNames.push_back(cat);
+      categoryCombo.addItem(cat, comboId);
+      if (cat.equalsIgnoreCase(meta.category))
+        preSelectId = comboId;
+      ++comboId;
+    }
+    categoryCombo.addSeparator();
+    newCategoryId = comboId;
+    categoryCombo.addItem("New category...", newCategoryId);
+    categoryCombo.setSelectedId(preSelectId, juce::dontSendNotification);
+
+    categoryCombo.onChange = [this] {
+      newCategoryEditor.setVisible(categoryCombo.getSelectedId() == newCategoryId);
+    };
+
+    setupEditor(newCategoryEditor, {});
+    newCategoryEditor.setTextToShowWhenEmpty("Category name...",
+                                             juce::Colours::dimgrey);
+    newCategoryEditor.setVisible(false);
+
+    addAndMakeVisible(saveButton);
+    saveButton.setColour(juce::TextButton::buttonColourId,
+                         juce::Colour(0xff007799));
+    saveButton.setColour(juce::TextButton::textColourOffId,
+                         juce::Colours::white);
+    saveButton.onClick = [this] { doSave(); };
+
+    addAndMakeVisible(cancelButton);
+    cancelButton.onClick = [this] {
+      if (auto *dw = findParentComponentOfClass<juce::DialogWindow>())
+        dw->closeButtonPressed();
+    };
+
+    setSize(420, 250);
+  }
+
+  void resized() override {
+    const int labelW = 82;
+    const int gap = 6;
+    const int rowH = 26;
+    const int pad = 12;
+    const int controlX = pad + labelW + gap;
+    const int controlW = getWidth() - controlX - pad;
+    int y = pad;
+
+    auto layoutRow = [&](juce::Label &lbl, juce::Component &ctrl) {
+      lbl.setBounds(pad, y, labelW, rowH);
+      ctrl.setBounds(controlX, y, controlW, rowH);
+      y += rowH + gap;
+    };
+
+    layoutRow(nameLabel, nameEditor);
+    layoutRow(authorLabel, authorEditor);
+    layoutRow(categoryLabel, categoryCombo);
+
+    // New-category editor sits in a reserved row (hidden when not needed)
+    newCategoryEditor.setBounds(controlX, y, controlW, rowH);
+    if (newCategoryEditor.isVisible())
+      y += rowH + gap;
+
+    layoutRow(descLabel, descEditor);
+    layoutRow(tagsLabel, tagsEditor);
+
+    const int btnW = 80;
+    const int btnH = 28;
+    cancelButton.setBounds(getWidth() - pad - btnW, getHeight() - pad - btnH,
+                           btnW, btnH);
+    saveButton.setBounds(getWidth() - pad - btnW * 2 - gap,
+                         getHeight() - pad - btnH, btnW, btnH);
+  }
+
+ private:
+  void doSave() {
+    Metadata meta;
+    meta.name = nameEditor.getText().trim();
+    meta.author = authorEditor.getText().trim();
+    meta.description = descEditor.getText().trim();
+    meta.tags = tagsEditor.getText().trim();
+
+    if (meta.name.isEmpty()) {
+      nameEditor.setColour(juce::TextEditor::outlineColourId,
+                           juce::Colours::red);
+      nameEditor.repaint();
+      return;
+    }
+
+    juce::String category;
+    int selId = categoryCombo.getSelectedId();
+    if (selId == newCategoryId) {
+      category = newCategoryEditor.getText().trim();
+    } else if (selId >= 2) {
+      int idx = selId - 2;
+      if (idx < (int)categoryNames.size())
+        category = categoryNames[(size_t)idx];
+    }
+
+    onSaveCallback(meta, category);
+
+    if (auto *dw = findParentComponentOfClass<juce::DialogWindow>())
+      dw->closeButtonPressed();
+  }
+
+  std::function<void(Metadata, juce::String)> onSaveCallback;
+  std::vector<juce::String> categoryNames;
+  int newCategoryId = 0;
+
+  juce::Label nameLabel{"", "Name"};
+  juce::Label authorLabel{"", "Author"};
+  juce::Label descLabel{"", "Description"};
+  juce::Label tagsLabel{"", "Tags"};
+  juce::Label categoryLabel{"", "Category"};
+  juce::TextEditor nameEditor;
+  juce::TextEditor authorEditor;
+  juce::TextEditor descEditor;
+  juce::TextEditor tagsEditor;
+  juce::TextEditor newCategoryEditor;
+  juce::ComboBox categoryCombo;
+  juce::TextButton saveButton{"Save"};
+  juce::TextButton cancelButton{"Cancel"};
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PatchSaveDialog)
+};
+
 PatchBrowserPanel::PatchBrowserPanel(ArpsEuclidyaProcessor &p,
                                      PatchLibrary &lib)
     : processor(p), library(lib) {
@@ -167,6 +352,12 @@ void PatchBrowserPanel::loadPatchAtIndex(int index) {
     currentPatchIndex = index;
     auto &patch = currentResults[(size_t)index];
     processor.loadPatch(patch.file);
+    // Back-fill category from filesystem for patches that pre-date this field.
+    // Exclude the sentinel "Uncategorised" value — that means no real category.
+    if (processor.currentPatchMetadata.category.isEmpty() &&
+        patch.category != "Uncategorised") {
+      processor.currentPatchMetadata.category = patch.category;
+    }
     currentPatchButton.setButtonText(patch.name);
   }
 }
@@ -206,21 +397,45 @@ void PatchBrowserPanel::refreshPatchName() {
 }
 
 void PatchBrowserPanel::savePatch() {
-  fileChooser = std::make_unique<juce::FileChooser>(
-      "Save Patch", library.getUserPatchDirectory(), "*.euclidya");
+  auto categories = library.getCategories(PatchLibrary::Bank::User);
 
-  auto flags = juce::FileBrowserComponent::saveMode |
-               juce::FileBrowserComponent::canSelectFiles |
-               juce::FileBrowserComponent::warnAboutOverwriting;
+  auto *dialog = new PatchSaveDialog(
+      processor.currentPatchMetadata, categories,
+      [this](ArpsEuclidyaProcessor::PatchMetadata meta, const juce::String &category) {
+        juce::String safeName =
+            meta.name.replaceCharacters("/\\:*?\"<>|", "_________").trim();
+        if (safeName.isEmpty()) {
+          safeName = "Patch";
+        }
 
-  fileChooser->launchAsync(flags, [this](const juce::FileChooser &fc) {
-    auto file = fc.getResult();
-    if (file != juce::File()) {
-      processor.savePatch(file.withFileExtension(".euclidya"));
-      library.scan();
-      updateList();
-    }
-  });
+        juce::File dir = PatchLibrary::getUserPatchDirectory();
+        if (category.isNotEmpty()) {
+          dir = dir.getChildFile(category);
+        }
+        dir.createDirectory();
+
+        juce::File file = dir.getChildFile(safeName + ".euclidya");
+
+        // Preserve the original creation timestamp on re-saves
+        meta.created = processor.currentPatchMetadata.created;
+        meta.category = category;
+        processor.currentPatchMetadata = meta;
+
+        if (processor.savePatch(file)) {
+          currentPatchButton.setButtonText(meta.name);
+          library.scan();
+          updateList();
+        }
+      });
+
+  juce::DialogWindow::LaunchOptions opts;
+  opts.dialogTitle = "Save Patch";
+  opts.dialogBackgroundColour = juce::Colour(0xff1a1a2e);
+  opts.content.setOwned(dialog);
+  opts.escapeKeyTriggersCloseButton = true;
+  opts.useNativeTitleBar = true;
+  opts.resizable = false;
+  opts.launchAsync();
 }
 
 void PatchBrowserPanel::showMenu() {

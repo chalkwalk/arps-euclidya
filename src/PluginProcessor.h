@@ -127,6 +127,7 @@ class ArpsEuclidyaProcessor
     juce::String author;
     juce::String description;
     juce::String tags;
+    juce::String category;
     juce::String created;
     juce::String modified;
   };
