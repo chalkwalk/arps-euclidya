@@ -3,7 +3,6 @@
 #include <algorithm>
 
 #include "../LayoutParser.h"
-#include "../MacroMappingMenu.h"
 #include "BinaryData.h"
 
 // --- FoldNode Impl

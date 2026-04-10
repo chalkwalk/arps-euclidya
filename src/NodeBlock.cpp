@@ -6,7 +6,6 @@
 #include "GraphCanvas.h"
 #include "GraphEngine.h"
 #include "MacroColours.h"
-#include "MacroMappingMenu.h"
 #include "MacroParameter.h"
 #include "NodeFactory.h"
 #include "SharedMacroUI.h"
@@ -117,48 +116,37 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
 
           GraphCanvas *canvasPtr = &parentCanvas;
           slider->onRightClick = [node = targetNode, slider,
-                                  macroParam = element.macroParamRef, canvasPtr,
-                                  &apvts]() {
-            MacroMappingMenu::showMenu(
-                slider, *macroParam,
-                [node, macroParam, canvasPtr, slider, &apvts](int macroIndex) {
-                  canvasPtr->performMutation(
-                      [node, macroParam, canvasPtr, slider, &apvts,
-                       macroIndex]() {
-                        if (macroIndex == -1) {
-                          macroParam->bindings.clear();
-                        } else {
-                          int finalIndex = macroIndex;
-                          auto &bindings = macroParam->bindings;
-                          auto it = std::find_if(
-                              bindings.begin(), bindings.end(),
-                              [finalIndex](const MacroBinding &b) {
-                                return b.macroIndex == finalIndex;
-                              });
-                          if (it != bindings.end()) {
-                            bindings.erase(it);
-                          } else {
-                            auto *ap = dynamic_cast<MacroParameter *>(
-                                apvts.getParameter("macro_" +
-                                                   juce::String(finalIndex +
-                                                                1)));
-                            if (ap != nullptr && !ap->isMapped()) {
-                              float norm = (float)(
-                                  (slider->getValue() - slider->getMinimum()) /
-                                  (slider->getMaximum() - slider->getMinimum()));
-                              ap->setValueNotifyingHost(norm);
-                            }
-                            bindings.push_back({finalIndex, 1.0f});
-                          }
-                        }
-
-                        node->parameterChanged();
-                        if (node->onMappingChanged) {
-                          node->onMappingChanged();
-                        }
-
-                        canvasPtr->rebuild();
-                      });
+                                  macroParam = element.macroParamRef,
+                                  canvasPtr]() {
+            juce::PopupMenu menu;
+            if (macroParam->bindings.empty()) {
+              menu.addItem(1, "No macro bindings", false, false);
+            } else {
+              for (const auto &b : macroParam->bindings) {
+                menu.addItem(b.macroIndex + 2,
+                             "Remove: Macro " + juce::String(b.macroIndex + 1));
+              }
+            }
+            auto options = juce::PopupMenu::Options().withTargetScreenArea(
+                slider->getScreenBounds());
+            menu.showMenuAsync(
+                options, [node, macroParam, canvasPtr](int result) {
+                  if (result < 2)
+                    return;
+                  int macroIndex = result - 2;
+                  canvasPtr->performMutation([node, macroParam, macroIndex]() {
+                    auto &bindings = macroParam->bindings;
+                    bindings.erase(
+                        std::remove_if(bindings.begin(), bindings.end(),
+                                       [macroIndex](const MacroBinding &b) {
+                                         return b.macroIndex == macroIndex;
+                                       }),
+                        bindings.end());
+                    node->parameterChanged();
+                    if (node->onMappingChanged)
+                      node->onMappingChanged();
+                  });
+                  canvasPtr->rebuild();
                 });
           };
 
@@ -235,47 +223,37 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
         if (element.macroParamRef != nullptr) {
           GraphCanvas *canvasPtr = &parentCanvas;
           button->onRightClick = [node = targetNode, button,
-                                  macroParam = element.macroParamRef, canvasPtr,
-                                  &apvts]() {
-            MacroMappingMenu::showMenu(
-                button, *macroParam,
-                [node, macroParam, canvasPtr, button, &apvts](int macroIndex) {
-                  canvasPtr->performMutation(
-                      [node, macroParam, canvasPtr, button, &apvts,
-                       macroIndex]() {
-                        if (macroIndex == -1) {
-                          macroParam->bindings.clear();
-                        } else {
-                          int finalIndex = macroIndex;
-                          auto &bindings = macroParam->bindings;
-                          auto it = std::find_if(
-                              bindings.begin(), bindings.end(),
-                              [finalIndex](const MacroBinding &b) {
-                                return b.macroIndex == finalIndex;
-                              });
-                          if (it != bindings.end()) {
-                            bindings.erase(it);
-                          } else {
-                            auto *ap = dynamic_cast<MacroParameter *>(
-                                apvts.getParameter("macro_" +
-                                                   juce::String(finalIndex +
-                                                                1)));
-                            if (ap != nullptr && !ap->isMapped()) {
-                              float norm =
-                                  button->getToggleState() ? 1.0f : 0.0f;
-                              ap->setValueNotifyingHost(norm);
-                            }
-                            bindings.push_back({finalIndex, 1.0f});
-                          }
-                        }
-
-                        node->parameterChanged();
-                        if (node->onMappingChanged) {
-                          node->onMappingChanged();
-                        }
-
-                        canvasPtr->rebuild();
-                      });
+                                  macroParam = element.macroParamRef,
+                                  canvasPtr]() {
+            juce::PopupMenu menu;
+            if (macroParam->bindings.empty()) {
+              menu.addItem(1, "No macro bindings", false, false);
+            } else {
+              for (const auto &b : macroParam->bindings) {
+                menu.addItem(b.macroIndex + 2,
+                             "Remove: Macro " + juce::String(b.macroIndex + 1));
+              }
+            }
+            auto options = juce::PopupMenu::Options().withTargetScreenArea(
+                button->getScreenBounds());
+            menu.showMenuAsync(
+                options, [node, macroParam, canvasPtr](int result) {
+                  if (result < 2)
+                    return;
+                  int macroIndex = result - 2;
+                  canvasPtr->performMutation([node, macroParam, macroIndex]() {
+                    auto &bindings = macroParam->bindings;
+                    bindings.erase(
+                        std::remove_if(bindings.begin(), bindings.end(),
+                                       [macroIndex](const MacroBinding &b) {
+                                         return b.macroIndex == macroIndex;
+                                       }),
+                        bindings.end());
+                    node->parameterChanged();
+                    if (node->onMappingChanged)
+                      node->onMappingChanged();
+                  });
+                  canvasPtr->rebuild();
                 });
           };
 

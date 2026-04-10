@@ -4,8 +4,6 @@
 
 #include "../GraphCanvas.h"
 #include "../LayoutParser.h"
-#include "../MacroMappingMenu.h"
-#include "../MacroParameter.h"
 #include "../SharedMacroUI.h"
 #include "BinaryData.h"
 
@@ -13,7 +11,7 @@ class SequenceNodeEditor : public juce::Component,
                            public juce::ScrollBar::Listener {
  public:
   SequenceNodeEditor(SequenceNode &node,
-                     juce::AudioProcessorValueTreeState &apvts)
+                     juce::AudioProcessorValueTreeState & /*apvts*/)
       : seqNode(node) {
     // Length slider
     lengthSlider.setRange(1, 16, 1);
@@ -33,60 +31,44 @@ class SequenceNodeEditor : public juce::Component,
     lengthLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(lengthLabel);
 
-    lengthSlider.onRightClick = [this, &node, &apvts]() {
+    lengthSlider.onRightClick = [this, &node]() {
       GraphCanvas *canvasPtr = findParentComponentOfClass<GraphCanvas>();
       if (canvasPtr == nullptr) {
         return;
       }
 
-      MacroMappingMenu::showMenu(
-          &lengthSlider, node.macroSeqLength,
-          [&node, canvasPtr, &apvts, this](int macroIndex) {
-            canvasPtr->performMutation([&node, canvasPtr, &apvts, macroIndex,
-                                        this]() {
-              if (macroIndex == -1) {
-                node.macroSeqLength.bindings.clear();
-              } else {
-                int finalIndex = macroIndex;
-                auto &bindings = node.macroSeqLength.bindings;
-                auto it =
-                    std::find_if(bindings.begin(), bindings.end(),
-                                 [finalIndex](const MacroBinding &b) {
-                                   return b.macroIndex == finalIndex;
-                                 });
-                if (it != bindings.end()) {
-                  bindings.erase(it);
-                } else {
-                  auto *ap = dynamic_cast<MacroParameter *>(apvts.getParameter(
-                      "macro_" + juce::String(finalIndex + 1)));
-                  if (ap != nullptr && !ap->isMapped()) {
-                    float norm = (float)((lengthSlider.getValue() -
-                                          lengthSlider.getMinimum()) /
-                                         (lengthSlider.getMaximum() -
-                                          lengthSlider.getMinimum()));
-                    ap->setValueNotifyingHost(norm);
-                  }
-                  bindings.push_back({finalIndex, 1.0f});
-                }
-              }
-
-              if (node.onMappingChanged)
-                node.onMappingChanged();
-
-              canvasPtr->rebuild();
-            });
-          });
+      juce::PopupMenu menu;
+      if (node.macroSeqLength.bindings.empty()) {
+        menu.addItem(1, "No macro bindings", false, false);
+      } else {
+        for (const auto &b : node.macroSeqLength.bindings) {
+          menu.addItem(b.macroIndex + 2,
+                       "Remove: Macro " + juce::String(b.macroIndex + 1));
+        }
+      }
+      auto options = juce::PopupMenu::Options().withTargetScreenArea(
+          lengthSlider.getScreenBounds());
+      menu.showMenuAsync(options, [&node, canvasPtr](int result) {
+        if (result < 2) {
+          return;
+        }
+        int macroIndex = result - 2;
+        canvasPtr->performMutation([&node, macroIndex]() {
+          auto &bindings = node.macroSeqLength.bindings;
+          bindings.erase(
+              std::remove_if(bindings.begin(), bindings.end(),
+                             [macroIndex](const MacroBinding &b) {
+                               return b.macroIndex == macroIndex;
+                             }),
+              bindings.end());
+          node.parameterChanged();
+          if (node.onMappingChanged) {
+            node.onMappingChanged();
+          }
+        });
+        canvasPtr->rebuild();
+      });
     };
-
-    if (!node.macroSeqLength.bindings.empty()) {
-      lengthSlider.setColour(juce::Slider::rotarySliderFillColourId,
-                             juce::Colours::orange);
-      lengthSlider.setColour(juce::Slider::rotarySliderOutlineColourId,
-                             juce::Colours::orange.withAlpha(0.3f));
-    } else {
-      lengthSlider.removeColour(juce::Slider::rotarySliderFillColourId);
-      lengthSlider.removeColour(juce::Slider::rotarySliderOutlineColourId);
-    }
 
     // Vertical scrollbar for note range
     scrollbar.setRangeLimits(0.0, 128.0, juce::dontSendNotification);

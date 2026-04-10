@@ -4,7 +4,6 @@
 #include <set>
 
 #include "../LayoutParser.h"
-#include "../MacroMappingMenu.h"
 #include "BinaryData.h"
 
 // --- OctaveStackNode Impl

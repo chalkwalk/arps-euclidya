@@ -4,7 +4,6 @@
 #include <cmath>
 
 #include "../LayoutParser.h"
-#include "../MacroMappingMenu.h"
 #include "../SharedMacroUI.h"
 #include "BinaryData.h"
 
