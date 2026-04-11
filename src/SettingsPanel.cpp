@@ -200,16 +200,29 @@ void SettingsPanel::timerCallback() {
         typeStr = "Out ArpOn  ";
       else if (ev.logType == 5)
         typeStr = "Out ArpOff ";
+      else if (ev.logType == 7)
+        typeStr = "Out Arp PB ";
       else if (ev.logType == 20)
         typeStr = "CLAP NoteOn";
       else if (ev.logType == 21)
         typeStr = "CLAP NoteOff";
       else if (ev.logType == 22)
-        typeStr = "CLAP Expr";
+        typeStr = "CLAP Tuning";
+      else if (ev.logType == 25)
+        typeStr = "PROTOCOL   ";
       else
         typeStr = "Unknown (" + juce::String(ev.logType) + ")";
 
-      juce::String msg = "[" + typeStr + "] Ch: " + juce::String(ev.channel) +
+      // Format PPQ as bar.beat.sixteenth (4/4 assumed, 1-indexed)
+      int totalSixteenths = (int)(ev.ppq * 4.0);
+      int bar = totalSixteenths / 16 + 1;
+      int beat = (totalSixteenths % 16) / 4 + 1;
+      int sixteenth = totalSixteenths % 4 + 1;
+      juce::String pos = juce::String(bar) + "." + juce::String(beat) + "." +
+                         juce::String(sixteenth);
+
+      juce::String msg = pos + " [" + typeStr + "] Ch: " +
+                         juce::String(ev.channel) +
                          (ev.logType >= 20 ? " | Note: " : " | d1: ") +
                          juce::String(ev.data1) +
                          " | d2: " + juce::String(ev.data2) + "\n";

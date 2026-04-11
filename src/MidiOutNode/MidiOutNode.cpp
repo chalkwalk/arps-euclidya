@@ -121,29 +121,24 @@ void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
       (activeTuning != nullptr && !activeTuning->isIdentity());
 
   for (auto it = playingNotes.begin(); it != playingNotes.end();) {
-    if (it->remainingSamples != -1) {
-      if (it->remainingSamples <= numSamples) {
-        // Send NoteOff at the scheduled time within this block
-        int offPos = std::max(0, it->remainingSamples);
-        if (usePerNoteChannels) {
-          mptAllocator.release(it->noteID);
-        }
-        collector.addNoteOff(it->channel, it->noteNumber, 0.0f, offPos,
-                             it->noteID);
-        it = playingNotes.erase(it);
-        continue;
-      }
-      it->remainingSamples -= numSamples;
-    } else {
-      // Legacy behavior or absolute flush (e.g. on stop)
+    if (it->remainingSamples == -1) {
+      // No scheduled NoteOff — leave this note alone.
+      ++it;
+      continue;
+    }
+    if (it->remainingSamples < numSamples) {
+      // It expires in THIS block (at offset std::max(0, remainingSamples))
+      int offset = std::max(0, it->remainingSamples);
       if (usePerNoteChannels) {
         mptAllocator.release(it->noteID);
       }
-      collector.addNoteOff(it->channel, it->noteNumber, 0.0f, 0, it->noteID);
+      collector.addNoteOff(it->channel, it->noteNumber, 0.0f, offset,
+                           it->noteID);
       it = playingNotes.erase(it);
-      continue;
+    } else {
+      it->remainingSamples -= numSamples;
+      ++it;
     }
-    ++it;
   }
 }
 
@@ -275,23 +270,28 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     }
   }
 
+  // Advance per-note scheduled NoteOffs every block, not just at ticks.
+  // This is the core of timed-gate delivery: remainingSamples decrements by
+  // numSamples each call, and NoteOff fires when the counter reaches zero.
+  flushPlayingNotes(collector, numSamples);
+
+  bool prevWasPlaying = wasPlaying;
   wasHoldingNotes = holdingNotes;
   wasPlaying = isPlaying;
   lastTickPpq = currentPpq;
 
-  // Cleanup playing notes on every tick
   if (isTick) {
-    // In Humanize mode, NoteOffs are scheduled per-note.
-    // However, if a new tick arrives and we STILL have notes playing (gate >
-    // 100%), we flush them now to avoid overlap/hangs, OR we could let them
-    // overlap. For Euclidya, we usually want monophonic per-lane logic, so
-    // we'll flush.
-    flushPlayingNotes(collector, numSamples);
     lastTickPlayedNote = false;
   }
 
-  if (!isPlaying && wasPlaying) {
+  if (!isPlaying && prevWasPlaying) {
+    const bool usePerNoteChannels =
+        (channelMode == 1) ||
+        (activeTuning != nullptr && !activeTuning->isIdentity());
     for (const auto &note : playingNotes) {
+      if (usePerNoteChannels) {
+        mptAllocator.release(note.noteID);
+      }
       collector.addNoteOff(note.channel, note.noteNumber, 0.0f, 0, note.noteID);
     }
     playingNotes.clear();
@@ -467,9 +467,39 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
             (activeTuning != nullptr && !activeTuning->isIdentity());
 
         if (usePerNoteChannels) {
-          int slot = mptAllocator.allocate(outNoteID);
-          usedChannel = slot + 1;  // 0-indexed slot → 1-indexed, collector adds
-                                   // 1 more → MIDI channels 2-16
+          auto allocation = mptAllocator.allocate(outNoteID);
+          usedChannel =
+              allocation.first + 1;  // slot 0 -> channel 2 (via collector)
+
+          if (allocation.second != -1) {
+            // Stolen slot! Kill the old note immediately at the new note's
+            // onset.
+            auto itC = playingNotes.begin();
+            while (itC != playingNotes.end()) {
+              if (itC->noteID == allocation.second) {
+                collector.addNoteOff(itC->channel, itC->noteNumber, 0.0f,
+                                     finalSamplePos, itC->noteID);
+                itC = playingNotes.erase(itC);
+                break;  // noteID is unique, so we can stop
+              }
+              ++itC;
+            }
+          }
+        } else {
+          // Fixed mode: Kill any active note of the SAME pitch on this channel
+          // to avoid overlapping identical notes causing stuck notes or clicks.
+          // We clear ALL such notes just in case.
+          auto itC = playingNotes.begin();
+          while (itC != playingNotes.end()) {
+            if (itC->channel == usedChannel &&
+                itC->noteNumber == noteTrigger.noteNumber) {
+              collector.addNoteOff(itC->channel, itC->noteNumber, 0.0f,
+                                   finalSamplePos, itC->noteID);
+              itC = playingNotes.erase(itC);
+            } else {
+              ++itC;
+            }
+          }
         }
 
         // ── Combined pitch bend: microtone offset + input pitch bend ──
@@ -482,10 +512,13 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         float inputBendSemitones =
             passExpressions ? (noteTrigger.mpeX * 48.0f) : 0.0f;
         float totalPitchBend = tuningOffsetSemitones + inputBendSemitones;
-        if (totalPitchBend != 0.0f) {
-          collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
-                                      NoteExpressionType::Tuning, totalPitchBend,
-                                      finalSamplePos, outNoteID);
+
+        // Apply tuning. For MIDI (Pitch Bend), this MUST arrive before NoteOn.
+        // For CLAP, it links by outNoteID.
+        if (totalPitchBend != 0.0f || usePerNoteChannels) {
+          collector.addNoteExpression(
+              usedChannel, noteTrigger.noteNumber, NoteExpressionType::Tuning,
+              totalPitchBend, finalSamplePos, outNoteID);
         }
 
         // ── Pressure and timbre pass-through ──
@@ -507,8 +540,15 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         collector.addNoteOn(usedChannel, noteTrigger.noteNumber, finalVelocity,
                             finalSamplePos, outNoteID);
 
+        // Schedule NoteOff via playingNotes. remainingSamples is how many
+        // samples after this block until the note ends. Clamped to 0 so that
+        // notes whose full duration fits inside the current block still sound
+        // for its remainder — flushPlayingNotes fires the NoteOff at offset 0
+        // of the next block. This prevents in-block NoteOn+NoteOff pairs that
+        // most synths never render (especially critical for MPE/round-robin).
+        int noteEndSample = finalSamplePos + duration;
         playingNotes.push_back({usedChannel, noteTrigger.noteNumber, outNoteID,
-                                duration - finalSamplePos});
+                                std::max(0, noteEndSample - numSamples)});
       }
     }
 
@@ -641,7 +681,7 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     humTiming = static_cast<float>(xml->getDoubleAttribute("humTiming", 0.0));
     humVelocity =
         static_cast<float>(xml->getDoubleAttribute("humVelocity", 0.0));
-    humGate = static_cast<float>(xml->getDoubleAttribute("humGate", 0.5));
+    humGate = static_cast<float>(xml->getDoubleAttribute("humGate", 0.0));
 
     // Legacy single-macro migration
     struct LegacyMapping {

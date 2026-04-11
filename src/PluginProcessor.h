@@ -15,6 +15,7 @@ struct MidiLogEvent {
   int channel;
   int data1;
   float data2;
+  double ppq = 0.0;  // Cumulative PPQ at time of event (for musical timestamps)
 };
 
 // Forward declaration of the editor class
@@ -161,6 +162,7 @@ class ArpsEuclidyaProcessor
   juce::UndoManager undoManager;
 
   std::atomic<bool> isClapProtocol{false};
+  std::atomic<bool> hasLoggedClapProtocol{false};
   std::atomic<int32_t> globalNoteIDCounter{0};
   std::vector<OutboundClapEvent> outboundClapEvents;
 

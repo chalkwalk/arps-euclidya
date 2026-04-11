@@ -62,6 +62,11 @@ ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {
 
 void ArpsEuclidyaProcessor::logMidiEvent(int type, int channel, int d1,
                                          float d2) {
+  // Diagnostically log isClapProtocol once
+  if (!hasLoggedClapProtocol) {
+    // Standard log mechanism doesn't support strings, so we use a special type
+    // We'll check this in the UI
+  }
   if (midiLogFifo.getFreeSpace() > 0) {
     int start1;
     int size1;
@@ -69,7 +74,8 @@ void ArpsEuclidyaProcessor::logMidiEvent(int type, int channel, int d1,
     int size2;
     midiLogFifo.prepareToWrite(1, start1, size1, start2, size2);
     if (size1 > 0) {
-      midiLogBuffer[(size_t)start1] = {type, channel, d1, d2};
+      midiLogBuffer[(size_t)start1] = {type, channel, d1, d2,
+                                       clockManager.getCumulativePpq()};
     }
     midiLogFifo.finishedWrite(size1 + size2);
   }
@@ -228,6 +234,9 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
   if (!isClapProtocol) {
     noteExpressionManager.processMidi(midiMessages);
+  } else if (!hasLoggedClapProtocol) {
+    logMidiEvent(25, 0, 0, 0.0f);  // Type 25 = CLAP Detected
+    hasLoggedClapProtocol = true;
   }
 
   {
@@ -281,27 +290,24 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                             sampleOffset);
             break;
           case NoteExpressionType::Brightness:
-            buffer.addEvent(
-                juce::MidiMessage::controllerEvent(ch1, 74,
-                                                   (int)(value * 127.0f)),
-                sampleOffset);
+            buffer.addEvent(juce::MidiMessage::controllerEvent(
+                                ch1, 74, (int)(value * 127.0f)),
+                            sampleOffset);
             break;
           case NoteExpressionType::Tuning: {
-            // Set pitch bend range to ±48 semitones via RPN, then send the
-            // pitch wheel. value is in semitones.
-            buffer.addEvent(
-                juce::MidiMessage::controllerEvent(ch1, 101, 0), sampleOffset);
-            buffer.addEvent(
-                juce::MidiMessage::controllerEvent(ch1, 100, 0), sampleOffset);
-            buffer.addEvent(
-                juce::MidiMessage::controllerEvent(ch1, 6, 48), sampleOffset);
-            buffer.addEvent(
-                juce::MidiMessage::controllerEvent(ch1, 38, 0), sampleOffset);
-            // RPN null (deselect)
-            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 101, 127),
+            // MPE microtuning: Set pitch bend range to ±48 semitones via RPN.
+            // value is in semitones relative to 12-TET center.
+            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 101, 0),
                             sampleOffset);
-            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 100, 127),
+            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 100, 0),
                             sampleOffset);
+            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 6, 48),
+                            sampleOffset);
+            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 38, 0),
+                            sampleOffset);
+            // NOTE: We omit RPN deselect (127, 127) here because some synths
+            // may reset their internal state if deselected too rapidly.
+
             int pb = 8192 + juce::roundToInt((value / 48.0f) * 8191.0f);
             pb = juce::jlimit(0, 16383, pb);
             buffer.addEvent(juce::MidiMessage::pitchWheel(ch1, pb),
@@ -368,7 +374,15 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     } else if (message.isController()) {
       logMidiEvent(2, channel, message.getControllerNumber(),
                    (float)message.getControllerValue());
+    } else if (message.isPitchWheel()) {
+      logMidiEvent(7, channel, message.getPitchWheelValue(),
+                   0.0f);  // Type 7 = Out Arp PB
     }
+  }
+
+  // Double check if we should log CLAP status (Type 20 is custom for protocol)
+  if (!hasLoggedClapProtocol.exchange(true)) {
+    logMidiEvent(20, (isClapProtocol ? 1 : 0), 0, 0.0f);
   }
 }
 
@@ -398,7 +412,8 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
   // Save macro bipolar flags as a 32-bit bitmask
   uint32_t bipolarMask = 0;
   for (int i = 0; i < 32; ++i) {
-    if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+    if (macroParams[(size_t)i] != nullptr &&
+        macroParams[(size_t)i]->isBipolar())
       bipolarMask |= (1u << i);
   }
   xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
@@ -460,16 +475,16 @@ void ArpsEuclidyaProcessor::pushTuningToNodes() {
 }
 
 void ArpsEuclidyaProcessor::setActiveTuning(const juce::File &sclFile,
-                                             const juce::File &kbmFile) {
+                                            const juce::File &kbmFile) {
   activeTuning = ScalaParser::parse(sclFile, kbmFile);
 
   // Store relative paths for serialization
   juce::File tuningDir =
       AppSettings::getInstance().getResolvedTuningLibraryDir();
   activeSclRelPath = sclFile.getRelativePathFrom(tuningDir);
-  activeKbmRelPath =
-      kbmFile.existsAsFile() ? kbmFile.getRelativePathFrom(tuningDir)
-                              : juce::String();
+  activeKbmRelPath = kbmFile.existsAsFile()
+                         ? kbmFile.getRelativePathFrom(tuningDir)
+                         : juce::String();
 
   pushTuningToNodes();
 }
@@ -501,7 +516,8 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   // Save macro bipolar flags as a 32-bit bitmask
   uint32_t bipolarMask = 0;
   for (int i = 0; i < 32; ++i) {
-    if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+    if (macroParams[(size_t)i] != nullptr &&
+        macroParams[(size_t)i]->isBipolar())
       bipolarMask |= (1u << i);
   }
   xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
@@ -583,7 +599,8 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
   // Restore bipolar flags (only if the patch explicitly saved them; otherwise
   // keep the constructor defaults so old patches stay all-unipolar).
   if (xmlState->hasAttribute("macroBipolarMask")) {
-    auto bipolarMask = (uint32_t)xmlState->getIntAttribute("macroBipolarMask", 0);
+    auto bipolarMask =
+        (uint32_t)xmlState->getIntAttribute("macroBipolarMask", 0);
     for (int i = 0; i < 32; ++i) {
       if (macroParams[(size_t)i] != nullptr)
         macroParams[(size_t)i]->setBipolar((bipolarMask >> i) & 1u);
@@ -600,7 +617,8 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     // Propagate current bipolar flags to all loaded nodes
     uint32_t bipolarMask = 0;
     for (int i = 0; i < 32; ++i) {
-      if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+      if (macroParams[(size_t)i] != nullptr &&
+          macroParams[(size_t)i]->isBipolar())
         bipolarMask |= (1u << i);
     }
     for (const auto &node : graphEngine.getNodes()) {
@@ -639,11 +657,15 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
 void ArpsEuclidyaProcessor::restoreTuningFromXml(juce::XmlElement *xmlState) {
   clearActiveTuning();
   auto *tuningXml = xmlState->getChildByName("Tuning");
-  if (tuningXml == nullptr) { return; }
+  if (tuningXml == nullptr) {
+    return;
+  }
 
   juce::String sclRel = tuningXml->getStringAttribute("scl");
   juce::String kbmRel = tuningXml->getStringAttribute("kbm");
-  if (sclRel.isEmpty()) { return; }
+  if (sclRel.isEmpty()) {
+    return;
+  }
 
   juce::File tuningDir =
       AppSettings::getInstance().getResolvedTuningLibraryDir();
@@ -765,7 +787,8 @@ void ArpsEuclidyaProcessor::addNode(const std::shared_ptr<GraphNode> &node) {
     // Propagate the current bipolar bitmask to the new node
     uint32_t mask = 0;
     for (int i = 0; i < 32; ++i) {
-      if (macroParams[(size_t)i] != nullptr && macroParams[(size_t)i]->isBipolar())
+      if (macroParams[(size_t)i] != nullptr &&
+          macroParams[(size_t)i]->isBipolar())
         mask |= (1u << i);
     }
     node->macroBipolarMask.store(mask, std::memory_order_relaxed);
@@ -897,7 +920,10 @@ bool ArpsEuclidyaProcessor::supportsDirectEvent(uint16_t space_id,
 
 void ArpsEuclidyaProcessor::handleDirectEvent(const clap_event_header_t *event,
                                               int sampleOffset) {
-  isClapProtocol = true;
+  if (!isClapProtocol.exchange(true)) {
+    // Log immediately when protocol is detected
+    logMidiEvent(25, 1, 0, 0.0f);
+  }
   juce::ignoreUnused(sampleOffset);
   if (event->space_id == CLAP_CORE_EVENT_SPACE_ID) {
     switch (event->type) {
@@ -947,7 +973,29 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
   if (!out_events || !out_events->try_push)
     return;
 
-  // 1. Push native CLAP events collected during processBlock
+  if (!isClapProtocol.exchange(true)) {
+    // Protocol detected via outbound queue call
+    logMidiEvent(25, 2, 0, 0.0f);
+  }
+
+  // 1. Push native CLAP events collected during processBlock.
+  // Sort so that at equal timestamps: NoteOff < NoteOn < NoteExpression.
+  // For MIDI the MidiBuffer handles ordering (pitch bend before NoteOn).
+  // For CLAP, hosts match expressions to notes by note_id — the NoteOn must
+  // be processed before the expression so the host knows the note exists.
+  std::stable_sort(
+      outboundClapEvents.begin(), outboundClapEvents.end(),
+      [](const OutboundClapEvent &a, const OutboundClapEvent &b) {
+        if (a.sampleOffset != b.sampleOffset)
+          return a.sampleOffset < b.sampleOffset;
+        auto priority = [](const OutboundClapEvent &e) -> int {
+          if (e.type == OutboundClapEvent::Type::NoteOff) return 0;
+          if (e.type == OutboundClapEvent::Type::NoteOn) return 1;
+          return 2;  // NoteExpression
+        };
+        return priority(a) < priority(b);
+      });
+
   for (const auto &evt : outboundClapEvents) {
     if (evt.type == OutboundClapEvent::Type::NoteOn) {
       clap_event_note clapEvt{};
@@ -962,6 +1010,7 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
       clapEvt.key = (int16_t)evt.noteNumber;
       clapEvt.velocity = (double)evt.value;
       clapEvt.note_id = evt.noteID;
+      logMidiEvent(20, evt.channel, evt.noteNumber, evt.value);
       out_events->try_push(out_events, &clapEvt.header);
     } else if (evt.type == OutboundClapEvent::Type::NoteOff) {
       clap_event_note clapEvt{};
@@ -976,6 +1025,7 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
       clapEvt.key = (int16_t)evt.noteNumber;
       clapEvt.velocity = (double)evt.value;
       clapEvt.note_id = evt.noteID;
+      logMidiEvent(21, evt.channel, evt.noteNumber, 0.0f);
       out_events->try_push(out_events, &clapEvt.header);
     } else if (evt.type == OutboundClapEvent::Type::NoteExpression) {
       clap_event_note_expression clapEvt{};
@@ -1000,6 +1050,8 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
           break;
         case NoteExpressionType::Tuning:
           clapEvt.expression_id = CLAP_NOTE_EXPRESSION_TUNING;
+          // Log: d1 = noteNumber, d2 = tuning value in semitones
+          logMidiEvent(22, evt.channel, evt.noteNumber, evt.value);
           break;
         case NoteExpressionType::Brightness:
           clapEvt.expression_id = CLAP_NOTE_EXPRESSION_BRIGHTNESS;

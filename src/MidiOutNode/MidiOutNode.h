@@ -13,47 +13,57 @@
 #include "../Tuning/TuningTable.h"
 
 // Allocates MIDI channels 2-16 (stored as 0-indexed slots 0-14) for
-// per-note microtonal pitch bend.  Picks the slot that was released
-// earliest; if all slots are still active it steals the one with the
-// lowest release-counter (= has been ringing the longest without a
-// fresh allocation).
+// per-note microtonal pitch bend and round-robin output.
+// Allocation is round-robin: the inactive slot that was assigned least
+// recently is chosen next (true rotation through all 15 channels).
+// When all slots are active the oldest allocation is stolen.
 struct MicrotoneChannelAllocator {
   static constexpr int kSlots = 15;
 
   struct Slot {
     bool active = false;
     int32_t noteID = -1;
-    int64_t releaseCounter = 0;
+    int64_t allocateCounter = 0;  // Incremented on each assign; 0 = never used
   };
 
   std::array<Slot, kSlots> slots{};
   int64_t counter = 0;
 
-  // Returns a 0-indexed slot (add 1 to get the value passed to the collector,
-  // which adds another 1 for 1-based MIDI, yielding channels 2-16).
-  int allocate(int32_t noteID) {
+  // Returns {slotIndex, stolenNoteID}. stolenNoteID is -1 if no note was active in that slot.
+  std::pair<int, int32_t> allocate(int32_t noteID) {
+    // Round-robin: pick the inactive slot with the lowest allocateCounter
+    // (= least recently used channel), cycling evenly through all slots.
+    int best = -1;
     for (int i = 0; i < kSlots; ++i) {
       if (!slots[(size_t)i].active) {
-        assign(i, noteID);
-        return i;
+        if (best == -1 ||
+            slots[(size_t)i].allocateCounter <
+                slots[(size_t)best].allocateCounter) {
+          best = i;
+        }
       }
     }
-    // All active: steal slot released longest ago (lowest counter).
+    if (best != -1) {
+      assign(best, noteID);
+      return {best, -1};
+    }
+    // All active: steal the slot allocated earliest (lowest allocateCounter).
     int oldest = 0;
     for (int i = 1; i < kSlots; ++i) {
-      if (slots[(size_t)i].releaseCounter < slots[(size_t)oldest].releaseCounter) {
+      if (slots[(size_t)i].allocateCounter <
+          slots[(size_t)oldest].allocateCounter) {
         oldest = i;
       }
     }
+    int32_t stolenNoteID = slots[(size_t)oldest].noteID;
     assign(oldest, noteID);
-    return oldest;
+    return {oldest, stolenNoteID};
   }
 
   void release(int32_t noteID) {
     for (auto& s : slots) {
       if (s.noteID == noteID) {
         s.active = false;
-        s.releaseCounter = ++counter;
         return;
       }
     }
@@ -66,7 +76,9 @@ struct MicrotoneChannelAllocator {
 
  private:
   void assign(int i, int32_t noteID) {
-    slots[(size_t)i] = {true, noteID, 0};
+    slots[(size_t)i].active = true;
+    slots[(size_t)i].noteID = noteID;
+    slots[(size_t)i].allocateCounter = ++counter;
   }
 };
 
