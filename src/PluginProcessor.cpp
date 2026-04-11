@@ -6,6 +6,7 @@
 #include "MacroParameter.h"
 #include "MidiOutNode/MidiOutNode.h"
 #include "PluginEditor.h"
+#include "Tuning/ScalaParser.h"
 
 namespace FactoryPatches {
 extern const char *getNamedResource(const char *name, int &size);
@@ -272,17 +273,41 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
       void addNoteExpression(int channel, int noteNumber,
                              NoteExpressionType type, float value,
                              int sampleOffset, int32_t /*noteID*/) override {
+        int ch1 = channel + 1;
         switch (type) {
           case NoteExpressionType::Pressure:
             buffer.addEvent(juce::MidiMessage::aftertouchChange(
-                                channel + 1, noteNumber, (int)(value * 127.0f)),
+                                ch1, noteNumber, (int)(value * 127.0f)),
                             sampleOffset);
             break;
           case NoteExpressionType::Brightness:
-            buffer.addEvent(juce::MidiMessage::controllerEvent(
-                                channel + 1, 74, (int)(value * 127.0f)),
+            buffer.addEvent(
+                juce::MidiMessage::controllerEvent(ch1, 74,
+                                                   (int)(value * 127.0f)),
+                sampleOffset);
+            break;
+          case NoteExpressionType::Tuning: {
+            // Set pitch bend range to ±48 semitones via RPN, then send the
+            // pitch wheel. value is in semitones.
+            buffer.addEvent(
+                juce::MidiMessage::controllerEvent(ch1, 101, 0), sampleOffset);
+            buffer.addEvent(
+                juce::MidiMessage::controllerEvent(ch1, 100, 0), sampleOffset);
+            buffer.addEvent(
+                juce::MidiMessage::controllerEvent(ch1, 6, 48), sampleOffset);
+            buffer.addEvent(
+                juce::MidiMessage::controllerEvent(ch1, 38, 0), sampleOffset);
+            // RPN null (deselect)
+            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 101, 127),
+                            sampleOffset);
+            buffer.addEvent(juce::MidiMessage::controllerEvent(ch1, 100, 127),
+                            sampleOffset);
+            int pb = 8192 + juce::roundToInt((value / 48.0f) * 8191.0f);
+            pb = juce::jlimit(0, 16383, pb);
+            buffer.addEvent(juce::MidiMessage::pitchWheel(ch1, pb),
                             sampleOffset);
             break;
+          }
           default:
             break;
         }
@@ -385,6 +410,13 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
     graphEngine.saveState(graphXml);
   }
 
+  // Save Tuning
+  {
+    auto *tuningXml = xmlRoot.createNewChildElement("Tuning");
+    tuningXml->setAttribute("scl", activeSclRelPath);
+    tuningXml->setAttribute("kbm", activeKbmRelPath);
+  }
+
   // Save Metadata
   auto *metaXml = xmlRoot.createNewChildElement("Metadata");
   if (currentPatchMetadata.author.isEmpty()) {
@@ -414,6 +446,39 @@ void ArpsEuclidyaProcessor::setStateInformation(const void *data,
   if (xmlState != nullptr && xmlState->hasTagName("ArpsEuclidyaState")) {
     loadFromXml(xmlState.get());
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Microtonality
+// ─────────────────────────────────────────────────────────────────────────────
+
+void ArpsEuclidyaProcessor::pushTuningToNodes() {
+  const TuningTable *ptr = activeTuning.isIdentity() ? nullptr : &activeTuning;
+  for (auto *node : graphEngine.getMidiOutNodes()) {
+    node->setActiveTuning(ptr);
+  }
+}
+
+void ArpsEuclidyaProcessor::setActiveTuning(const juce::File &sclFile,
+                                             const juce::File &kbmFile) {
+  activeTuning = ScalaParser::parse(sclFile, kbmFile);
+
+  // Store relative paths for serialization
+  juce::File tuningDir =
+      AppSettings::getInstance().getResolvedTuningLibraryDir();
+  activeSclRelPath = sclFile.getRelativePathFrom(tuningDir);
+  activeKbmRelPath =
+      kbmFile.existsAsFile() ? kbmFile.getRelativePathFrom(tuningDir)
+                              : juce::String();
+
+  pushTuningToNodes();
+}
+
+void ArpsEuclidyaProcessor::clearActiveTuning() {
+  activeTuning = TuningTable{};
+  activeSclRelPath.clear();
+  activeKbmRelPath.clear();
+  pushTuningToNodes();
 }
 
 bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
@@ -446,6 +511,13 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   {
     const juce::ScopedLock sl(graphLock);
     graphEngine.saveState(graphXml);
+  }
+
+  // Save Tuning
+  {
+    auto *tuningXml = xmlRoot.createNewChildElement("Tuning");
+    tuningXml->setAttribute("scl", activeSclRelPath);
+    tuningXml->setAttribute("kbm", activeKbmRelPath);
   }
 
   // Save Metadata
@@ -537,6 +609,9 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     }
     updateMacroNames();
 
+    // Re-push any active tuning to the freshly loaded nodes
+    pushTuningToNodes();
+
     if (auto *editor = getEditor()) {
       editor->rebuildCanvas();
     }
@@ -555,6 +630,30 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     currentPatchMetadata.modified = metaXml->getStringAttribute("modified");
   } else {
     currentPatchMetadata = PatchMetadata();
+  }
+
+  // Restore Tuning
+  restoreTuningFromXml(xmlState);
+}
+
+void ArpsEuclidyaProcessor::restoreTuningFromXml(juce::XmlElement *xmlState) {
+  clearActiveTuning();
+  auto *tuningXml = xmlState->getChildByName("Tuning");
+  if (tuningXml == nullptr) { return; }
+
+  juce::String sclRel = tuningXml->getStringAttribute("scl");
+  juce::String kbmRel = tuningXml->getStringAttribute("kbm");
+  if (sclRel.isEmpty()) { return; }
+
+  juce::File tuningDir =
+      AppSettings::getInstance().getResolvedTuningLibraryDir();
+  juce::File sclFile = tuningDir.getChildFile(sclRel);
+  juce::File kbmFile =
+      kbmRel.isNotEmpty() ? tuningDir.getChildFile(kbmRel) : juce::File{};
+  if (sclFile.existsAsFile()) {
+    setActiveTuning(sclFile, kbmFile);
+  } else {
+    DBG("PluginProcessor: tuning file not found: " + sclFile.getFullPathName());
   }
 }
 

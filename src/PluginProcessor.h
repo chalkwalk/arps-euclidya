@@ -32,6 +32,7 @@ class ArpsEuclidyaEditor;
 #include "ClockManager.h"
 #include "GraphEngine.h"
 #include "NoteExpressionManager.h"
+#include "Tuning/TuningTable.h"
 
 struct OutboundClapEvent {
   enum class Type { NoteOn, NoteOff, NoteExpression };
@@ -142,6 +143,15 @@ class ArpsEuclidyaProcessor
   bool savePatch(const juce::File &file);
   bool loadPatch(const juce::File &file);
 
+  // Microtonality: parse sclFile+kbmFile and distribute to all MidiOutNodes.
+  // Pass an invalid kbmFile to use the default mapping.
+  void setActiveTuning(const juce::File &sclFile,
+                       const juce::File &kbmFile = {});
+  void clearActiveTuning();
+  [[nodiscard]] juce::String getActiveTuningName() const {
+    return activeTuning.isIdentity() ? juce::String() : activeTuning.name;
+  }
+
   void addNode(const std::shared_ptr<GraphNode> &node);
   void removeNode(GraphNode *node);
 
@@ -164,6 +174,13 @@ class ArpsEuclidyaProcessor
   static void upgradePatch(juce::XmlElement *xml, int fromVersion);
   static juce::AudioProcessorValueTreeState::ParameterLayout
   createParameterLayout();
+
+  void pushTuningToNodes();
+  void restoreTuningFromXml(juce::XmlElement *xmlState);
+
+  TuningTable activeTuning;
+  juce::String activeSclRelPath;
+  juce::String activeKbmRelPath;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArpsEuclidyaProcessor)
 };

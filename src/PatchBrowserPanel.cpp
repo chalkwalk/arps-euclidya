@@ -291,6 +291,7 @@ void PatchBrowserPanel::toggleBrowser() {
 
   if (auto *parent = getParentComponent()) {
     parent->resized();
+    parent->repaint();
   }
   repaint();
 }

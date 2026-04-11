@@ -5,10 +5,70 @@
 
 #include <array>
 #include <atomic>
+#include <cstdint>
 
 #include "../ClockManager.h"
 #include "../GraphNode.h"
 #include "../NoteExpressionManager.h"
+#include "../Tuning/TuningTable.h"
+
+// Allocates MIDI channels 2-16 (stored as 0-indexed slots 0-14) for
+// per-note microtonal pitch bend.  Picks the slot that was released
+// earliest; if all slots are still active it steals the one with the
+// lowest release-counter (= has been ringing the longest without a
+// fresh allocation).
+struct MicrotoneChannelAllocator {
+  static constexpr int kSlots = 15;
+
+  struct Slot {
+    bool active = false;
+    int32_t noteID = -1;
+    int64_t releaseCounter = 0;
+  };
+
+  std::array<Slot, kSlots> slots{};
+  int64_t counter = 0;
+
+  // Returns a 0-indexed slot (add 1 to get the value passed to the collector,
+  // which adds another 1 for 1-based MIDI, yielding channels 2-16).
+  int allocate(int32_t noteID) {
+    for (int i = 0; i < kSlots; ++i) {
+      if (!slots[(size_t)i].active) {
+        assign(i, noteID);
+        return i;
+      }
+    }
+    // All active: steal slot released longest ago (lowest counter).
+    int oldest = 0;
+    for (int i = 1; i < kSlots; ++i) {
+      if (slots[(size_t)i].releaseCounter < slots[(size_t)oldest].releaseCounter) {
+        oldest = i;
+      }
+    }
+    assign(oldest, noteID);
+    return oldest;
+  }
+
+  void release(int32_t noteID) {
+    for (auto& s : slots) {
+      if (s.noteID == noteID) {
+        s.active = false;
+        s.releaseCounter = ++counter;
+        return;
+      }
+    }
+  }
+
+  void reset() {
+    slots = {};
+    counter = 0;
+  }
+
+ private:
+  void assign(int i, int32_t noteID) {
+    slots[(size_t)i] = {true, noteID, 0};
+  }
+};
 
 class MidiOutNode : public GraphNode {
  public:
@@ -85,6 +145,15 @@ class MidiOutNode : public GraphNode {
   int clockDivisionIndex = 5;  // Index into division table (default: 1/8)
   bool triplet = false;        // Triplet modifier
   int outputChannel = 0;       // Output MIDI channel (0-15)
+
+  // Microtonality: set by PluginProcessor; nullptr = 12-TET (no pitch bend).
+  // Pointer is non-owning; the TuningTable is owned by PluginProcessor.
+  void setActiveTuning(const TuningTable* t) {
+    activeTuning = t;
+    mptAllocator.reset();
+  }
+  const TuningTable* activeTuning = nullptr;
+  MicrotoneChannelAllocator mptAllocator;
 
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;

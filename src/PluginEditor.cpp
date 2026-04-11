@@ -7,6 +7,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     : AudioProcessorEditor(p),
       audioProcessor(p),
       patchBrowser(p, patchLibrary),
+      tuningPanel(p, tuningLibrary),
       midiKeyboard(p.keyboardState,
                    juce::MidiKeyboardComponent::horizontalKeyboard) {
   // Apply custom Neon styling entirely
@@ -78,6 +79,7 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
   };
 
   addAndMakeVisible(patchBrowser);
+  addAndMakeVisible(tuningPanel);
 
   // Standalone Transport (Only if running as standalone app)
   if (juce::PluginHostType::getPluginLoadedAs() ==
@@ -274,6 +276,9 @@ void ArpsEuclidyaEditor::timerCallback() {
 
   // Check for large sequences and update warning banner
   graphCanvas->checkForLargeSequences();
+
+  // Keep tuning panel name in sync (handles DAW state restore)
+  tuningPanel.refreshTuningName();
 }
 
 void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
@@ -282,16 +287,21 @@ void ArpsEuclidyaEditor::paint(juce::Graphics &g) {
   }
   g.fillRect(macroBar.getBounds());
   g.fillRect(patchBrowser.getBounds());
+  g.fillRect(tuningPanel.getBounds());
 }
 
 void ArpsEuclidyaEditor::resized() {
   auto bounds = getLocalBounds();
 
-  // Patch Browser (height is 40 when collapsed, 400 when browser is open)
-  int patchHeight =
-      patchBrowser.getHeight() > 0 ? patchBrowser.getHeight() : 40;
-  auto patchBounds = bounds.removeFromTop(patchHeight);
-  patchBrowser.setBounds(patchBounds);
+  // Top bar: patch browser (left) + tuning panel (right 220px).
+  // Height follows whichever panel is tallest (they expand independently).
+  int topHeight = std::max(patchBrowser.getPreferredHeight(),
+                           tuningPanel.getPreferredHeight());
+  auto topStrip = bounds.removeFromTop(topHeight);
+
+  auto tuningBounds = topStrip.removeFromRight(220);
+  patchBrowser.setBounds(topStrip);
+  tuningPanel.setBounds(tuningBounds);
 
   // Standalone Transport Bar (only layout if present)
   if (transportBar != nullptr) {

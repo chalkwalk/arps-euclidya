@@ -56,6 +56,19 @@ juce::File AppSettings::getResolvedPatchLibraryDir() {
   return baseDir.getChildFile("Patches");
 }
 
+juce::File AppSettings::getResolvedTuningLibraryDir() {
+  juce::String customRoot = getPatchLibraryRoot();
+  if (customRoot.isNotEmpty() && juce::File(customRoot).isDirectory()) {
+    return juce::File(customRoot).getChildFile("Tunings");
+  }
+
+  juce::File appDataDir =
+      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+  juce::File baseDir =
+      appDataDir.getChildFile("ChalkWalkMusic").getChildFile("Arps Euclidya");
+  return baseDir.getChildFile("Tunings");
+}
+
 bool AppSettings::getIgnoreMpeMasterPressure() {
   return propertiesFile->getBoolValue("ignoreMpeMasterPressure", false);
 }

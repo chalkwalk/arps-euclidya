@@ -12,6 +12,7 @@
 #include "PatchBrowserPanel.h"
 #include "PluginProcessor.h"
 #include "TransportBar.h"
+#include "Tuning/TuningPanel.h"
 
 class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
                            public juce::DragAndDropContainer,
@@ -43,6 +44,10 @@ class ArpsEuclidyaEditor : public juce::AudioProcessorEditor,
   // Patch Management
   PatchLibrary patchLibrary;
   PatchBrowserPanel patchBrowser;
+
+  // Tuning
+  TuningLibrary tuningLibrary;
+  TuningPanel tuningPanel;
 
   // Graph canvas
   std::unique_ptr<GraphCanvas> graphCanvas;

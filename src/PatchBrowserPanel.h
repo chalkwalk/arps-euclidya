@@ -21,6 +21,8 @@ class PatchBrowserPanel : public juce::Component, public juce::ListBoxModel {
   // Call after loading a patch externally (e.g. from state restore)
   void refreshPatchName();
 
+  [[nodiscard]] int getPreferredHeight() const { return isBrowserOpen ? 400 : 40; }
+
  private:
   void toggleBrowser();
   void updateList();

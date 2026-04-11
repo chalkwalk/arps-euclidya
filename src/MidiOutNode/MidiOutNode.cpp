@@ -120,6 +120,9 @@ void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
       if (it->remainingSamples <= numSamples) {
         // Send NoteOff at the scheduled time within this block
         int offPos = std::max(0, it->remainingSamples);
+        if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+          mptAllocator.release(it->noteID);
+        }
         collector.addNoteOff(it->channel, it->noteNumber, 0.0f, offPos,
                              it->noteID);
         it = playingNotes.erase(it);
@@ -128,6 +131,9 @@ void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
       it->remainingSamples -= numSamples;
     } else {
       // Legacy behavior or absolute flush (e.g. on stop)
+      if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+        mptAllocator.release(it->noteID);
+      }
       collector.addNoteOff(it->channel, it->noteNumber, 0.0f, 0, it->noteID);
       it = playingNotes.erase(it);
       continue;
@@ -449,11 +455,25 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
         int finalSamplePos = std::clamp(tJitter, 0, numSamples - 1);
 
-        collector.addNoteOn(outputChannel, noteTrigger.noteNumber,
-                            finalVelocity, finalSamplePos, outNoteID);
+        int usedChannel = outputChannel;
 
-        playingNotes.push_back({outputChannel, noteTrigger.noteNumber,
-                                outNoteID, duration - finalSamplePos});
+        if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+          int slot = mptAllocator.allocate(outNoteID);
+          usedChannel = slot + 1;  // 0-indexed slot → 1-indexed, collector adds
+                                   // 1 more → MIDI channels 2-16
+          float semitones =
+              activeTuning->centsDeviation[(size_t)noteTrigger.noteNumber] /
+              100.0f;
+          collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
+                                      NoteExpressionType::Tuning, semitones,
+                                      finalSamplePos, outNoteID);
+        }
+
+        collector.addNoteOn(usedChannel, noteTrigger.noteNumber, finalVelocity,
+                            finalSamplePos, outNoteID);
+
+        playingNotes.push_back({usedChannel, noteTrigger.noteNumber, outNoteID,
+                                duration - finalSamplePos});
       }
     }
 

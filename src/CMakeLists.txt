@@ -50,6 +50,9 @@ target_sources(ArpsEuclidya
         PatchBrowserPanel.cpp
         PluginEditor.cpp
         PluginProcessor.cpp
+        Tuning/ScalaParser.cpp
+        Tuning/TuningLibrary.cpp
+        Tuning/TuningPanel.cpp
         QuantizerNode/QuantizerNode.cpp
         ReverseNode/ReverseNode.cpp
         RouteNode/RouteNode.cpp
@@ -100,6 +103,15 @@ juce_add_binary_data(FactoryPatchData NAMESPACE FactoryPatches SOURCES
     ../patches/Factory/Tutorial/Tutorial_5.euclidya
     ../patches/Factory/Tutorial/Tutorial_6.euclidya)
 
+juce_add_binary_data(FactoryTuningData NAMESPACE FactoryTunings SOURCES
+    ../patches/FactoryTunings/19-tet.scl
+    ../patches/FactoryTunings/22-tet.scl
+    ../patches/FactoryTunings/31-tet.scl
+    ../patches/FactoryTunings/53-tet.scl
+    ../patches/FactoryTunings/pythagorean.scl
+    ../patches/FactoryTunings/meantone_qc.scl
+    ../patches/FactoryTunings/ji_5limit.scl)
+
 clap_juce_extensions_plugin(TARGET ArpsEuclidya CLAP_ID "com.ChalkWalkMusic.ArpsEuclidya" CLAP_FEATURES "note-effect" "tool")
 
 target_compile_definitions(ArpsEuclidya
@@ -112,6 +124,7 @@ target_link_libraries(ArpsEuclidya
     PRIVATE
         NodeLayoutData
         FactoryPatchData
+        FactoryTuningData
         juce::juce_audio_utils
         juce::juce_audio_plugin_client
         juce::juce_opengl
