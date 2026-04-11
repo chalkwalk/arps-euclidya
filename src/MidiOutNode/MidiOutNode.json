@@ -2,7 +2,7 @@
     "gridWidth": 4,
     "gridHeight": 3,
     "extendedGridWidth": 4,
-    "extendedGridHeight": 4,
+    "extendedGridHeight": 5,
     "elements": [
         {
             "type": "Label",
@@ -401,6 +401,40 @@
                 76,
                 9,
                 4
+            ]
+        },
+        {
+            "type": "Label",
+            "label": "Pass Expr",
+            "gridBounds": [
+                22,
+                82,
+                14,
+                4
+            ]
+        },
+        {
+            "type": "Toggle",
+            "label": "passExpressions",
+            "gridBounds": [
+                22,
+                86,
+                14,
+                7
+            ]
+        },
+        {
+            "type": "ComboBox",
+            "label": "channelMode",
+            "options": [
+                "Fixed",
+                "Round Robin"
+            ],
+            "gridBounds": [
+                36,
+                86,
+                28,
+                7
             ]
         }
     ]

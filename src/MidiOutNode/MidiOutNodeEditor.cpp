@@ -83,6 +83,10 @@ NodeLayout MidiOutNode::getLayout() const {
         el.valueRef = &self->ui_rhythmResetOnRelease;
       } else if (el.label == "outputChannel") {
         el.valueRef = &self->outputChannel;
+      } else if (el.label == "channelMode") {
+        el.valueRef = &self->channelMode;
+      } else if (el.label == "passExpressions") {
+        el.valueRef = &self->ui_passExpressions;
       } else if (el.label == "humTiming") {
         el.floatValueRef = &self->humTiming;
         el.macroParamRef = &self->macroHumTiming;

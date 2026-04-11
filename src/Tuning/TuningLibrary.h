@@ -36,7 +36,7 @@ class TuningLibrary {
   static juce::File getUserTuningDirectory();
 
  private:
-  static constexpr const char* kFactoryTuningVersion = "1.0";
+  static constexpr const char* kFactoryTuningVersion = "1.2";
 
   [[nodiscard]] static bool installFactoryTunings();
 

@@ -101,6 +101,7 @@ void MidiOutNode::clampParameters() {
   patternResetOnRelease = (ui_patternResetOnRelease != 0);
   rhythmResetOnRelease = (ui_rhythmResetOnRelease != 0);
   triplet = (ui_triplet != 0);
+  passExpressions = (ui_passExpressions != 0);
 
   ui_pBeatsMin = 1;
   ui_pBeatsMax = pSteps;
@@ -115,12 +116,16 @@ void MidiOutNode::clampParameters() {
 
 void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
                                     int numSamples) {
+  const bool usePerNoteChannels =
+      (channelMode == 1) ||
+      (activeTuning != nullptr && !activeTuning->isIdentity());
+
   for (auto it = playingNotes.begin(); it != playingNotes.end();) {
     if (it->remainingSamples != -1) {
       if (it->remainingSamples <= numSamples) {
         // Send NoteOff at the scheduled time within this block
         int offPos = std::max(0, it->remainingSamples);
-        if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+        if (usePerNoteChannels) {
           mptAllocator.release(it->noteID);
         }
         collector.addNoteOff(it->channel, it->noteNumber, 0.0f, offPos,
@@ -131,7 +136,7 @@ void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
       it->remainingSamples -= numSamples;
     } else {
       // Legacy behavior or absolute flush (e.g. on stop)
-      if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+      if (usePerNoteChannels) {
         mptAllocator.release(it->noteID);
       }
       collector.addNoteOff(it->channel, it->noteNumber, 0.0f, 0, it->noteID);
@@ -457,16 +462,46 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
         int usedChannel = outputChannel;
 
-        if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+        const bool usePerNoteChannels =
+            (channelMode == 1) ||
+            (activeTuning != nullptr && !activeTuning->isIdentity());
+
+        if (usePerNoteChannels) {
           int slot = mptAllocator.allocate(outNoteID);
           usedChannel = slot + 1;  // 0-indexed slot → 1-indexed, collector adds
                                    // 1 more → MIDI channels 2-16
-          float semitones =
+        }
+
+        // ── Combined pitch bend: microtone offset + input pitch bend ──
+        float tuningOffsetSemitones = 0.0f;
+        if (activeTuning != nullptr && !activeTuning->isIdentity()) {
+          tuningOffsetSemitones =
               activeTuning->centsDeviation[(size_t)noteTrigger.noteNumber] /
               100.0f;
+        }
+        float inputBendSemitones =
+            passExpressions ? (noteTrigger.mpeX * 48.0f) : 0.0f;
+        float totalPitchBend = tuningOffsetSemitones + inputBendSemitones;
+        if (totalPitchBend != 0.0f) {
           collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
-                                      NoteExpressionType::Tuning, semitones,
+                                      NoteExpressionType::Tuning, totalPitchBend,
                                       finalSamplePos, outNoteID);
+        }
+
+        // ── Pressure and timbre pass-through ──
+        if (passExpressions) {
+          if (currentPressure > 0.001f) {
+            collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
+                                        NoteExpressionType::Pressure,
+                                        currentPressure, finalSamplePos,
+                                        outNoteID);
+          }
+          if (currentTimbre > 0.001f) {
+            collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
+                                        NoteExpressionType::Brightness,
+                                        currentTimbre, finalSamplePos,
+                                        outNoteID);
+          }
         }
 
         collector.addNoteOn(usedChannel, noteTrigger.noteNumber, finalVelocity,
@@ -562,6 +597,8 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
 
     xml->setAttribute("pressureToVelocity", pressureToVelocity);
     xml->setAttribute("timbreToVelocity", timbreToVelocity);
+    xml->setAttribute("passExpressions", passExpressions ? 1 : 0);
+    xml->setAttribute("channelMode", channelMode);
 
     xml->setAttribute("humTiming", humTiming);
     xml->setAttribute("humVelocity", humVelocity);
@@ -599,6 +636,8 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
 
     pressureToVelocity = xml->getDoubleAttribute("pressureToVelocity", 0.0);
     timbreToVelocity = xml->getDoubleAttribute("timbreToVelocity", 0.0);
+    passExpressions = xml->getIntAttribute("passExpressions", 0) != 0;
+    channelMode = xml->getIntAttribute("channelMode", 0);
     humTiming = static_cast<float>(xml->getDoubleAttribute("humTiming", 0.0));
     humVelocity =
         static_cast<float>(xml->getDoubleAttribute("humVelocity", 0.0));
@@ -636,6 +675,7 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     ui_patternResetOnRelease = patternResetOnRelease ? 1 : 0;
     ui_rhythmResetOnRelease = rhythmResetOnRelease ? 1 : 0;
     ui_triplet = triplet ? 1 : 0;
+    ui_passExpressions = passExpressions ? 1 : 0;
   }
 }
 

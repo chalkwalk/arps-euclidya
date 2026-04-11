@@ -157,6 +157,8 @@ class MidiOutNode : public GraphNode {
 
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;
+  bool passExpressions = false;  // forward mpeX/Y/Z as expressions at trigger
+  int channelMode = 0;           // 0 = Fixed (outputChannel), 1 = Round-Robin
 
   float humTiming = 0.0f;
   float humVelocity = 0.0f;
@@ -174,6 +176,7 @@ class MidiOutNode : public GraphNode {
   int ui_patternResetOnRelease = 1;
   int ui_rhythmResetOnRelease = 1;
   int ui_triplet = 0;
+  int ui_passExpressions = 0;
 
   int ui_pBeatsMin = 1;
   int ui_pBeatsMax = 32;
