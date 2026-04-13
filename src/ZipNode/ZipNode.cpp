@@ -28,17 +28,35 @@ void ZipNode::process() {
       }
     }
 
-    std::sort(step.begin(), step.end(),
+    // Merge notes with the same pitch. When two notes' MpeConditions can be
+    // hulled (all axes touch or overlap), replace both with the single hulled
+    // note. When any axis is truly disjoint, keep both — they will
+    // independently fire or rest at playback time based on their conditions.
+    std::vector<HeldNote> merged;
+    merged.reserve(step.size());
+    for (const auto &note : step) {
+      bool absorbed = false;
+      for (auto &m : merged) {
+        if (m.noteNumber == note.noteNumber) {
+          MpeCondition hulled;
+          if (MpeCondition::tryHull(m.mpeCondition, note.mpeCondition,
+                                    hulled)) {
+            m.mpeCondition = hulled;
+            absorbed = true;
+            break;
+          }
+        }
+      }
+      if (!absorbed) {
+        merged.push_back(note);
+      }
+    }
+
+    std::sort(merged.begin(), merged.end(),
               [](const HeldNote &a, const HeldNote &b) {
                 return a.noteNumber < b.noteNumber;
               });
-    auto last = std::unique(step.begin(), step.end(),
-                            [](const HeldNote &a, const HeldNote &b) {
-                              return a.noteNumber == b.noteNumber;
-                            });
-    step.erase(last, step.end());
-
-    outSeq.push_back(step);
+    outSeq.push_back(merged);
   }
 
   outputSequences[0] = outSeq;

@@ -234,9 +234,14 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
   if (!isClapProtocol) {
     noteExpressionManager.processMidi(midiMessages);
-  } else if (!hasLoggedClapProtocol) {
-    logMidiEvent(25, 0, 0, 0.0f);  // Type 25 = CLAP Detected
-    hasLoggedClapProtocol = true;
+  } else {
+    // In CLAP mode processMidi is not called, so pressure smoothing must be
+    // ticked explicitly once per buffer to keep getMpeZ current.
+    noteExpressionManager.tickPressureSmoothing();
+    if (!hasLoggedClapProtocol) {
+      logMidiEvent(25, 0, 0, 0.0f);  // Type 25 = CLAP Detected
+      hasLoggedClapProtocol = true;
+    }
   }
 
   {

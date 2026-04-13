@@ -45,6 +45,13 @@ class NoteExpressionManager : private juce::MPEInstrument::Listener {
   }
   bool getIgnoreMpeMasterPressure() const { return ignoreMpeMasterPressure; }
 
+  // Call once per audio buffer in CLAP mode to keep smoothedPressure current.
+  // In MIDI mode this is driven automatically by processMidi().
+  void tickPressureSmoothing() {
+    std::lock_guard<std::recursive_mutex> lock(stateMutex);
+    updatePressureSmoothing();
+  }
+
  private:
   void noteAdded(juce::MPENote newNote) override;
   void noteReleased(juce::MPENote finishedNote) override;

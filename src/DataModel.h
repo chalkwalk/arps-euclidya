@@ -56,6 +56,24 @@ struct MpeCondition {
     return xMin == 0.f && xMax == 1.f && yMin == 0.f && yMax == 1.f &&
            zMin == 0.f && zMax == 1.f;
   }
+
+  // Attempt to hull two conditions into one. Succeeds when every axis has a
+  // non-empty intersection (ranges touch or overlap: lo1 <= hi2 && lo2 <= hi1).
+  // On success, writes the hull to 'out' and returns true.
+  // On failure (any axis is truly disjoint) returns false — keep both notes.
+  [[nodiscard]] static bool tryHull(const MpeCondition &a, const MpeCondition &b,
+                                    MpeCondition &out) {
+    if (a.xMin > b.xMax || b.xMin > a.xMax) { return false; }
+    if (a.yMin > b.yMax || b.yMin > a.yMax) { return false; }
+    if (a.zMin > b.zMax || b.zMin > a.zMax) { return false; }
+    out.xMin = std::min(a.xMin, b.xMin);
+    out.xMax = std::max(a.xMax, b.xMax);
+    out.yMin = std::min(a.yMin, b.yMin);
+    out.yMax = std::max(a.yMax, b.yMax);
+    out.zMin = std::min(a.zMin, b.zMin);
+    out.zMax = std::max(a.zMax, b.zMax);
+    return true;
+  }
 };
 
 struct HeldNote {

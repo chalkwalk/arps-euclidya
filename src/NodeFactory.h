@@ -15,6 +15,7 @@
 #include "GraphNode.h"
 #include "MidiInNode/MidiInNode.h"
 #include "MidiOutNode/MidiOutNode.h"
+#include "MpeFilterNode/MpeFilterNode.h"
 #include "MultiplyNode/MultiplyNode.h"
 #include "OctaveStackNode/OctaveStackNode.h"
 #include "OctaveTransposeNode/OctaveTransposeNode.h"
@@ -90,6 +91,8 @@ class NodeFactory {
       return std::make_shared<SwitchNode>();
     if (type == "Midi Out")
       return std::make_shared<MidiOutNode>(midiCtx, clockCtx);
+    if (type == "MPE Filter")
+      return std::make_shared<MpeFilterNode>();
     if (type == "Note")
       return std::make_shared<TextNoteNode>(2, 1);
     if (type == "Note Large")
@@ -102,13 +105,13 @@ class NodeFactory {
         "All Notes",   "Chord Split",  "ChordN",
         "Concatenate", "Converge",     "Diagnostic",
         "Diverge",     "Fold",         "Midi In",
-        "Midi Out",    "Multiply",     "Note",
-        "Note Large",  "Octave Stack", "Octave Transpose",
-        "Quantizer",   "Reverse",      "Route",
-        "Select",      "Sequence",     "Sort",
-        "Split",       "Switch",       "Transpose",
-        "Unfold",      "Unzip",        "Walk",
-        "Zip"};
+        "Midi Out",    "MPE Filter",   "Multiply",
+        "Note",        "Note Large",   "Octave Stack",
+        "Octave Transpose", "Quantizer", "Reverse",
+        "Route",       "Select",       "Sequence",
+        "Sort",        "Split",        "Switch",
+        "Transpose",   "Unfold",       "Unzip",
+        "Walk",        "Zip"};
     std::sort(types.begin(), types.end());
     return types;
   }
@@ -144,6 +147,10 @@ class NodeFactory {
     } else if (type == "Diagnostic") {
       m.gridW = 3;
       m.gridH = 2;
+    } else if (type == "MPE Filter") {
+      m.gridW = 2;
+      m.gridH = 1;
+      m.numOut = 2;
     } else if (type == "Fold" || type == "Quantizer" || type == "Split" ||
                type == "Walk" || type == "Unfold") {
       m.gridW = 2;
