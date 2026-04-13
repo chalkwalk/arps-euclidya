@@ -75,7 +75,7 @@
     },
     {
       "type": "Label",
-      "label": "Mode",
+      "label": "Snap",
       "gridBounds": [
         0,
         27,
@@ -95,7 +95,7 @@
     },
     {
       "type": "Label",
-      "label": "Rest",
+      "label": "Rests",
       "gridBounds": [
         0,
         40,

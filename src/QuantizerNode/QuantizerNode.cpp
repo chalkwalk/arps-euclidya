@@ -27,8 +27,8 @@ const std::vector<std::vector<int>> SCALES = {
 // --- QuantizerNode Impl
 
 QuantizerNode::QuantizerNode() {
-  macroMode.name = "Quant Mode";
-  macroRestOnDrop.name = "Quant Rest";
+  macroMode.name = "Quant Snap";
+  macroRestOnDrop.name = "Quant Rests";
   addMacroParam(&macroMode);
   addMacroParam(&macroRestOnDrop);
 }
