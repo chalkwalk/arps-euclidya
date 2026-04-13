@@ -61,9 +61,7 @@ void OctaveTransposeNode::process() {
           outStep.push_back(transposed);
         }
       }
-      if (!outStep.empty()) {
-        outSeq.push_back(outStep);
-      }
+      outSeq.push_back(outStep);  // preserve rests (empty steps)
     }
     outputSequences[0] = outSeq;
   }

@@ -74,9 +74,7 @@ void OctaveStackNode::process() {
             }
           }
         }
-        if (!outStep.empty()) {
-          outSeq.push_back(outStep);
-        }
+        outSeq.push_back(outStep);  // preserve rests (empty steps)
       }
     }
 
