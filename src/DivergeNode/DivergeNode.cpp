@@ -31,11 +31,11 @@ void DivergeNode::process() {
     int e = (int)steps.size() / 2;
 
     while (s >= 0 || e < (int)steps.size()) {
-      if (s >= 0 && !steps[(size_t)s].empty()) {
-        sortedSeq.push_back(steps[(size_t)s]);
+      if (s >= 0) {
+        sortedSeq.push_back(steps[(size_t)s]);  // preserve rests
       }
-      if (s != e && e < (int)steps.size() && !steps[(size_t)e].empty()) {
-        sortedSeq.push_back(steps[(size_t)e]);
+      if (s != e && e < (int)steps.size()) {
+        sortedSeq.push_back(steps[(size_t)e]);  // preserve rests
       }
       s--;
       e++;

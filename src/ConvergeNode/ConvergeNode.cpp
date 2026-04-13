@@ -30,11 +30,9 @@ void ConvergeNode::process() {
     int s = 0;
     int e = (int)steps.size() - 1;
     while (s <= e) {
-      if (!steps[(size_t)s].empty()) {
-        sortedSeq.push_back(steps[(size_t)s]);
-      }
-      if (s != e && !steps[(size_t)e].empty()) {
-        sortedSeq.push_back(steps[(size_t)e]);
+      sortedSeq.push_back(steps[(size_t)s]);  // preserve rests
+      if (s != e) {
+        sortedSeq.push_back(steps[(size_t)e]);  // preserve rests
       }
       s++;
       e--;
