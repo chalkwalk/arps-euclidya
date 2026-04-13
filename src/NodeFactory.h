@@ -141,8 +141,11 @@ class NodeFactory {
       m.gridW = 4;
       m.gridH = 2;
       m.numIn = 0;
-    } else if (type == "Diagnostic" || type == "Fold" || type == "Quantizer" ||
-               type == "Split" || type == "Walk" || type == "Unfold") {
+    } else if (type == "Diagnostic") {
+      m.gridW = 3;
+      m.gridH = 2;
+    } else if (type == "Fold" || type == "Quantizer" || type == "Split" ||
+               type == "Walk" || type == "Unfold") {
       m.gridW = 2;
       m.gridH = 2;
       if (type == "Split")

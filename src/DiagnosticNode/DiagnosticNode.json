@@ -1,5 +1,5 @@
 {
-  "gridWidth": 2,
+  "gridWidth": 3,
   "gridHeight": 2,
   "elements": [
     {
@@ -8,7 +8,7 @@
       "gridBounds": [
         0,
         0,
-        40,
+        60,
         40
       ]
     }

@@ -2,6 +2,52 @@
 
 #include "../LayoutParser.h"
 #include "BinaryData.h"
+
+// Returns a compact string for non-passthrough MPE conditions, e.g.
+// "X≥0% Y<30%". Returns empty string when all axes are passthrough.
+// X (Bend) uses bipolar ±% display: 0.5=0%, 0.0=-100%, 1.0=+100%.
+// Y and Z use unipolar 0-100%.
+static juce::String getMpeConditionString(const MpeCondition &c) {
+  juce::String s;
+  auto appendAxis = [&](char axis, float lo, float hi, bool bipolar) {
+    if (lo == 0.f && hi == 1.f) {
+      return;  // passthrough, skip
+    }
+    if (!s.isEmpty()) {
+      s << " ";
+    }
+    if (lo > hi) {
+      s << axis << "\xc3\xb8";  // ø — impossible range, always a rest
+      return;
+    }
+    if (bipolar) {
+      auto toDisp = [](float v) {
+        return juce::roundToInt((v - 0.5f) * 200.f);
+      };
+      if (hi >= 1.f) {
+        s << axis << "\xe2\x89\xa5" << toDisp(lo) << "%";  // ≥
+      } else if (lo <= 0.f) {
+        s << axis << "<" << toDisp(hi) << "%";
+      } else {
+        s << axis << ":" << toDisp(lo) << "%-" << toDisp(hi) << "%";
+      }
+    } else {
+      auto toDisp = [](float v) { return juce::roundToInt(v * 100.f); };
+      if (hi >= 1.f) {
+        s << axis << "\xe2\x89\xa5" << toDisp(lo) << "%";  // ≥
+      } else if (lo <= 0.f) {
+        s << axis << "<" << toDisp(hi) << "%";
+      } else {
+        s << axis << ":" << toDisp(lo) << "%-" << toDisp(hi) << "%";
+      }
+    }
+  };
+  appendAxis('X', c.xMin, c.xMax, true);
+  appendAxis('Y', c.yMin, c.yMax, false);
+  appendAxis('Z', c.zMin, c.zMax, false);
+  return s;
+}
+
 class DiagnosticNodeCustomComponent : public juce::Component,
                                       public juce::ListBoxModel {
  public:
@@ -51,6 +97,10 @@ class DiagnosticNodeCustomComponent : public juce::Component,
         if (step[i].sourceNoteNumber != -1) {
           text << " (Src: " << step[i].sourceChannel << "."
                << getNoteName(step[i].sourceNoteNumber) << ")";
+        }
+        auto condStr = getMpeConditionString(step[i].mpeCondition);
+        if (condStr.isNotEmpty()) {
+          text << " {" << condStr << "}";
         }
         if (i < step.size() - 1) {
           text << ", ";
