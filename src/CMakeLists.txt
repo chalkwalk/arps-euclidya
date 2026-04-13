@@ -61,6 +61,7 @@ target_sources(ArpsEuclidya
         SettingsPanel.cpp
         SortNode/SortNode.cpp
         MpeFilterNode/MpeFilterNode.cpp
+        VelocityFilterNode/VelocityFilterNode.cpp
         SplitNode/SplitNode.cpp
         SwitchNode/SwitchNode.cpp
         TextNoteNode/TextNoteNode.cpp
@@ -93,6 +94,7 @@ juce_add_binary_data(NodeLayoutData SOURCES
     SwitchNode/SwitchNode.json
     TransposeNode/TransposeNode.json
     UnfoldNode/UnfoldNode.json
+    VelocityFilterNode/VelocityFilterNode.json
     WalkNode/WalkNode.json)
 
 juce_add_binary_data(FactoryPatchData NAMESPACE FactoryPatches SOURCES

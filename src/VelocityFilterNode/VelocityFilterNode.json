@@ -1,0 +1,19 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "RotarySlider",
+      "floatMin": 0.0,
+      "floatMax": 1.0,
+      "step": 0.01,
+      "gridBounds": [
+        5,
+        2,
+        10,
+        16
+      ],
+      "label": "threshold"
+    }
+  ]
+}
