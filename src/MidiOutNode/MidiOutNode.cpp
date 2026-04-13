@@ -402,6 +402,24 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       }
 
       for (const HeldNote &noteTrigger : step) {
+        // Evaluate MPE condition at playback time.
+        // isPassThrough() fast-exits for notes with no filter upstream.
+        if (!noteTrigger.mpeCondition.isPassThrough() &&
+            noteTrigger.sourceNoteNumber != -1) {
+          const float cx = noteExpressionManager.getMpeX(
+              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
+              noteTrigger.sourceNoteID);
+          const float cy = noteExpressionManager.getMpeY(
+              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
+              noteTrigger.sourceNoteID);
+          const float cz = noteExpressionManager.getMpeZ(
+              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
+              noteTrigger.sourceNoteID);
+          if (!noteTrigger.mpeCondition.passes(cx, cy, cz)) {
+            continue;  // condition not met — note becomes a rest this tick
+          }
+        }
+
         float currentPressure = 0.0f;
         float currentTimbre = 0.0f;
 
