@@ -24,3 +24,13 @@ For controllers like the LinnStrument, Roli Seaboard, or Erae Touch:
 
 > [!TIP]
 > If you notice that pressure on one key is affecting all other held notes, check your DAW's MIDI channel mapping. It is likely flattening your MPE data to Channel 1.
+
+## Using MPE Expression in the Graph
+
+Once MPE is enabled, the live per-note expression values (Bend, Timbre, Pressure) are available throughout the graph at playback time. The **MPE Filter Node** lets you branch sequence paths based on these values:
+
+- Choose an axis — **Bend** (X, ±100%), **Timbre** (Y, 0–100%), or **Pressure** (Z, 0–100%) — and set a threshold.
+- Output 0 (`≥`) fires notes whose live expression is at or above the threshold; Output 1 (`<`) fires those below.
+- Because the test is evaluated at the moment the note would play (not when the graph last computed), the routing responds dynamically to expression changes while notes are held.
+
+Multiple MPE Filter nodes can be chained to create sub-ranges. If you want notes to fire regardless of expression, use a **Zip Node** to re-merge the two outputs — when the same pitch arrives on both inputs with adjacent conditions, the Zip node automatically unions the ranges back to a full passthrough.
