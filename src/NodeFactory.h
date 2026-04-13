@@ -13,6 +13,7 @@
 #include "DivergeNode/DivergeNode.h"
 #include "FoldNode/FoldNode.h"
 #include "GraphNode.h"
+#include "InterleaveNode/InterleaveNode.h"
 #include "MidiInNode/MidiInNode.h"
 #include "MidiOutNode/MidiOutNode.h"
 #include "MpeFilterNode/MpeFilterNode.h"
@@ -96,6 +97,8 @@ class NodeFactory {
       return std::make_shared<MpeFilterNode>();
     if (type == "Velocity Filter")
       return std::make_shared<VelocityFilterNode>();
+    if (type == "Interleave")
+      return std::make_shared<InterleaveNode>();
     if (type == "Note")
       return std::make_shared<TextNoteNode>(2, 1);
     if (type == "Note Large")
@@ -114,7 +117,7 @@ class NodeFactory {
         "Route",          "Select",         "Sequence",
         "Sort",           "Split",          "Switch",
         "Transpose",      "Unfold",         "Unzip",
-        "Velocity Filter", "Walk",          "Zip"};
+        "Interleave",      "Velocity Filter", "Walk",          "Zip"};
     std::sort(types.begin(), types.end());
     return types;
   }
@@ -166,7 +169,8 @@ class NodeFactory {
         m.numOut = 2;
     } else if (type == "Chord Split" || type == "Diverge" || type == "Unzip") {
       m.numOut = 2;
-    } else if (type == "Converge" || type == "Zip" || type == "Concatenate") {
+    } else if (type == "Converge" || type == "Zip" || type == "Concatenate" ||
+               type == "Interleave") {
       m.numIn = 2;
     }
     return m;

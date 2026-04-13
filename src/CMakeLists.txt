@@ -60,6 +60,7 @@ target_sources(ArpsEuclidya
         SequenceNode/SequenceNode.cpp
         SettingsPanel.cpp
         SortNode/SortNode.cpp
+        InterleaveNode/InterleaveNode.cpp
         MpeFilterNode/MpeFilterNode.cpp
         VelocityFilterNode/VelocityFilterNode.cpp
         SplitNode/SplitNode.cpp
@@ -82,6 +83,7 @@ juce_add_binary_data(NodeLayoutData SOURCES
     FoldNode/FoldNode.json
     MidiInNode/MidiInNode.json
     MidiOutNode/MidiOutNode.json
+    InterleaveNode/InterleaveNode.json
     MpeFilterNode/MpeFilterNode.json
     MultiplyNode/MultiplyNode.json
     OctaveStackNode/OctaveStackNode.json

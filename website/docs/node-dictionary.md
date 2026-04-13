@@ -1,6 +1,6 @@
 # Node Dictionary
 
-The Arps Euclidya environment offers 27+ specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
+The Arps Euclidya environment offers 28+ specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
 
 ## Core I/O & Generation
 
@@ -25,6 +25,7 @@ The Arps Euclidya environment offers 27+ specialized nodes, broken down into fun
 - **Octave Stack Node `(Macros)`**: Duplicates the sequence pattern and stacks it at user-defined octave offsets, creating thick textures. Ensures no duplicate pitches are clustered. *(Inputs: 1, Outputs: 1)*
 - **Multiply Node `(Macros)`**: Stretches the sequence by repeating each step N times consecutively. *(Inputs: 1, Outputs: 1)*
 - **Concatenate Node**: Appends Sequence B to the end of Sequence A. Often used with a Sort and Reverse node to build a classic "Up/Down" arpeggiator. *(Inputs: 2, Outputs: 1)*
+- **Interleave Node**: Alternates steps from two inputs: A[0], B[0], A[1], B[1], … If the inputs differ in length, the shorter is padded with rests. Output length = 2 × max(len(A), len(B)). *(Inputs: 2, Outputs: 1)*
 - **Zip Node**: Zips two parallel sequences into a single sequence of chords. When the same pitch arrives on both inputs with compatible MPE conditions (e.g. the two outputs of an MPE Filter node re-joined), the conditions are automatically merged into their union range — so the note fires whenever either condition would have passed. *(Inputs: 2, Outputs: 1)*
 - **Unzip Node**: Unzips a sequence of chords into two separate mono lines (lowest to Port 0, highest to Port 1). *(Inputs: 1, Outputs: 2)*
 
