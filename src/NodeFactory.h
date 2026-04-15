@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include "AlgorithmicModulatorNode/AlgorithmicModulatorNode.h"
 #include "AllNotesNode/AllNotesNode.h"
 #include "ChordNNode/ChordNNode.h"
 #include "ChordSplitNode/ChordSplitNode.h"
@@ -41,6 +42,8 @@ class NodeFactory {
   static std::shared_ptr<GraphNode> createNode(const std::string &type,
                                                NoteExpressionManager &midiCtx,
                                                ClockManager &clockCtx) {
+    if (type == "CC Modulator")
+      return std::make_shared<AlgorithmicModulatorNode>();
     if (type == "Midi In")
       return std::make_shared<MidiInNode>(midiCtx);
     if (type == "Sort")
@@ -108,16 +111,17 @@ class NodeFactory {
 
   static std::vector<std::string> getAvailableNodeTypes() {
     std::vector<std::string> types = {
-        "All Notes",      "Chord Split",    "ChordN",
-        "Concatenate",    "Converge",       "Diagnostic",
-        "Diverge",        "Fold",           "Midi In",
-        "Midi Out",       "MPE Filter",     "Multiply",
-        "Note",           "Note Large",     "Octave Stack",
-        "Octave Transpose", "Quantizer",    "Reverse",
-        "Route",          "Select",         "Sequence",
-        "Sort",           "Split",          "Switch",
-        "Transpose",      "Unfold",         "Unzip",
-        "Interleave",      "Velocity Filter", "Walk",          "Zip"};
+        "All Notes",      "CC Modulator",   "Chord Split",
+        "ChordN",         "Concatenate",    "Converge",
+        "Diagnostic",     "Diverge",        "Fold",
+        "Midi In",        "Midi Out",       "MPE Filter",
+        "Multiply",       "Note",           "Note Large",
+        "Octave Stack",   "Octave Transpose", "Quantizer",
+        "Reverse",        "Route",          "Select",
+        "Sequence",       "Sort",           "Split",
+        "Switch",         "Transpose",      "Unfold",
+        "Unzip",          "Interleave",     "Velocity Filter",
+        "Walk",           "Zip"};
     std::sort(types.begin(), types.end());
     return types;
   }
@@ -128,7 +132,11 @@ class NodeFactory {
 
   static NodeMetadata getPreviewMetadata(const std::string &type) {
     NodeMetadata m;
-    if (type == "Note") {
+    if (type == "CC Modulator") {
+      m.gridW = 3;
+      m.gridH = 2;
+      m.numIn = 0;
+    } else if (type == "Note") {
       m.gridW = 2;
       m.gridH = 1;
       m.numIn = 0;

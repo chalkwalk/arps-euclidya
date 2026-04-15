@@ -58,6 +58,7 @@ target_sources(ArpsEuclidya
         RouteNode/RouteNode.cpp
         SelectNode/SelectNode.cpp
         SequenceNode/SequenceNode.cpp
+        AlgorithmicModulatorNode/AlgorithmicModulatorNode.cpp
         SettingsPanel.cpp
         SortNode/SortNode.cpp
         InterleaveNode/InterleaveNode.cpp
@@ -76,6 +77,7 @@ target_sources(ArpsEuclidya
         NodeEditorPanel.cpp)
 
 juce_add_binary_data(NodeLayoutData SOURCES
+    AlgorithmicModulatorNode/AlgorithmicModulatorNode.json
     AllNotesNode/AllNotesNode.json
     ChordNNode/ChordNNode.json
     ChordSplitNode/ChordSplitNode.json

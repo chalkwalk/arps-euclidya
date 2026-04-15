@@ -1,0 +1,117 @@
+{
+  "gridWidth": 3,
+  "gridHeight": 2,
+  "extendedGridWidth": 3,
+  "extendedGridHeight": 3,
+  "elements": [
+    {
+      "type": "ComboBox",
+      "label": "algorithm",
+      "options": [
+        "Sine",
+        "Ramp Up",
+        "Ramp Down",
+        "Triangle",
+        "Random Hold",
+        "Random Walk",
+        "Euclidean",
+        "Custom"
+      ],
+      "gridBounds": [0, 1, 59, 7]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "ccNumber",
+      "minValue": 0,
+      "maxValue": 127,
+      "gridBounds": [0, 10, 13, 13]
+    },
+    {
+      "type": "Label",
+      "label": "CC#",
+      "gridBounds": [0, 23, 13, 3]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "length",
+      "minValue": 1,
+      "maxValue": 64,
+      "gridBounds": [15, 10, 13, 13]
+    },
+    {
+      "type": "Label",
+      "label": "Length",
+      "gridBounds": [15, 23, 13, 3]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "rangeMin",
+      "floatMin": 0.0,
+      "floatMax": 1.0,
+      "step": 0.01,
+      "gridBounds": [30, 10, 13, 13]
+    },
+    {
+      "type": "Label",
+      "label": "Min",
+      "gridBounds": [30, 23, 13, 3]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "rangeMax",
+      "floatMin": 0.0,
+      "floatMax": 1.0,
+      "step": 0.01,
+      "gridBounds": [46, 10, 13, 13]
+    },
+    {
+      "type": "Label",
+      "label": "Max",
+      "gridBounds": [46, 23, 13, 3]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "steps",
+      "minValue": 1,
+      "maxValue": 64,
+      "gridBounds": [0, 28, 13, 10]
+    },
+    {
+      "type": "Label",
+      "label": "Steps",
+      "gridBounds": [0, 38, 13, 2]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "beats",
+      "minValue": 1,
+      "maxValue": 64,
+      "gridBounds": [15, 28, 13, 10]
+    },
+    {
+      "type": "Label",
+      "label": "Beats",
+      "gridBounds": [15, 38, 13, 2]
+    },
+    {
+      "type": "RotarySlider",
+      "label": "offset",
+      "minValue": 0,
+      "maxValue": 63,
+      "gridBounds": [30, 28, 13, 10]
+    },
+    {
+      "type": "Label",
+      "label": "Offset",
+      "gridBounds": [30, 38, 13, 2]
+    }
+  ],
+  "extendedElements": [
+    {
+      "type": "Custom",
+      "customType": "ModulatorStepEditor",
+      "label": "ModulatorStepEditor",
+      "gridBounds": [0, 43, 59, 16]
+    }
+  ]
+}
