@@ -9,20 +9,20 @@ void ConvergeNode::process() {
   } else {
     NoteSequence steps = it->second;
 
-    auto getMeanValue = [](const std::vector<HeldNote> &chord) {
-      if (chord.empty()) {
-        return 0.0f;
-      }
+    auto getMeanValue = [](const EventStep &step) {
       float sum = 0.0f;
-      for (const auto &n : chord) {
-        sum += n.noteNumber;
+      int count = 0;
+      for (const auto &ev : step) {
+        if (const auto *n = asNote(ev)) {
+          sum += (float)n->noteNumber;
+          ++count;
+        }
       }
-      return sum / (float)chord.size();
+      return count > 0 ? sum / (float)count : 0.0f;
     };
 
     std::stable_sort(steps.begin(), steps.end(),
-                     [&getMeanValue](const std::vector<HeldNote> &a,
-                                     const std::vector<HeldNote> &b) {
+                     [&getMeanValue](const EventStep &a, const EventStep &b) {
                        return getMeanValue(a) < getMeanValue(b);
                      });
 

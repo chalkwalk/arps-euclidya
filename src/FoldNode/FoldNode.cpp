@@ -57,8 +57,28 @@ void FoldNode::process() {
   } else {
     NoteSequence outSeq;
 
+    // Sort/dedup helpers for folded steps (note-order; non-note events sort low).
+    auto sortByPitch = [](EventStep &s) {
+      std::sort(s.begin(), s.end(),
+                [](const SequenceEvent &a, const SequenceEvent &b) {
+                  const auto *na = asNote(a);
+                  const auto *nb = asNote(b);
+                  return (na ? na->noteNumber : 0) < (nb ? nb->noteNumber : 0);
+                });
+    };
+    auto dedupByPitch = [](EventStep &s) {
+      auto last = std::unique(s.begin(), s.end(),
+                              [](const SequenceEvent &a, const SequenceEvent &b) {
+                                const auto *na = asNote(a);
+                                const auto *nb = asNote(b);
+                                return na && nb &&
+                                       na->noteNumber == nb->noteNumber;
+                              });
+      s.erase(last, s.end());
+    };
+
     if (mode == 0) {  // Chunked
-      std::vector<HeldNote> currentAggregatedStep;
+      EventStep currentAggregatedStep;
       int itemsInCurrentStep = 0;
 
       for (const auto &step : it->second) {
@@ -67,25 +87,14 @@ void FoldNode::process() {
         }
         // for now to compact notes.
 
-        for (const auto &note : step) {
-          currentAggregatedStep.push_back(note);
+        for (const auto &ev : step) {
+          currentAggregatedStep.push_back(ev);
         }
         itemsInCurrentStep++;
 
         if (itemsInCurrentStep >= actualNValue) {
-          // Sort and dedup before pushing the folded step
-          std::sort(currentAggregatedStep.begin(), currentAggregatedStep.end(),
-                    [](const HeldNote &a, const HeldNote &b) {
-                      return a.noteNumber < b.noteNumber;
-                    });
-
-          auto last = std::unique(currentAggregatedStep.begin(),
-                                  currentAggregatedStep.end(),
-                                  [](const HeldNote &a, const HeldNote &b) {
-                                    return a.noteNumber == b.noteNumber;
-                                  });
-          currentAggregatedStep.erase(last, currentAggregatedStep.end());
-
+          sortByPitch(currentAggregatedStep);
+          dedupByPitch(currentAggregatedStep);
           outSeq.push_back(currentAggregatedStep);
           currentAggregatedStep.clear();
           itemsInCurrentStep = 0;
@@ -94,18 +103,8 @@ void FoldNode::process() {
 
       // Push any remaining aggregated notes as the final step
       if (!currentAggregatedStep.empty()) {
-        std::sort(currentAggregatedStep.begin(), currentAggregatedStep.end(),
-                  [](const HeldNote &a, const HeldNote &b) {
-                    return a.noteNumber < b.noteNumber;
-                  });
-
-        auto last = std::unique(currentAggregatedStep.begin(),
-                                currentAggregatedStep.end(),
-                                [](const HeldNote &a, const HeldNote &b) {
-                                  return a.noteNumber == b.noteNumber;
-                                });
-        currentAggregatedStep.erase(last, currentAggregatedStep.end());
-
+        sortByPitch(currentAggregatedStep);
+        dedupByPitch(currentAggregatedStep);
         outSeq.push_back(currentAggregatedStep);
       }
     } else {  // Rolling
@@ -113,26 +112,18 @@ void FoldNode::process() {
       int seqSize = (int)inSeq.size();
 
       for (int i = 0; i < seqSize; ++i) {
-        std::vector<HeldNote> rollingStep;
+        EventStep rollingStep;
 
         for (int j = 0; j < actualNValue; ++j) {
           const auto &sourceStep = inSeq[(size_t)((i + j) % seqSize)];
-          for (const auto &note : sourceStep) {
-            rollingStep.push_back(note);
+          for (const auto &ev : sourceStep) {
+            rollingStep.push_back(ev);
           }
         }
 
         if (!rollingStep.empty()) {
-          std::sort(rollingStep.begin(), rollingStep.end(),
-                    [](const HeldNote &a, const HeldNote &b) {
-                      return a.noteNumber < b.noteNumber;
-                    });
-
-          auto last = std::unique(rollingStep.begin(), rollingStep.end(),
-                                  [](const HeldNote &a, const HeldNote &b) {
-                                    return a.noteNumber == b.noteNumber;
-                                  });
-          rollingStep.erase(last, rollingStep.end());
+          sortByPitch(rollingStep);
+          dedupByPitch(rollingStep);
           outSeq.push_back(rollingStep);
         } else {
           outSeq.emplace_back();

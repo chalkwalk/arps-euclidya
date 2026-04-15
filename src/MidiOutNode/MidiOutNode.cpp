@@ -18,20 +18,32 @@ MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
 }
 
 namespace {
-bool stepsAreEqual(const std::vector<HeldNote> &a,
-                   const std::vector<HeldNote> &b) {
+bool stepsAreEqual(const EventStep &a, const EventStep &b) {
   if (a.size() != b.size()) {
     return false;
   }
   for (size_t i = 0; i < a.size(); ++i) {
-    if (!(a[i] == b[i])) {
-      return false;
+    const auto *na = asNote(a[i]);
+    const auto *nb = asNote(b[i]);
+    if (na && nb) {
+      if (!(*na == *nb)) return false;
+    } else if (na != nb) {
+      return false;  // one is note, one is CC
+    } else {
+      // Both are CC events
+      const auto *ca = asCC(a[i]);
+      const auto *cb = asCC(b[i]);
+      if (ca && cb) {
+        if (ca->ccNumber != cb->ccNumber || ca->value != cb->value ||
+            ca->channel != cb->channel)
+          return false;
+      }
     }
   }
   return true;
 }
 
-int findClosestNoteIndex(const std::vector<HeldNote> &stepToFind,
+int findClosestNoteIndex(const EventStep &stepToFind,
                          const NoteSequence &oldSequence,
                          const NoteSequence &newSequence, int previousIndex) {
   if (newSequence.empty()) {
@@ -401,21 +413,24 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         lastTickPlayedNote = true;
       }
 
-      for (const HeldNote &noteTrigger : step) {
+      for (const auto &ev : step) {
+        const auto *noteTrigger = asNote(ev);
+        if (!noteTrigger) continue;  // CC events not handled here (Phase 3)
+
         // Evaluate MPE condition at playback time.
         // isPassThrough() fast-exits for notes with no filter upstream.
-        if (!noteTrigger.mpeCondition.isPassThrough() &&
-            noteTrigger.sourceNoteNumber != -1) {
+        if (!noteTrigger->mpeCondition.isPassThrough() &&
+            noteTrigger->sourceNoteNumber != -1) {
           const float cx = noteExpressionManager.getMpeX(
-              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
-              noteTrigger.sourceNoteID);
+              noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
+              noteTrigger->sourceNoteID);
           const float cy = noteExpressionManager.getMpeY(
-              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
-              noteTrigger.sourceNoteID);
+              noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
+              noteTrigger->sourceNoteID);
           const float cz = noteExpressionManager.getMpeZ(
-              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
-              noteTrigger.sourceNoteID);
-          if (!noteTrigger.mpeCondition.passes(cx, cy, cz)) {
+              noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
+              noteTrigger->sourceNoteID);
+          if (!noteTrigger->mpeCondition.passes(cx, cy, cz)) {
             continue;  // condition not met — note becomes a rest this tick
           }
         }
@@ -423,13 +438,13 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         float currentPressure = 0.0f;
         float currentTimbre = 0.0f;
 
-        if (noteTrigger.sourceNoteNumber != -1) {
+        if (noteTrigger->sourceNoteNumber != -1) {
           currentPressure = noteExpressionManager.getMpeZ(
-              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
-              noteTrigger.sourceNoteID);
+              noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
+              noteTrigger->sourceNoteID);
           currentTimbre = noteExpressionManager.getMpeY(
-              noteTrigger.sourceChannel, noteTrigger.sourceNoteNumber,
-              noteTrigger.sourceNoteID);
+              noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
+              noteTrigger->sourceNoteID);
         }
 
         float actualPressMod = resolveMacroFloat(
@@ -448,9 +463,9 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
         // --- 1. Base + Expression Mapping ---
         float vIntermediate =
-            noteTrigger.velocity +
-            (actualPressMod * (currentPressure - noteTrigger.velocity)) +
-            (actualTimbMod * (currentTimbre - noteTrigger.velocity));
+            noteTrigger->velocity +
+            (actualPressMod * (currentPressure - noteTrigger->velocity)) +
+            (actualTimbMod * (currentTimbre - noteTrigger->velocity));
 
         // --- 2. Humanize Velocity (Interpolation Style) ---
         float randVTarget = rng.nextFloat();
@@ -510,7 +525,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
           auto itC = playingNotes.begin();
           while (itC != playingNotes.end()) {
             if (itC->channel == usedChannel &&
-                itC->noteNumber == noteTrigger.noteNumber) {
+                itC->noteNumber == noteTrigger->noteNumber) {
               collector.addNoteOff(itC->channel, itC->noteNumber, 0.0f,
                                    finalSamplePos, itC->noteID);
               itC = playingNotes.erase(itC);
@@ -524,38 +539,38 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         float tuningOffsetSemitones = 0.0f;
         if (activeTuning != nullptr && !activeTuning->isIdentity()) {
           tuningOffsetSemitones =
-              activeTuning->centsDeviation[(size_t)noteTrigger.noteNumber] /
+              activeTuning->centsDeviation[(size_t)noteTrigger->noteNumber] /
               100.0f;
         }
         float inputBendSemitones =
-            passExpressions ? (noteTrigger.mpeX * 48.0f) : 0.0f;
+            passExpressions ? (noteTrigger->mpeX * 48.0f) : 0.0f;
         float totalPitchBend = tuningOffsetSemitones + inputBendSemitones;
 
         // Apply tuning. For MIDI (Pitch Bend), this MUST arrive before NoteOn.
         // For CLAP, it links by outNoteID.
         if (totalPitchBend != 0.0f || usePerNoteChannels) {
           collector.addNoteExpression(
-              usedChannel, noteTrigger.noteNumber, NoteExpressionType::Tuning,
+              usedChannel, noteTrigger->noteNumber, NoteExpressionType::Tuning,
               totalPitchBend, finalSamplePos, outNoteID);
         }
 
         // ── Pressure and timbre pass-through ──
         if (passExpressions) {
           if (currentPressure > 0.001f) {
-            collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
+            collector.addNoteExpression(usedChannel, noteTrigger->noteNumber,
                                         NoteExpressionType::Pressure,
                                         currentPressure, finalSamplePos,
                                         outNoteID);
           }
           if (currentTimbre > 0.001f) {
-            collector.addNoteExpression(usedChannel, noteTrigger.noteNumber,
+            collector.addNoteExpression(usedChannel, noteTrigger->noteNumber,
                                         NoteExpressionType::Brightness,
                                         currentTimbre, finalSamplePos,
                                         outNoteID);
           }
         }
 
-        collector.addNoteOn(usedChannel, noteTrigger.noteNumber, finalVelocity,
+        collector.addNoteOn(usedChannel, noteTrigger->noteNumber, finalVelocity,
                             finalSamplePos, outNoteID);
 
         // Schedule NoteOff via playingNotes. remainingSamples is how many
@@ -565,7 +580,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         // of the next block. This prevents in-block NoteOn+NoteOff pairs that
         // most synths never render (especially critical for MPE/round-robin).
         int noteEndSample = finalSamplePos + duration;
-        playingNotes.push_back({usedChannel, noteTrigger.noteNumber, outNoteID,
+        playingNotes.push_back({usedChannel, noteTrigger->noteNumber, outNoteID,
                                 std::max(0, noteEndSample - numSamples)});
       }
     }

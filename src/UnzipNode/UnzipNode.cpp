@@ -21,10 +21,12 @@ void UnzipNode::process() {
       continue;
     }
 
-    std::vector<HeldNote> sortedStep = step;
+    auto sortedStep = step;
     std::sort(sortedStep.begin(), sortedStep.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
+              [](const SequenceEvent &a, const SequenceEvent &b) {
+                const auto *na = asNote(a);
+                const auto *nb = asNote(b);
+                return (na ? na->noteNumber : 0) < (nb ? nb->noteNumber : 0);
               });
 
     size_t half = sortedStep.size() / 2;
@@ -32,11 +34,10 @@ void UnzipNode::process() {
       out0.push_back(sortedStep);
       out1.emplace_back();
     } else {
-      std::vector<HeldNote> lower(
-          sortedStep.begin(),
-          sortedStep.begin() + static_cast<ptrdiff_t>(half));
-      std::vector<HeldNote> higher(
-          sortedStep.begin() + static_cast<ptrdiff_t>(half), sortedStep.end());
+      EventStep lower(sortedStep.begin(),
+                      sortedStep.begin() + static_cast<ptrdiff_t>(half));
+      EventStep higher(sortedStep.begin() + static_cast<ptrdiff_t>(half),
+                       sortedStep.end());
       out0.push_back(lower);
       out1.push_back(higher);
     }

@@ -16,45 +16,50 @@ void ZipNode::process() {
   outSeq.reserve(maxLen);
 
   for (size_t i = 0; i < maxLen; ++i) {
-    std::vector<HeldNote> step;
+    EventStep step;
     if (i < seq0.size()) {
-      for (const auto &n : seq0[i]) {
-        step.push_back(n);
-      }
+      for (const auto &ev : seq0[i]) step.push_back(ev);
     }
     if (i < seq1.size()) {
-      for (const auto &n : seq1[i]) {
-        step.push_back(n);
-      }
+      for (const auto &ev : seq1[i]) step.push_back(ev);
     }
 
     // Merge notes with the same pitch. When two notes' MpeConditions can be
     // hulled (all axes touch or overlap), replace both with the single hulled
     // note. When any axis is truly disjoint, keep both — they will
     // independently fire or rest at playback time based on their conditions.
-    std::vector<HeldNote> merged;
+    // CC events pass through without merging.
+    EventStep merged;
     merged.reserve(step.size());
-    for (const auto &note : step) {
+    for (const auto &ev : step) {
+      const auto *note = asNote(ev);
+      if (!note) {
+        merged.push_back(ev);  // CC events: pass through
+        continue;
+      }
       bool absorbed = false;
       for (auto &m : merged) {
-        if (m.noteNumber == note.noteNumber) {
+        auto *mn = asNote(m);
+        if (mn && mn->noteNumber == note->noteNumber) {
           MpeCondition hulled;
-          if (MpeCondition::tryHull(m.mpeCondition, note.mpeCondition,
+          if (MpeCondition::tryHull(mn->mpeCondition, note->mpeCondition,
                                     hulled)) {
-            m.mpeCondition = hulled;
+            mn->mpeCondition = hulled;
             absorbed = true;
             break;
           }
         }
       }
       if (!absorbed) {
-        merged.push_back(note);
+        merged.push_back(ev);
       }
     }
 
     std::sort(merged.begin(), merged.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
+              [](const SequenceEvent &a, const SequenceEvent &b) {
+                const auto *na = asNote(a);
+                const auto *nb = asNote(b);
+                return (na ? na->noteNumber : -1) < (nb ? nb->noteNumber : -1);
               });
     outSeq.push_back(merged);
   }

@@ -93,14 +93,20 @@ class DiagnosticNodeCustomComponent : public juce::Component,
     } else {
       g.setColour(juce::Colours::white);
       for (size_t i = 0; i < step.size(); ++i) {
-        text << getNoteName(step[i].noteNumber);
-        if (step[i].sourceNoteNumber != -1) {
-          text << " (Src: " << step[i].sourceChannel << "."
-               << getNoteName(step[i].sourceNoteNumber) << ")";
-        }
-        auto condStr = getMpeConditionString(step[i].mpeCondition);
-        if (condStr.isNotEmpty()) {
-          text << " {" << condStr << "}";
+        const auto *note = asNote(step[i]);
+        if (note) {
+          text << getNoteName(note->noteNumber);
+          if (note->sourceNoteNumber != -1) {
+            text << " (Src: " << note->sourceChannel << "."
+                 << getNoteName(note->sourceNoteNumber) << ")";
+          }
+          auto condStr = getMpeConditionString(note->mpeCondition);
+          if (condStr.isNotEmpty()) {
+            text << " {" << condStr << "}";
+          }
+        } else if (const auto *cc = asCC(step[i])) {
+          text << "CC" << cc->ccNumber << "="
+               << juce::String(cc->value, 3);
         }
         if (i < step.size() - 1) {
           text << ", ";

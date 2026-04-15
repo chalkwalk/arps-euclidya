@@ -16,11 +16,13 @@ void VelocityFilterNode::process() {
   NoteSequence falseSeq(input.size());
 
   for (size_t s = 0; s < input.size(); ++s) {
-    for (const HeldNote &note : input[s]) {
-      if (note.velocity >= threshold) {
-        trueSeq[s].push_back(note);
+    for (const auto &ev : input[s]) {
+      const auto *note = asNote(ev);
+      if (!note) { continue; }
+      if (note->velocity >= threshold) {
+        trueSeq[s].push_back(*note);
       } else {
-        falseSeq[s].push_back(note);
+        falseSeq[s].push_back(*note);
       }
     }
     // Steps that end up empty are valid rests — leave them as-is.

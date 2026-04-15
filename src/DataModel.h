@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <variant>
 #include <vector>
 
 enum class NoteExpressionType : std::uint8_t {
@@ -122,4 +123,43 @@ class NoteEventCollector {
                                  int sampleOffset, int32_t noteID = -1) = 0;
 };
 
-using NoteSequence = std::vector<std::vector<HeldNote>>;
+// ---------------------------------------------------------------------------
+// CC event — a single MIDI CC message, normalised value [0, 1].
+// ---------------------------------------------------------------------------
+struct CCEvent {
+  int ccNumber = 0;    // 0..127
+  float value  = 0.f;  // normalised 0..1 (converted to 0..127 at MIDI output)
+  int channel  = 1;
+};
+
+// ---------------------------------------------------------------------------
+// A sequence event is either a note (HeldNote) or a CC value (CCEvent).
+// Using std::variant keeps the type value-typed and cache-friendly — no heap
+// allocation per event.  Helper free functions (asNote / asCC) give safe,
+// concise access without boilerplate std::get_if calls at every site.
+// ---------------------------------------------------------------------------
+using SequenceEvent = std::variant<HeldNote, CCEvent>;
+
+inline const HeldNote* asNote(const SequenceEvent& e) {
+  return std::get_if<HeldNote>(&e);
+}
+inline HeldNote* asNote(SequenceEvent& e) {
+  return std::get_if<HeldNote>(&e);
+}
+inline const CCEvent* asCC(const SequenceEvent& e) {
+  return std::get_if<CCEvent>(&e);
+}
+inline CCEvent* asCC(SequenceEvent& e) {
+  return std::get_if<CCEvent>(&e);
+}
+
+// A single time-step: zero or more events (empty = rest).
+using EventStep     = std::vector<SequenceEvent>;
+// A full sequence: one EventStep per time step.
+using EventSequence = std::vector<EventStep>;
+
+// Legacy alias — NoteSequence is now a synonym for EventSequence.
+// All existing code continues to compile; the type carried inside each step
+// is now SequenceEvent instead of HeldNote directly.  Notes-only nodes access
+// events via asNote(); the variant conversion from HeldNote is implicit.
+using NoteSequence = EventSequence;

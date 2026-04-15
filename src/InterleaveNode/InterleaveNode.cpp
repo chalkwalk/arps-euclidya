@@ -20,8 +20,8 @@ void InterleaveNode::process() {
   out.reserve(maxLen * 2);
 
   for (size_t i = 0; i < maxLen; ++i) {
-    out.push_back(i < seq0.size() ? seq0[i] : std::vector<HeldNote>{});
-    out.push_back(i < seq1.size() ? seq1[i] : std::vector<HeldNote>{});
+    out.push_back(i < seq0.size() ? seq0[i] : EventStep{});
+    out.push_back(i < seq1.size() ? seq1[i] : EventStep{});
   }
 
   outputSequences[0] = std::move(out);

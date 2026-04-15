@@ -159,11 +159,11 @@ class GraphNode {
   std::function<void()> onNodeDirtied;
   std::function<void()> onMappingChanged;
 
-  void setInputSequence(int inputPort, const NoteSequence &sequence);
+  void setInputSequence(int inputPort, const EventSequence &sequence);
   void clearInputSequence(int inputPort);
-  const NoteSequence &getInputSequence(int inputPort) const;
-  const NoteSequence &getOutputSequence(int outputPort) const;
-  void setOutputSequence(int outputPort, const NoteSequence &sequence);
+  const EventSequence &getInputSequence(int inputPort) const;
+  const EventSequence &getOutputSequence(int outputPort) const;
+  void setOutputSequence(int outputPort, const EventSequence &sequence);
 
   struct Connection {
     GraphNode *targetNode;
@@ -265,8 +265,8 @@ class GraphNode {
   // Call once per MacroParam member in each subclass constructor.
   void addMacroParam(MacroParam *p) { macroParamList.push_back(p); }
 
-  std::map<int, NoteSequence> inputSequences;
-  std::map<int, NoteSequence> outputSequences;
+  std::map<int, EventSequence> inputSequences;
+  std::map<int, EventSequence> outputSequences;
 
   std::map<int, std::vector<Connection>> connections;
 

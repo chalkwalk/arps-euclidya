@@ -59,17 +59,19 @@ void OctaveStackNode::process() {
 
     for (int oct = 0; oct < actualOctaves; ++oct) {
       for (const auto &step : it->second) {
-        std::vector<HeldNote> outStep;
-        for (const auto &note : step) {
-          HeldNote n = note;
-          n.noteNumber += (oct * 12);
+        EventStep outStep;
+        for (const auto &ev : step) {
+          if (const auto *note = asNote(ev)) {
+            HeldNote n = *note;
+            n.noteNumber += (oct * 12);
 
-          if (n.noteNumber <= 127) {
-            if (!uniqueOnly ||
-                seenNotes.find(n.noteNumber) == seenNotes.end()) {
-              outStep.push_back(n);
-              if (uniqueOnly) {
-                seenNotes.insert(n.noteNumber);
+            if (n.noteNumber <= 127) {
+              if (!uniqueOnly ||
+                  seenNotes.find(n.noteNumber) == seenNotes.end()) {
+                outStep.push_back(n);
+                if (uniqueOnly) {
+                  seenNotes.insert(n.noteNumber);
+                }
               }
             }
           }

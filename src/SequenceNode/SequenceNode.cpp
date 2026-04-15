@@ -348,7 +348,7 @@ void SequenceNode::process() {
   NoteSequence outSeq;
 
   for (int c = 0; c < actualLen; ++c) {
-    std::vector<HeldNote> stepNotes;
+    EventStep stepNotes;
     for (int n = 0; n < 128; ++n) {
       if (grid[n][c]) {
         HeldNote hn;

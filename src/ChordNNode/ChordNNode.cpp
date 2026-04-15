@@ -55,10 +55,12 @@ void ChordNNode::process() {
     std::vector<HeldNote> uniqueNotes;
 
     for (const auto &step : it->second) {
-      for (const auto &note : step) {
-        if (uniquePitches.find(note.noteNumber) == uniquePitches.end()) {
-          uniquePitches.insert(note.noteNumber);
-          uniqueNotes.push_back(note);
+      for (const auto &ev : step) {
+        const auto *note = asNote(ev);
+        if (!note) { continue; }
+        if (uniquePitches.find(note->noteNumber) == uniquePitches.end()) {
+          uniquePitches.insert(note->noteNumber);
+          uniqueNotes.push_back(*note);
         }
       }
     }
@@ -74,10 +76,9 @@ void ChordNNode::process() {
 
     // 3. Generate N-note combinations from the flat unique pool
     if (n > 0 && n <= uniqueNotes.size()) {
-      auto cmb = [&](auto &self, const std::vector<HeldNote> &cur,
-                     size_t sI) -> void {
+      auto cmb = [&](auto &self, EventStep cur, size_t sI) -> void {
         if (cur.size() == n) {
-          sortedSeq.push_back(cur);
+          sortedSeq.push_back(std::move(cur));
           return;
         }
         if (sI >= uniqueNotes.size()) {
@@ -88,13 +89,13 @@ void ChordNNode::process() {
             break;
           }
 
-          std::vector<HeldNote> nextCur = cur;
-          nextCur.push_back(uniqueNotes[i]);
+          EventStep nextCur = cur;
+          nextCur.push_back(uniqueNotes[i]);  // HeldNote implicitly → SequenceEvent
 
-          self(self, nextCur, i + 1);
+          self(self, std::move(nextCur), i + 1);
         }
       };
-      cmb(cmb, std::vector<HeldNote>(), 0);
+      cmb(cmb, EventStep{}, 0);
     }
 
     outputSequences[0] = sortedSeq;

@@ -53,12 +53,14 @@ void OctaveTransposeNode::process() {
   } else {
     NoteSequence outSeq;
     for (const auto &step : it->second) {
-      std::vector<HeldNote> outStep;
-      for (const auto &note : step) {
-        HeldNote transposed = note;
-        transposed.noteNumber += (actualOctaves * 12);
-        if (transposed.noteNumber >= 0 && transposed.noteNumber <= 127) {
-          outStep.push_back(transposed);
+      EventStep outStep;
+      for (const auto &ev : step) {
+        if (const auto *note = asNote(ev)) {
+          HeldNote transposed = *note;
+          transposed.noteNumber += (actualOctaves * 12);
+          if (transposed.noteNumber >= 0 && transposed.noteNumber <= 127) {
+            outStep.push_back(transposed);
+          }
         }
       }
       outSeq.push_back(outStep);  // preserve rests (empty steps)

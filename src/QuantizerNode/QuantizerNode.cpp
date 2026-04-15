@@ -92,13 +92,15 @@ void QuantizerNode::process() {
         continue;
       }
 
-      std::vector<HeldNote> processedStep;
+      EventStep processedStep;
 
-      for (const auto &originalNote : step) {
-        HeldNote quantizedNote = originalNote;
+      for (const auto &ev : step) {
+        const auto *originalNote = asNote(ev);
+        if (!originalNote) { continue; }
+        HeldNote quantizedNote = *originalNote;
 
         // Find interval relative to root
-        int pitchClass = (originalNote.noteNumber - rootNote) % 12;
+        int pitchClass = (originalNote->noteNumber - rootNote) % 12;
         if (pitchClass < 0) {
           pitchClass += 12;  // Handle negative modulo
         }
@@ -149,13 +151,20 @@ void QuantizerNode::process() {
       if (!processedStep.empty()) {
         // Dedup notes in chord to avoid identical snapped pitches
         std::sort(processedStep.begin(), processedStep.end(),
-                  [](const HeldNote &a, const HeldNote &b) {
-                    return a.noteNumber < b.noteNumber;
+                  [](const SequenceEvent &a, const SequenceEvent &b) {
+                    const auto *na = asNote(a);
+                    const auto *nb = asNote(b);
+                    return (na ? na->noteNumber : 0) <
+                           (nb ? nb->noteNumber : 0);
                   });
 
         auto last = std::unique(processedStep.begin(), processedStep.end(),
-                                [](const HeldNote &a, const HeldNote &b) {
-                                  return a.noteNumber == b.noteNumber;
+                                [](const SequenceEvent &a,
+                                   const SequenceEvent &b) {
+                                  const auto *na = asNote(a);
+                                  const auto *nb = asNote(b);
+                                  return na && nb &&
+                                         na->noteNumber == nb->noteNumber;
                                 });
         processedStep.erase(last, processedStep.end());
         outSeq.push_back(processedStep);

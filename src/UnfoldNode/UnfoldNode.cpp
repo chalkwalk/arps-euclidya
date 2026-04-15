@@ -51,20 +51,27 @@ void UnfoldNode::process() {
     const NoteSequence &inSeq = it->second;
     NoteSequence outSeq;
 
-    // Helper: sort a chord's notes by ordering
-    auto sortNotes = [this](std::vector<HeldNote> notes) {
+    // Helper: sort a step's events by note number (ascending or descending).
+    // Non-note events sort to the front with key 0.
+    auto sortNotes = [this](EventStep step) {
       if (ordering == 0) {
-        std::sort(notes.begin(), notes.end(),
-                  [](const HeldNote &a, const HeldNote &b) {
-                    return a.noteNumber < b.noteNumber;
+        std::sort(step.begin(), step.end(),
+                  [](const SequenceEvent &a, const SequenceEvent &b) {
+                    const auto *na = asNote(a);
+                    const auto *nb = asNote(b);
+                    return (na ? na->noteNumber : 0) <
+                           (nb ? nb->noteNumber : 0);
                   });
       } else {
-        std::sort(notes.begin(), notes.end(),
-                  [](const HeldNote &a, const HeldNote &b) {
-                    return a.noteNumber > b.noteNumber;
+        std::sort(step.begin(), step.end(),
+                  [](const SequenceEvent &a, const SequenceEvent &b) {
+                    const auto *na = asNote(a);
+                    const auto *nb = asNote(b);
+                    return (na ? na->noteNumber : 0) >
+                           (nb ? nb->noteNumber : 0);
                   });
       }
-      return notes;
+      return step;
     };
 
     if (fixedWidth == 0) {
@@ -75,8 +82,8 @@ void UnfoldNode::process() {
           continue;
         }
         auto sorted = sortNotes(step);
-        for (const auto &note : sorted) {
-          outSeq.push_back({note});
+        for (const auto &ev : sorted) {
+          outSeq.push_back({ev});
         }
       }
     } else {
@@ -121,9 +128,9 @@ void UnfoldNode::process() {
           }
         }
 
-        // Emit real notes
-        for (const auto &note : sorted) {
-          outSeq.push_back({note});
+        // Emit real events one per step
+        for (const auto &ev : sorted) {
+          outSeq.push_back({ev});
         }
         // Pad with rests to fill the slot
         int padCount = maxChordSize - (int)sorted.size();

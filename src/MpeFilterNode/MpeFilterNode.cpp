@@ -16,9 +16,11 @@ void MpeFilterNode::process() {
   NoteSequence falseSeq(input.size());
 
   for (size_t s = 0; s < input.size(); ++s) {
-    for (const HeldNote &note : input[s]) {
-      HeldNote trueNote = note;
-      HeldNote falseNote = note;
+    for (const auto &ev : input[s]) {
+      const auto *note = asNote(ev);
+      if (!note) { continue; }
+      HeldNote trueNote = *note;
+      HeldNote falseNote = *note;
 
       switch (axis) {
         case 0:  // Bend (X)

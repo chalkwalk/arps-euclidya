@@ -43,21 +43,23 @@ void ChordSplitNode::process() {
     // Multiple notes: sort by pitch to find highest/lowest
     auto sorted = step;
     std::sort(sorted.begin(), sorted.end(),
-              [](const HeldNote &a, const HeldNote &b) {
-                return a.noteNumber < b.noteNumber;
+              [](const SequenceEvent &a, const SequenceEvent &b) {
+                const auto *na = asNote(a);
+                const auto *nb = asNote(b);
+                return (na ? na->noteNumber : 0) < (nb ? nb->noteNumber : 0);
               });
 
     if (splitMode == 0) {
       // Top mode: highest note → out0 (Top), rest → out1 (Bottom)
-      std::vector<HeldNote> lower(sorted.begin(), sorted.end() - 1);
-      std::vector<HeldNote> higher = {sorted.back()};
+      EventStep lower(sorted.begin(), sorted.end() - 1);
+      EventStep higher = {sorted.back()};
       out0.push_back(higher);
-      out1.push_back(lower.empty() ? std::vector<HeldNote>{} : lower);
+      out1.push_back(lower.empty() ? EventStep{} : lower);
     } else {
       // Bottom mode: lowest note → out1 (Bottom), rest → out0 (Top)
-      std::vector<HeldNote> lowest = {sorted.front()};
-      std::vector<HeldNote> upper(sorted.begin() + 1, sorted.end());
-      out0.push_back(upper.empty() ? std::vector<HeldNote>{} : upper);
+      EventStep lowest = {sorted.front()};
+      EventStep upper(sorted.begin() + 1, sorted.end());
+      out0.push_back(upper.empty() ? EventStep{} : upper);
       out1.push_back(lowest);
     }
   }
