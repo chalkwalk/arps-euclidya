@@ -31,6 +31,10 @@ class GraphNode {
   juce::Uuid nodeId;
   bool bypassed = false;
 
+  // Port data type. All existing nodes default to Notes.
+  // CC and Agnostic will be introduced in later phases.
+  enum class PortType { Notes, CC, Agnostic };
+
   virtual std::string getName() const = 0;
 
   // UI and Grid Layout (the source of truth for node footprint)
@@ -39,6 +43,16 @@ class GraphNode {
   // Port counts — override in subclasses with non-standard port layouts
   virtual int getNumInputPorts() const { return 1; }
   virtual int getNumOutputPorts() const { return 1; }
+
+  // Port types — override in nodes that carry CC or are type-agnostic
+  virtual PortType getInputPortType(int port) const {
+    juce::ignoreUnused(port);
+    return PortType::Notes;
+  }
+  virtual PortType getOutputPortType(int port) const {
+    juce::ignoreUnused(port);
+    return PortType::Notes;
+  }
 
   // Grid footprint (derived from layout by default, but overridable)
   virtual int getGridWidth() const {

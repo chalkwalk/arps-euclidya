@@ -312,16 +312,14 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   // 1. Draw background cables
   for (const auto &cable : cachedCables) {
     if (!cable.isSelected && !proximityCableID.matches(cable)) {
-      drawCable(g, cable.path, false, cable.isLarge, false, cable.hasData,
-                cable.hasNotes);
+      drawCable(g, cable.path, false, cable.isLarge, false, cable.portType);
     }
   }
 
   // 2. Draw foreground/selected cables
   for (const auto &cable : cachedCables) {
     if (cable.isSelected && !proximityCableID.matches(cable)) {
-      drawCable(g, cable.path, false, cable.isLarge, true, cable.hasData,
-                cable.hasNotes);
+      drawCable(g, cable.path, false, cable.isLarge, true, cable.portType);
     }
   }
 
@@ -329,8 +327,7 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
   if (proximityCableID.isValid()) {
     for (const auto &cable : cachedCables) {
       if (proximityCableID.matches(cable)) {
-        drawCable(g, cable.path, true, cable.isLarge, true, cable.hasData,
-                  cable.hasNotes);
+        drawCable(g, cable.path, true, cable.isLarge, true, cable.portType);
         break;
       }
     }
@@ -355,11 +352,22 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     dragPath.cubicTo(start.x + dx, (float)start.y, end.x - dx, (float)end.y,
                      (float)end.x, (float)end.y);
 
-    drawCable(g, dragPath, true, false, true, false, false);
+    drawCable(g, dragPath, true, false, true, GraphNode::PortType::Notes);
   }
 
   g.restoreState();  // Pop the camera transform to draw tooltips in screen
                      // space
+
+  // Reject flash — red glow at the drop point when a type mismatch is detected
+  if (rejectFlashAlpha > 0.01f) {
+    const float r = 22.0f;
+    g.setColour(juce::Colours::red.withAlpha(rejectFlashAlpha * 0.25f));
+    g.fillEllipse(rejectFlashPos.x - r, rejectFlashPos.y - r, r * 2.0f,
+                  r * 2.0f);
+    g.setColour(juce::Colours::red.withAlpha(rejectFlashAlpha * 0.85f));
+    g.drawEllipse(rejectFlashPos.x - r, rejectFlashPos.y - r, r * 2.0f,
+                  r * 2.0f, 2.5f);
+  }
 
   // Draw rubber-band selection box (screen-space, after camera pop)
   if (isBoxSelecting) {
@@ -461,6 +469,7 @@ void GraphCanvas::refreshCableCache() {
         cable.path.cubicTo(startF.x + dx, startF.y, endF.x - dx, endF.y, endF.x,
                            endF.y);
 
+        cable.portType = graphEngine.getEffectiveOutputPortType(node.get(), outPort);
         const auto &outSeq = node->getOutputSequence(outPort);
         cable.stepCount = (int)outSeq.size();
         cable.activeStepCount = 0;
@@ -469,8 +478,6 @@ void GraphCanvas::refreshCableCache() {
             cable.activeStepCount++;
           }
         }
-        cable.hasData = (cable.stepCount > 0);
-        cable.hasNotes = (cable.activeStepCount > 0);
         cable.isLarge = (cable.stepCount > 10000);
         cable.isSelected =
             !selectedNodes.empty() &&
@@ -485,25 +492,25 @@ void GraphCanvas::refreshCableCache() {
 
 void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
                             bool highlighted, bool warning, bool isForeground,
-                            bool hasData, bool hasNotes) {
+                            GraphNode::PortType portType) {
   // 1. Drop Shadow (Subtle dark offset)
   auto shadowPath = path;
   shadowPath.applyTransform(juce::AffineTransform::translation(1.0f, 1.5f));
   g.setColour(juce::Colours::black.withAlpha(0.4f));
   g.strokePath(shadowPath, juce::PathStrokeType(2.5f));
 
-  // 2. Base Cable Color and Glow
+  // 2. Base Cable Color and Glow — colour by source port type
   juce::Colour baseColor;
   if (highlighted) {
-    baseColor = juce::Colour(0xffeeee44);
+    baseColor = juce::Colour(0xffeeee44);  // Yellow highlight
   } else if (warning) {
-    baseColor = juce::Colour(0xffff6633);
-  } else if (hasNotes) {
-    baseColor = juce::Colour(0xff0df0e3);  // Neon Cyan
-  } else if (hasData) {
-    baseColor = juce::Colour(0xff2266aa);  // Dark Blue
+    baseColor = juce::Colour(0xffff6633);  // Orange (large sequence)
+  } else if (portType == GraphNode::PortType::CC) {
+    baseColor = juce::Colour(0xffaa44ff);  // Violet for CC
+  } else if (portType == GraphNode::PortType::Notes) {
+    baseColor = juce::Colour(0xffd4a017);  // Amber/gold for Notes
   } else {
-    baseColor = juce::Colour(0xff555555);  // Dead Grey
+    baseColor = juce::Colour(0xffaaaaaa);  // Cool grey for Agnostic
   }
 
   // Dimming for background (non-selected) cables
@@ -900,7 +907,13 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
         if (blockLocalWorld.getDistanceFrom(portCentreWorld) <=
             NodeBlock::PORT_HIT_RADIUS) {
           const juce::ScopedLock sl(graphLock);
-          if (performMutation) {
+          if (!graphEngine.checkPortTypeCompatibility(
+                  cableDragSourceBlock->getNode().get(), cableDragSourcePort,
+                  block->getNode().get(), i)) {
+            rejectFlashPos = canvasPos.toFloat();
+            rejectFlashAlpha = 1.0f;
+            startTimerHz(30);
+          } else if (performMutation) {
             performMutation([this, block, i]() {
               graphEngine.addExplicitConnection(
                   cableDragSourceBlock->getNode().get(), cableDragSourcePort,
@@ -923,7 +936,13 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
         if (blockLocalWorld.getDistanceFrom(portCentreWorld) <=
             NodeBlock::PORT_HIT_RADIUS) {
           const juce::ScopedLock sl(graphLock);
-          if (performMutation) {
+          if (!graphEngine.checkPortTypeCompatibility(
+                  block->getNode().get(), i,
+                  cableDragSourceBlock->getNode().get(), cableDragSourcePort)) {
+            rejectFlashPos = canvasPos.toFloat();
+            rejectFlashAlpha = 1.0f;
+            startTimerHz(30);
+          } else if (performMutation) {
             performMutation([this, block, i]() {
               graphEngine.addExplicitConnection(
                   block->getNode().get(), i,
@@ -1658,5 +1677,14 @@ void GraphCanvas::setGhostTarget(int gridX, int gridY, int gridW, int gridH,
 
 void GraphCanvas::clearGhostTarget() {
   showGhostTarget = false;
+  repaint();
+}
+
+void GraphCanvas::timerCallback() {
+  rejectFlashAlpha *= 0.80f;
+  if (rejectFlashAlpha < 0.01f) {
+    rejectFlashAlpha = 0.0f;
+    stopTimer();
+  }
   repaint();
 }

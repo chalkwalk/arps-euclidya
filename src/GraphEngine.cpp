@@ -188,6 +188,51 @@ int GraphEngine::getNextFreeMacro() const {
   return -1;
 }
 
+GraphNode::PortType GraphEngine::getEffectiveOutputPortType(GraphNode *node,
+                                                            int port) const {
+  auto declared = node->getOutputPortType(port);
+  if (declared != GraphNode::PortType::Agnostic) return declared;
+  // Agnostic: latch to the type of the first non-agnostic connection target
+  const auto &conns = node->getConnections();
+  auto it = conns.find(port);
+  if (it != conns.end()) {
+    for (const auto &conn : it->second) {
+      auto tType = conn.targetNode->getInputPortType(conn.targetInputPort);
+      if (tType != GraphNode::PortType::Agnostic) return tType;
+    }
+  }
+  return GraphNode::PortType::Agnostic;
+}
+
+GraphNode::PortType GraphEngine::getEffectiveInputPortType(GraphNode *node,
+                                                           int port) const {
+  auto declared = node->getInputPortType(port);
+  if (declared != GraphNode::PortType::Agnostic) return declared;
+  // Agnostic: latch to the type of the first non-agnostic connected source
+  for (const auto &n : nodes) {
+    for (const auto &[outPort, connVec] : n->getConnections()) {
+      for (const auto &conn : connVec) {
+        if (conn.targetNode == node && conn.targetInputPort == port) {
+          auto sType = n->getOutputPortType(outPort);
+          if (sType != GraphNode::PortType::Agnostic) return sType;
+        }
+      }
+    }
+  }
+  return GraphNode::PortType::Agnostic;
+}
+
+bool GraphEngine::checkPortTypeCompatibility(GraphNode *source, int outPort,
+                                             GraphNode *target,
+                                             int inPort) const {
+  auto srcType = getEffectiveOutputPortType(source, outPort);
+  auto dstType = getEffectiveInputPortType(target, inPort);
+  if (srcType == GraphNode::PortType::Agnostic ||
+      dstType == GraphNode::PortType::Agnostic)
+    return true;
+  return srcType == dstType;
+}
+
 bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
 
                                         GraphNode *target, int inPort) {
@@ -208,6 +253,11 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
     return false;
   }
   if (inPort < 0 || inPort >= target->getNumInputPorts()) {
+    return false;
+  }
+
+  // Port type compatibility (Notes ↔ CC mismatch rejected; Agnostic accepts all)
+  if (!checkPortTypeCompatibility(source, outPort, target, inPort)) {
     return false;
   }
 

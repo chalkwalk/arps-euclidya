@@ -10,7 +10,8 @@
 class GraphCanvas : public juce::Component,
                     public juce::ScrollBar::Listener,
                     public juce::DragAndDropTarget,
-                    public juce::KeyListener {
+                    public juce::KeyListener,
+                    public juce::Timer {
  public:
   GraphCanvas(GraphEngine &engine, juce::AudioProcessorValueTreeState &apvts,
               juce::CriticalSection &lock);
@@ -156,7 +157,8 @@ class GraphCanvas : public juce::Component,
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
   void drawCable(juce::Graphics &g, const juce::Path &path, bool highlighted,
-                 bool warning, bool isForeground, bool hasData, bool hasNotes);
+                 bool warning, bool isForeground,
+                 GraphNode::PortType portType);
   void updateCanvasSize();
 
   // Cable tooltip state
@@ -184,6 +186,11 @@ class GraphCanvas : public juce::Component,
   // Warning banner
   bool hasLargeSequenceWarning = false;
 
+  // Reject flash (type-mismatch cable drop feedback)
+  float rejectFlashAlpha = 0.0f;
+  juce::Point<float> rejectFlashPos;
+  void timerCallback() override;
+
   // Ghost target rendering state
   bool showGhostTarget = false;
   int ghostTargetX = 0;
@@ -205,8 +212,7 @@ class GraphCanvas : public juce::Component,
     bool isSelected = false;
     int stepCount = 0;
     int activeStepCount = 0;
-    bool hasData = false;
-    bool hasNotes = false;
+    GraphNode::PortType portType = GraphNode::PortType::Notes;
   };
 
   struct CableID {

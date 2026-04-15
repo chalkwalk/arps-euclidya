@@ -524,6 +524,17 @@ void NodeBlock::paint(juce::Graphics &g) {
                            1.5f);
   }
 
+  // Helper: pick fill/stroke colours based on port type
+  auto portColors = [](GraphNode::PortType pt)
+      -> std::pair<juce::Colour, juce::Colour> {
+    if (pt == GraphNode::PortType::CC)
+      return {juce::Colour(0xffaa44ff), juce::Colour(0xff7722cc)};
+    if (pt == GraphNode::PortType::Agnostic)
+      return {juce::Colour(0xffaaaaaa), juce::Colour(0xff777777)};
+    // Notes (default)
+    return {juce::Colour(0xffd4a017), juce::Colour(0xffa07800)};
+  };
+
   // Draw input ports (Half stadiums flush with left edge)
   int numIn = targetNode->getNumInputPorts();
   for (int i = 0; i < numIn; ++i) {
@@ -538,9 +549,10 @@ void NodeBlock::paint(juce::Graphics &g) {
     g.saveState();
     g.reduceClipRegion(rect.toNearestInt());  // Clip to just the right half
 
-    g.setColour(juce::Colour(0xff44cc44));
+    auto [fill, stroke] = portColors(targetNode->getInputPortType(i));
+    g.setColour(fill);
     g.fillPath(p);
-    g.setColour(juce::Colour(0xff228822));
+    g.setColour(stroke);
     g.strokePath(p, juce::PathStrokeType(1.5f));
 
     g.restoreState();
@@ -559,9 +571,10 @@ void NodeBlock::paint(juce::Graphics &g) {
     g.saveState();
     g.reduceClipRegion(rect.toNearestInt());  // Clip to just the left half
 
-    g.setColour(juce::Colour(0xff4499ff));
+    auto [fill, stroke] = portColors(targetNode->getOutputPortType(i));
+    g.setColour(fill);
     g.fillPath(p);
-    g.setColour(juce::Colour(0xff2266aa));
+    g.setColour(stroke);
     g.strokePath(p, juce::PathStrokeType(1.5f));
 
     g.restoreState();

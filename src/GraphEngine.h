@@ -64,6 +64,15 @@ class GraphEngine {
   // Check if adding a connection would create a cycle
   bool wouldCreateCycle(GraphNode *source, GraphNode *target) const;
 
+  // Port type compatibility — used by GUI for rejection flash and by
+  // addExplicitConnection as a safety guard
+  bool checkPortTypeCompatibility(GraphNode *source, int outPort,
+                                  GraphNode *target, int inPort) const;
+  GraphNode::PortType getEffectiveOutputPortType(GraphNode *node,
+                                                 int port) const;
+  GraphNode::PortType getEffectiveInputPortType(GraphNode *node,
+                                                int port) const;
+
   void saveState(juce::XmlElement *xmlRoot);
   void loadState(juce::XmlElement *xmlRoot, NoteExpressionManager &midiCtx,
                  ClockManager &clockCtx,
