@@ -38,9 +38,9 @@ Access rapid actions without moving your cursor to the sidebar:
 
 ### 2. Module Library (Sidebar)
 
-Located in a collapsible sidebar, this is your toolbox. It contains every node available in Arps Euclidya, categorized by function.
+Located in a collapsible sidebar, this is your toolbox. It contains every node available in Arps Euclidya, organized into categories: **I/O**, **Modulation**, **Generators**, **Pattern**, **Combinatorial**, **Pitch & Range**, **Routing**, **Filter**, and **Utility**.
 
-- You can browse nodes by category or use the rapid "fuzzy-search" bar at the top to instantly find the module you need. The module list is alphabetically sorted for quick visual scanning.
+- Browse nodes by category or type in the search bar at the top to switch to a flat filtered list. Pressing `Enter` when exactly one result is shown adds that node at the current canvas position.
 
 ### 3. Macro Control Panel
 
@@ -58,5 +58,5 @@ The panel along the top of the plugin window surfaces the 32 global "Macro" knob
 Understanding your patch visually is critical:
 
 - **Nodes**: Each module is represented as a block on the canvas. Inputs are always located on the left edge, and outputs are on the right edge.
-- **Patch Cables**: Connections between nodes glow vividly over the dark background, making signal flow instantly obvious even in dense patches.
+- **Patch Cables**: Connections between nodes glow vividly over the dark background. Cable colour indicates data type: **gold** for note sequences, **violet** for CC sequences, and **grey/white** for agnostic connections that carry whichever type was first routed through them. Dragging a note cable onto a CC input (or vice versa) is rejected with a brief red flash.
 - **Visual Cues**: Active elements, selected nodes, and signal flow warnings use high-contrast neon colors so you can tell at a glance what is happening in your patch.

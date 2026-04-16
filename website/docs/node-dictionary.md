@@ -1,22 +1,32 @@
 # Node Dictionary
 
-The Arps Euclidya environment offers 28+ specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
+The Arps Euclidya environment offers 29 specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
+
+Patch cables come in three colours that indicate what type of data is flowing:
+
+- **Gold** — note sequences (`HeldNote` events)
+- **Violet** — CC sequences (`CCEvent` values, normalised 0–1)
+- **Grey/White** — agnostic connections (the cable takes the colour of the first sequence type routed into it)
 
 ## Core I/O & Generation
 
 - **Midi In Node**: The entry point for live performance. Captures notes and MPE data from the DAW or the on-screen keyboard. *(No Inputs, Outputs: 1)*
-- **Midi Out Node `(Macros)`**: The terminal destination and home of the Euclidean Engine. Converts the sequenced note blocks back into real-time MIDI events for the host. Features robust "Humanize" parameters (timing, velocity, gate variations) and per-node MIDI channel output routing for independent instrument control. *(Inputs: 1, No Outputs)*
+- **Midi Out Node `(Macros)`**: The terminal destination and home of the Euclidean Engine. Converts sequenced note and CC data into real-time MIDI events for the host. Port 0 (gold) accepts note sequences; Port 1 (violet) accepts a CC sequence and drives a per-CC# registry with anchor, slew, and rest-behaviour controls. Features robust "Humanize" parameters (timing, velocity, gate variations) and per-node MIDI channel output routing. *(Inputs: 2, No Outputs)*
 - **Sequence Node `(Macros)`**: A 16-step "piano roll" generator. Allows users to draw static patterns that play continuously, independent of held keys. *(No Inputs, Outputs: 1)*
 - **All Notes Node**: A utility node that steadily outputs every possible MIDI note (C-2 to G8). Useful as an input signal for test routing or scale folding. *(No Inputs, Outputs: 1)*
-- **Diagnostic Node**: Displays step count, note pitches, velocities, and active MPE conditions (`{X≥50% Z<30%}` style) for each step. Useful for inspecting the effect of upstream filter nodes. *(Inputs: 1, Outputs: 1)*
+- **Diagnostic Node**: Displays step count, note pitches, velocities, active MPE conditions, and CC values for each step. Accepts both note and CC sequences (agnostic port). *(Inputs: 1, Outputs: 1)*
+
+## Modulation
+
+- **CC Modulator Node `(Macros)`**: A CC sequence generator. Produces a stream of MIDI CC events from an algorithm — Sine, Ramp Up, Ramp Down, Triangle, Random Hold, Random Walk, Euclidean Gates, or Custom step-draw. CC values are stored normalised (0–1) and converted to 0–127 only at the Midi Out Node. Wire its output (violet) to the CC input of a Midi Out Node. The Algorithm selector is macro-bindable. *(No Inputs, Outputs: 1)*
 
 ## Pattern & Order (Directional)
 
 - **Sort Node**: Reorders the incoming sequence by grouping and sorting notes into ascending pitch. Perfect for traditional "Up" arpeggios. *(Inputs: 1, Outputs: 1)*
 - **Reverse Node**: Flips the chronological order of the steps. Creates a "Down" arpeggio. *(Inputs: 1, Outputs: 1)*
 - **Walk Node `(Macros)`**: Applies a "Brownian motion" logic to the sequence. You can configure the probability of stepping forward, staying on the same step, or stepping backward. *(Inputs: 1, Outputs: 1)*
-- **Converge Node**: Merges two input sequences. *(Inputs: 2, Outputs: 1)*
-- **Diverge Node**: Splits paths from a single input sequence. *(Inputs: 1, Outputs: 2)*
+- **Converge Node**: Reorders steps from outside-in — alternating the highest and lowest remaining values. Works on both note and CC sequences (agnostic). *(Inputs: 1, Outputs: 1)*
+- **Diverge Node**: Reorders steps from inside-out — the inverse of Converge. Works on both note and CC sequences (agnostic). *(Inputs: 1, Outputs: 1)*
 
 ## Combinatorial & Chord Logic
 
