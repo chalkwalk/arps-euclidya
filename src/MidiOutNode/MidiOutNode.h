@@ -82,13 +82,37 @@ struct MicrotoneChannelAllocator {
   }
 };
 
+// Per-CC# state for the CC registry inside MidiOutNode.
+// Audio thread reads slewAmount/anchorValue/holdOnRest and writes currentValue/
+// targetValue/lastEmitted127.  The UI thread reads all fields and writes the
+// user-editable ones.  Both access is allowed without a lock: all fields are
+// POD and small enough that individual reads/writes are naturally atomic on
+// x86/ARM.  Structural mutations (add/remove lanes) happen only on the audio
+// thread inside process().
+struct CCLaneState {
+  int ccNumber = 0;
+  juce::String name;        // display name, editable in UI
+  float anchorValue = 0.0f; // 0..1 — emitted on rest in Reset mode
+  bool holdOnRest = true;   // true = Hold (silence), false = Reset (→ anchor)
+  float slewAmount = 0.0f;  // 0..1  (0 = instant, 1 = ~8 ticks to converge)
+  // --- runtime state (audio thread) ---
+  float currentValue = 0.0f;
+  float targetValue = 0.0f;
+  int lastEmitted127 = -1;  // de-dupe: only emit when quantised value changes
+};
+
 class MidiOutNode : public GraphNode {
  public:
   MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx);
   ~MidiOutNode() override = default;
 
   std::string getName() const override { return "Midi Out"; }
+  int getNumInputPorts() const override { return 2; }
   int getNumOutputPorts() const override { return 0; }
+
+  PortType getInputPortType(int port) const override {
+    return (port == 1) ? PortType::CC : PortType::Notes;
+  }
 
   // Re-caches internally when graph sequence changes
   void process() override;
@@ -201,8 +225,14 @@ class MidiOutNode : public GraphNode {
 
   std::atomic<bool> lastTickPlayedNote{false};
 
+  // CC lane registry: one entry per unique CC# connected to input port 1.
+  // Structural mutations (add/remove) happen on the audio thread in process().
+  std::vector<CCLaneState> ccLanes;
+
  private:
   void flushPlayingNotes(NoteEventCollector &collector, int numSamples);
+  void flushCCSlew(NoteEventCollector &collector, int numSamples,
+                   double samplesPerTick);
 
   NoteExpressionManager &noteExpressionManager;
   ClockManager &clockManager;
@@ -212,6 +242,7 @@ class MidiOutNode : public GraphNode {
   int rhythmIndex = 0;
   int visualPatternIndex = 0;
   int visualRhythmIndex = 0;
+  int ccIndex = 0;
 
   NoteSequence previousSequence;
 

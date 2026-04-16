@@ -24,6 +24,7 @@ class AlgorithmicModulatorNode : public GraphNode {
   int getNumInputPorts() const override { return 0; }
   int getNumOutputPorts() const override { return 1; }
   PortType getOutputPortType(int /*port*/) const override { return PortType::CC; }
+  int getDeclaredCCNumber() const override { return ccNumber; }
 
   void process() override;
   NodeLayout getLayout() const override;

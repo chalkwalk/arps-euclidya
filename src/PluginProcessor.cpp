@@ -323,6 +323,12 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
             break;
         }
       }
+      void addCC(int channel, int ccNumber, int value,
+                 int sampleOffset) override {
+        buffer.addEvent(juce::MidiMessage::controllerEvent(channel + 1,
+                                                           ccNumber, value),
+                        sampleOffset);
+      }
 
      private:
       juce::MidiBuffer &buffer;
@@ -348,6 +354,13 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                              int sampleOffset, int32_t noteID) override {
         events.push_back({OutboundClapEvent::Type::NoteExpression, channel,
                           noteNumber, value, sampleOffset, noteID, type});
+      }
+      void addCC(int channel, int ccNumber, int value,
+                 int sampleOffset) override {
+        // CC reuses noteNumber field for ccNumber; value stored as float
+        events.push_back({OutboundClapEvent::Type::CC, channel, ccNumber,
+                          static_cast<float>(value), sampleOffset, -1,
+                          NoteExpressionType::Volume});
       }
 
      private:
@@ -996,7 +1009,7 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
         auto priority = [](const OutboundClapEvent &e) -> int {
           if (e.type == OutboundClapEvent::Type::NoteOff) return 0;
           if (e.type == OutboundClapEvent::Type::NoteOn) return 1;
-          return 2;  // NoteExpression
+          return 2;  // NoteExpression, CC
         };
         return priority(a) < priority(b);
       });
@@ -1062,6 +1075,21 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
           clapEvt.expression_id = CLAP_NOTE_EXPRESSION_BRIGHTNESS;
           break;
       }
+      out_events->try_push(out_events, &clapEvt.header);
+    } else if (evt.type == OutboundClapEvent::Type::CC) {
+      clap_event_midi clapEvt{};
+      clapEvt.header.size = sizeof(clap_event_midi);
+      clapEvt.header.type = CLAP_EVENT_MIDI;
+      clapEvt.header.time =
+          static_cast<uint32_t>(evt.sampleOffset + sampleOffset);
+      clapEvt.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+      clapEvt.header.flags = 0;
+      clapEvt.port_index = 0;
+      // 3-byte MIDI CC: status byte, CC number, value
+      clapEvt.data[0] =
+          static_cast<uint8_t>(0xB0 | (evt.channel & 0x0F));
+      clapEvt.data[1] = static_cast<uint8_t>(evt.noteNumber & 0x7F);
+      clapEvt.data[2] = static_cast<uint8_t>((int)evt.value & 0x7F);
       out_events->try_push(out_events, &clapEvt.header);
     }
   }

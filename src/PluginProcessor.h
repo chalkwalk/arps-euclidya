@@ -36,7 +36,7 @@ class ArpsEuclidyaEditor;
 #include "Tuning/TuningTable.h"
 
 struct OutboundClapEvent {
-  enum class Type { NoteOn, NoteOff, NoteExpression };
+  enum class Type { NoteOn, NoteOff, NoteExpression, CC };
   Type type;
   int channel;
   int noteNumber;

@@ -121,6 +121,9 @@ class NoteEventCollector {
   virtual void addNoteExpression(int channel, int noteNumber,
                                  NoteExpressionType expressionType, float value,
                                  int sampleOffset, int32_t noteID = -1) = 0;
+  // value is already quantised to 0..127
+  virtual void addCC(int channel, int ccNumber, int value,
+                     int sampleOffset) = 0;
 };
 
 // ---------------------------------------------------------------------------

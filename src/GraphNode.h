@@ -44,6 +44,10 @@ class GraphNode {
   virtual int getNumInputPorts() const { return 1; }
   virtual int getNumOutputPorts() const { return 1; }
 
+  // For CC generator nodes: returns the CC# this node will emit, or -1 if N/A.
+  // Used by MidiOutNode to pre-populate the CC registry.
+  virtual int getDeclaredCCNumber() const { return -1; }
+
   // Port types — override in nodes that carry CC or are type-agnostic
   virtual PortType getInputPortType(int port) const {
     juce::ignoreUnused(port);

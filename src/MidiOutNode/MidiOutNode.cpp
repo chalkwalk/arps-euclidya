@@ -177,6 +177,85 @@ void MidiOutNode::process() {
 
     previousSequence = newSequence;
   }
+
+  // Refresh CC lane registry from the CC input sequence (port 1).
+  auto it1 = inputSequences.find(1);
+  if (it1 != inputSequences.end() && !it1->second.empty()) {
+    // Collect all unique CC# present in the sequence.
+    std::vector<int> activeCCs;
+    for (const auto &step : it1->second) {
+      for (const auto &ev : step) {
+        if (const auto *cc = asCC(ev)) {
+          bool found = false;
+          for (int n : activeCCs) {
+            if (n == cc->ccNumber) {
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            activeCCs.push_back(cc->ccNumber);
+          }
+        }
+      }
+    }
+    // Ensure a lane exists for every active CC#.
+    for (int ccNum : activeCCs) {
+      bool found = false;
+      for (const auto &lane : ccLanes) {
+        if (lane.ccNumber == ccNum) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        CCLaneState lane;
+        lane.ccNumber = ccNum;
+        lane.name = "CC " + juce::String(ccNum);
+        ccLanes.push_back(lane);
+      }
+    }
+    // Remove lanes for CC#s no longer in the sequence.
+    ccLanes.erase(
+        std::remove_if(ccLanes.begin(), ccLanes.end(),
+                       [&activeCCs](const CCLaneState &l) {
+                         for (int n : activeCCs) {
+                           if (n == l.ccNumber) return false;
+                         }
+                         return true;
+                       }),
+        ccLanes.end());
+    // Clamp ccIndex.
+    int ccLen = (int)it1->second.size();
+    if (ccLen > 0 && ccIndex >= ccLen) {
+      ccIndex = 0;
+    }
+  } else {
+    ccLanes.clear();
+    ccIndex = 0;
+  }
+}
+
+void MidiOutNode::flushCCSlew(NoteEventCollector &collector, int numSamples,
+                              double samplesPerTick) {
+  // Per-block slew: advance currentValue toward targetValue, emit when the
+  // quantised int changes.  slewAmount=0 → instant snap; slewAmount=1 → ~8
+  // ticks to converge.
+  for (auto &lane : ccLanes) {
+    float slewSamples =
+        lane.slewAmount * 8.0f * (float)samplesPerTick + 1.0f;
+    float smoothFactor =
+        std::min(1.0f, (float)numSamples / slewSamples);
+    lane.currentValue +=
+        (lane.targetValue - lane.currentValue) * smoothFactor;
+
+    int quantised = juce::roundToInt(
+        std::clamp(lane.currentValue, 0.0f, 1.0f) * 127.0f);
+    if (quantised != lane.lastEmitted127) {
+      lane.lastEmitted127 = quantised;
+      collector.addCC(outputChannel, lane.ccNumber, quantised, numSamples - 1);
+    }
+  }
 }
 
 void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
@@ -193,12 +272,25 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     division *= (2.0 / 3.0);
   }
 
+  // CC ticks independently of notes in transport-driven modes.
+  // Gestural and Forgiving are key-gated: CC only runs while notes are held.
+  // Synchronized and Deterministic are transport-gated: CC runs whenever the
+  // transport is playing, even with no notes held.
+  const bool ccTicksWithTransport =
+      (syncMode == SyncMode::Synchronized ||
+       syncMode == SyncMode::Deterministic);
+
   // --- Reset/Sync State Tracking ---
   if (wasHoldingNotes && !holdingNotes) {
     if (patternResetOnRelease) {
       sequenceIndex = 0;
       patternIndex = 0;
       visualPatternIndex = 0;
+      // Only reset ccIndex for key-gated modes; in transport-driven modes the
+      // CC sequence keeps running through note releases.
+      if (!ccTicksWithTransport) {
+        ccIndex = 0;
+      }
     }
     if (rhythmResetOnRelease) {
       rhythmIndex = 0;
@@ -240,9 +332,12 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
   // Detect transport start
   if (!wasPlaying && isPlaying) {
-    // If transport starts exactly on a grid division and we're holding notes,
-    // fire it. We check if floor(current/div) is effectively 0.0 or unchanged.
-    if (holdingNotes && std::fmod(currentPpq, division) < 0.001) {
+    // If transport starts exactly on a grid division, fire immediately.
+    // Notes require holdingNotes; CC-independent modes fire regardless.
+    bool hasCCInput =
+        (inputSequences.count(1) > 0 && !inputSequences.at(1).empty());
+    if ((holdingNotes || (ccTicksWithTransport && hasCCInput)) &&
+        std::fmod(currentPpq, division) < 0.001) {
       forceTick = true;
     }
   }
@@ -287,6 +382,10 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   // numSamples each call, and NoteOff fires when the counter reaches zero.
   flushPlayingNotes(collector, numSamples);
 
+  // Advance CC slew interpolation every block.
+  double samplesPerTick = clockManager.getSamplesPerPpq() * division;
+  flushCCSlew(collector, numSamples, samplesPerTick);
+
   bool prevWasPlaying = wasPlaying;
   wasHoldingNotes = holdingNotes;
   wasPlaying = isPlaying;
@@ -307,6 +406,39 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       collector.addNoteOff(note.channel, note.noteNumber, 0.0f, 0, note.noteID);
     }
     playingNotes.clear();
+  }
+
+  // --- CC tick: advance ccIndex and update CC lane targets ---
+  // Fires on every tick in Synchronized/Deterministic (transport-gated), or
+  // only while notes are held in Gestural/Forgiving (key-gated).
+  if (isTick && (holdingNotes || ccTicksWithTransport)) {
+    auto ccIt = inputSequences.find(1);
+    if (ccIt != inputSequences.end() && !ccIt->second.empty()) {
+      const auto &ccSeq = ccIt->second;
+      int ccLen = (int)ccSeq.size();
+      if (ccLen > 0) {
+        const auto &ccStep = ccSeq[(size_t)(ccIndex % ccLen)];
+        if (ccStep.empty()) {
+          for (auto &lane : ccLanes) {
+            if (!lane.holdOnRest) {
+              lane.targetValue = lane.anchorValue;
+            }
+          }
+        } else {
+          for (const auto &ev : ccStep) {
+            if (const auto *cc = asCC(ev)) {
+              for (auto &lane : ccLanes) {
+                if (lane.ccNumber == cc->ccNumber) {
+                  lane.targetValue = cc->value;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        ccIndex = (ccIndex + 1) % ccLen;
+      }
+    }
   }
 
   if (!holdingNotes) {

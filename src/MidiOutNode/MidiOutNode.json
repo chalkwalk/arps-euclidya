@@ -2,7 +2,7 @@
     "gridWidth": 4,
     "gridHeight": 3,
     "extendedGridWidth": 4,
-    "extendedGridHeight": 5,
+    "extendedGridHeight": 7,
     "elements": [
         {
             "type": "Label",
@@ -435,6 +435,17 @@
                 86,
                 28,
                 7
+            ]
+        },
+        {
+            "type": "Custom",
+            "customType": "CCRegistry",
+            "label": "CCRegistry",
+            "gridBounds": [
+                0,
+                95,
+                80,
+                40
             ]
         }
     ]
