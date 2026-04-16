@@ -126,6 +126,25 @@ class NodeFactory {
     return types;
   }
 
+  // Returns node types grouped by category, in display order.
+  static std::vector<std::pair<std::string, std::vector<std::string>>>
+  getNodeCategories() {
+    return {
+        {"I/O",           {"Midi In", "Midi Out"}},
+        {"Modulation",    {"CC Modulator"}},
+        {"Generators",    {"All Notes", "ChordN", "Sequence", "Walk"}},
+        {"Pattern",       {"Converge", "Diverge", "Fold", "Multiply",
+                           "Reverse", "Sort", "Unfold"}},
+        {"Combinatorial", {"Chord Split", "Concatenate", "Interleave",
+                           "Split", "Unzip", "Zip"}},
+        {"Pitch & Range", {"Octave Stack", "Octave Transpose",
+                           "Quantizer", "Transpose"}},
+        {"Routing",       {"Route", "Select", "Switch"}},
+        {"Filter",        {"MPE Filter", "Velocity Filter"}},
+        {"Utility",       {"Diagnostic", "Note", "Note Large"}},
+    };
+  }
+
   struct NodeMetadata {
     int gridW = 1, gridH = 1, numIn = 1, numOut = 1;
   };

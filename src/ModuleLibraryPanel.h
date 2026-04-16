@@ -48,8 +48,13 @@ class ModuleLibraryPanel : public juce::Component,
   juce::TextEditor searchBox;
   LibraryListBox moduleList;
 
+  struct ListEntry {
+    std::string name;
+    bool isHeader = false;
+  };
+
   std::vector<std::string> allNodeTypes;
-  std::vector<std::string> filteredNodeTypes;
+  std::vector<ListEntry> filteredEntries;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModuleLibraryPanel)
 };

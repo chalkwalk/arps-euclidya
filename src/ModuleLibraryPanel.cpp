@@ -30,12 +30,24 @@ void ModuleLibraryPanel::resized() {
   moduleList.setBounds(bounds);
 }
 
-int ModuleLibraryPanel::getNumRows() { return (int)filteredNodeTypes.size(); }
+int ModuleLibraryPanel::getNumRows() { return (int)filteredEntries.size(); }
 
 void ModuleLibraryPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
                                           int width, int height,
                                           bool rowIsSelected) {
-  if (rowNumber < 0 || rowNumber >= (int)filteredNodeTypes.size()) {
+  if (rowNumber < 0 || rowNumber >= (int)filteredEntries.size()) {
+    return;
+  }
+
+  const auto &entry = filteredEntries[(size_t)rowNumber];
+
+  if (entry.isHeader) {
+    // Category header — darker background, muted label, no selection highlight
+    g.fillAll(ArpsLookAndFeel::getBackgroundCharcoal().darker(0.4f));
+    g.setColour(juce::Colours::lightgrey.withAlpha(0.7f));
+    g.setFont(juce::Font(juce::FontOptions(11.0f, juce::Font::bold)));
+    g.drawText(juce::String(entry.name).toUpperCase(), 8, 0, width - 16, height,
+               juce::Justification::centredLeft, true);
     return;
   }
 
@@ -45,22 +57,27 @@ void ModuleLibraryPanel::paintListBoxItem(int rowNumber, juce::Graphics &g,
 
   g.setColour(juce::Colours::white);
   g.setFont(14.0f);
-  g.drawText(filteredNodeTypes[(size_t)rowNumber], 10, 0, width - 20, height,
+  g.drawText(entry.name, 18, 0, width - 26, height,
              juce::Justification::centredLeft, true);
 }
 
 void ModuleLibraryPanel::listBoxItemClicked(int rowNumber,
                                             const juce::MouseEvent &e) {
-  juce::ignoreUnused(rowNumber, e);
-  // Single click just selects; drag is handled by getDragSourceDescription.
+  juce::ignoreUnused(e);
+  // Deselect headers so they are never highlighted
+  if (rowNumber >= 0 && rowNumber < (int)filteredEntries.size() &&
+      filteredEntries[(size_t)rowNumber].isHeader) {
+    moduleList.deselectAllRows();
+  }
 }
 
 juce::var ModuleLibraryPanel::getDragSourceDescription(
     const juce::SparseSet<int> &selectedRows) {
   if (selectedRows.size() > 0) {
     int row = selectedRows[0];
-    if (row >= 0 && row < (int)filteredNodeTypes.size()) {
-      return juce::var(juce::String(filteredNodeTypes[(size_t)row]));
+    if (row >= 0 && row < (int)filteredEntries.size() &&
+        !filteredEntries[(size_t)row].isHeader) {
+      return {juce::String{filteredEntries[(size_t)row].name}};
     }
   }
   return {};
@@ -69,9 +86,10 @@ juce::var ModuleLibraryPanel::getDragSourceDescription(
 void ModuleLibraryPanel::listBoxItemDoubleClicked(int rowNumber,
                                                   const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
-  if (rowNumber >= 0 && rowNumber < (int)filteredNodeTypes.size()) {
+  if (rowNumber >= 0 && rowNumber < (int)filteredEntries.size() &&
+      !filteredEntries[(size_t)rowNumber].isHeader) {
     if (onNodeSelected) {
-      onNodeSelected(filteredNodeTypes[(size_t)rowNumber]);
+      onNodeSelected(filteredEntries[(size_t)rowNumber].name);
       searchBox.clear();
       updateFilter();
     }
@@ -85,26 +103,41 @@ void ModuleLibraryPanel::textEditorTextChanged(juce::TextEditor &editor) {
 
 void ModuleLibraryPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
   juce::ignoreUnused(editor);
-  // "Enter-to-add" single result functionality
-  if (filteredNodeTypes.size() == 1) {
-    if (onNodeSelected) {
-      onNodeSelected(filteredNodeTypes[0]);
-
-      // Clear search after adding to quickly add something else
-      searchBox.clear();
-      updateFilter();
+  // "Enter-to-add" when exactly one non-header entry matches
+  std::string singleMatch;
+  int nodeCount = 0;
+  for (const auto &entry : filteredEntries) {
+    if (!entry.isHeader) {
+      singleMatch = entry.name;
+      ++nodeCount;
     }
+  }
+  if (nodeCount == 1 && onNodeSelected) {
+    onNodeSelected(singleMatch);
+    searchBox.clear();
+    updateFilter();
   }
 }
 
 void ModuleLibraryPanel::updateFilter() {
   auto searchText = searchBox.getText().trim().toLowerCase();
 
-  filteredNodeTypes.clear();
-  for (const auto &node : allNodeTypes) {
-    if (searchText.isEmpty() ||
-        juce::String(node).toLowerCase().contains(searchText)) {
-      filteredNodeTypes.push_back(node);
+  filteredEntries.clear();
+
+  if (searchText.isEmpty()) {
+    // Categorized view
+    for (const auto &[category, nodes] : NodeFactory::getNodeCategories()) {
+      filteredEntries.push_back({category, true});
+      for (const auto &node : nodes) {
+        filteredEntries.push_back({node, false});
+      }
+    }
+  } else {
+    // Flat filtered results — no headers
+    for (const auto &node : allNodeTypes) {
+      if (juce::String(node).toLowerCase().contains(searchText)) {
+        filteredEntries.push_back({node, false});
+      }
     }
   }
 
