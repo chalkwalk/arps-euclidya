@@ -948,6 +948,14 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("rBeats", rBeats);
     xml->setAttribute("rOffset", rOffset);
 
+    xml->setAttribute("syncMode", static_cast<int>(syncMode));
+    xml->setAttribute("patternMode", static_cast<int>(patternMode));
+    xml->setAttribute("patternResetOnRelease", patternResetOnRelease ? 1 : 0);
+    xml->setAttribute("rhythmResetOnRelease", rhythmResetOnRelease ? 1 : 0);
+    xml->setAttribute("clockDivisionIndex", clockDivisionIndex);
+    xml->setAttribute("triplet", triplet ? 1 : 0);
+    xml->setAttribute("outputChannel", outputChannel);
+
     xml->setAttribute("pressureToVelocity", pressureToVelocity);
     xml->setAttribute("timbreToVelocity", timbreToVelocity);
     xml->setAttribute("passExpressions", passExpressions ? 1 : 0);
