@@ -9,16 +9,28 @@ void SortNode::process() {
   } else {
     NoteSequence steps = it->second;
 
+    // Sort key: velocity-weighted mean pitch for note steps (so loud notes pull
+    // the centre toward their pitch), or mean CC value (0-127) for CC steps.
     auto getMeanValue = [](const EventStep &step) {
-      float sum = 0.0f;
-      int count = 0;
+      float weightedPitchSum = 0.0f;
+      float velocitySum = 0.0f;
+      float ccSum = 0.0f;
+      int ccCount = 0;
       for (const auto &ev : step) {
         if (const auto *n = asNote(ev)) {
-          sum += (float)n->noteNumber;
-          ++count;
+          float vel = (float)n->velocity;
+          weightedPitchSum += (float)n->noteNumber * vel;
+          velocitySum += vel;
+        } else if (const auto *c = asCC(ev)) {
+          ccSum += c->value * 127.0f;
+          ++ccCount;
         }
       }
-      return count > 0 ? sum / (float)count : 0.0f;
+      if (velocitySum > 0.0f)
+        return weightedPitchSum / velocitySum;
+      if (ccCount > 0)
+        return ccSum / (float)ccCount;
+      return 0.0f;
     };
 
     std::stable_sort(steps.begin(), steps.end(),

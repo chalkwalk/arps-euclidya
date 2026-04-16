@@ -14,6 +14,9 @@ class InterleaveNode : public GraphNode {
   [[nodiscard]] int getNumInputPorts() const override { return 2; }
   [[nodiscard]] int getNumOutputPorts() const override { return 1; }
 
+  [[nodiscard]] PortType getInputPortType(int /*port*/) const override { return PortType::Agnostic; }
+  [[nodiscard]] PortType getOutputPortType(int /*port*/) const override { return PortType::Agnostic; }
+
   void process() override;
 
   [[nodiscard]] NodeLayout getLayout() const override;

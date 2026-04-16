@@ -9,6 +9,9 @@ class DiagnosticNode : public GraphNode {
 
   std::string getName() const override { return "Diagnostic"; }
 
+  PortType getInputPortType(int /*port*/) const override { return PortType::Agnostic; }
+  PortType getOutputPortType(int /*port*/) const override { return PortType::Agnostic; }
+
   void process() override;
 
   NodeLayout getLayout() const override;

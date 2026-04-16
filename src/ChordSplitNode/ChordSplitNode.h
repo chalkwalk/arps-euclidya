@@ -15,6 +15,9 @@ class ChordSplitNode : public GraphNode {
   int getNumInputPorts() const override { return 1; }
   int getNumOutputPorts() const override { return 2; }
 
+  PortType getInputPortType(int /*port*/) const override { return PortType::Agnostic; }
+  PortType getOutputPortType(int /*port*/) const override { return PortType::Agnostic; }
+
   void process() override;
 
   NodeLayout getLayout() const override;
