@@ -8,7 +8,7 @@
 // Mode 2: Percentage split (controlled by splitPoint)
 class SplitNode : public GraphNode {
  public:
-  SplitNode() = default;
+  SplitNode() { addMacroParam(&macroSplitMode); }
   ~SplitNode() override = default;
 
   std::string getName() const override { return "Split"; }
@@ -24,4 +24,6 @@ class SplitNode : public GraphNode {
 
   int splitMode = 0;      // 0=first/last, 1=odd/even, 2=percentage
   int splitPercent = 50;  // Used in percentage mode (1-99)
+
+  MacroParam macroSplitMode{"Split Mode", {}};
 };

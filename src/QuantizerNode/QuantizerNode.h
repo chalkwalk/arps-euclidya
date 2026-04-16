@@ -22,6 +22,8 @@ class QuantizerNode : public GraphNode {
   int mode = 0;
   int restOnDrop = 1;
 
+  MacroParam macroTonality{"Scale", {}};
+  MacroParam macroRootNote{"Root Note", {}};
   MacroParam macroMode{};
   MacroParam macroRestOnDrop{};
 };

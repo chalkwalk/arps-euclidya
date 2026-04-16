@@ -29,6 +29,8 @@ const std::vector<std::vector<int>> SCALES = {
 QuantizerNode::QuantizerNode() {
   macroMode.name = "Quant Snap";
   macroRestOnDrop.name = "Quant Rests";
+  addMacroParam(&macroTonality);
+  addMacroParam(&macroRootNote);
   addMacroParam(&macroMode);
   addMacroParam(&macroRestOnDrop);
 }
@@ -41,8 +43,10 @@ NodeLayout QuantizerNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "tonality") {
       el.valueRef = const_cast<int *>(&tonality);
+      el.macroParamRef = const_cast<MacroParam *>(&macroTonality);
     } else if (el.label == "rootNote") {
       el.valueRef = const_cast<int *>(&rootNote);
+      el.macroParamRef = const_cast<MacroParam *>(&macroRootNote);
     } else if (el.label == "mode") {
       el.valueRef = const_cast<int *>(&mode);
       el.macroParamRef = const_cast<MacroParam *>(&macroMode);
@@ -78,13 +82,15 @@ void QuantizerNode::loadNodeState(juce::XmlElement *xml) {
 void QuantizerNode::process() {
   int effectiveMode = resolveMacroInt(macroMode, mode, 0, 1);
   int effectiveRestOnDrop = resolveMacroInt(macroRestOnDrop, restOnDrop, 0, 1);
+  int effectiveTonality = resolveMacroInt(macroTonality, tonality, 0, 14);
+  int effectiveRootNote = resolveMacroInt(macroRootNote, rootNote, 0, 11);
 
   auto it = inputSequences.find(0);
   if (it == inputSequences.end() || it->second.empty()) {
     outputSequences[0] = NoteSequence();
   } else {
     NoteSequence outSeq;
-    const auto &scalePattern = SCALES[(size_t)tonality];
+    const auto &scalePattern = SCALES[(size_t)effectiveTonality];
 
     for (const auto &step : it->second) {
       if (step.empty()) {
@@ -100,7 +106,7 @@ void QuantizerNode::process() {
         HeldNote quantizedNote = *originalNote;
 
         // Find interval relative to root
-        int pitchClass = (originalNote->noteNumber - rootNote) % 12;
+        int pitchClass = (originalNote->noteNumber - effectiveRootNote) % 12;
         if (pitchClass < 0) {
           pitchClass += 12;  // Handle negative modulo
         }

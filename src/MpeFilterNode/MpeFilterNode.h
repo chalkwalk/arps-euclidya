@@ -9,7 +9,7 @@
 // determines which one will actually fire on a given tick.
 class MpeFilterNode : public GraphNode {
  public:
-  MpeFilterNode() = default;
+  MpeFilterNode() { addMacroParam(&macroAxis); }
   ~MpeFilterNode() override = default;
 
   [[nodiscard]] std::string getName() const override { return "MPE Filter"; }
@@ -29,4 +29,6 @@ class MpeFilterNode : public GraphNode {
   // Split point in [0.0, 1.0].
   // For Bend: 0.5 = centre (no bend). Stored normalised; UI shows ±%.
   float threshold = 0.5f;
+
+  MacroParam macroAxis{"MPE Axis", {}};
 };

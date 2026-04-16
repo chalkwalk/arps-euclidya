@@ -222,6 +222,11 @@ class MidiOutNode : public GraphNode {
   float humVelocity = 0.0f;
   float humGate = 0.0f;
 
+  MacroParam macroClockDivisionIndex{"Clock Division", {}};
+  MacroParam macroSyncModeParam{"Sync Mode", {}};
+  MacroParam macroPatternModeParam{"Pattern Mode", {}};
+  MacroParam macroChannelMode{"Channel Mode", {}};
+
   MacroParam macroPressureToVelocity{"Press -> Vel", {}};
   MacroParam macroTimbreToVelocity{"Timb -> Vel", {}};
   MacroParam macroHumTiming{"Hum Timing", {}};
@@ -235,6 +240,7 @@ class MidiOutNode : public GraphNode {
   int ui_rhythmResetOnRelease = 1;
   int ui_triplet = 0;
   int ui_passExpressions = 0;
+  int ui_channelMode = 0;
 
   int ui_pBeatsMin = 1;
   int ui_pBeatsMax = 32;

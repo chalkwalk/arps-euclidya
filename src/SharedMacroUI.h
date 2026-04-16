@@ -191,6 +191,85 @@ class CustomMacroButton : public juce::TextButton {
   }
 };
 
+class CustomMacroComboBox : public juce::ComboBox {
+ public:
+  std::function<void()> onRightClick;
+
+  // Wired by NodeBlock to enable shift+click intensity binding
+  int *selectedMacroPtr = nullptr;
+  MacroParam *macroParamRef = nullptr;
+  std::function<int()> getNextFreeMacro;
+  std::function<void(std::vector<int>)> onHoverMacros;
+  std::function<void()> onMappingChanged;
+  std::function<void()> onBindingChanged;
+
+  void mouseEnter(const juce::MouseEvent &e) override {
+    juce::ComboBox::mouseEnter(e);
+    if (onHoverMacros && macroParamRef != nullptr) {
+      std::vector<int> indices;
+      for (const auto &b : macroParamRef->bindings)
+        indices.push_back(b.macroIndex);
+      onHoverMacros(std::move(indices));
+    }
+  }
+
+  void mouseExit(const juce::MouseEvent &e) override {
+    juce::ComboBox::mouseExit(e);
+    if (onHoverMacros)
+      onHoverMacros({});
+  }
+
+  void mouseDown(const juce::MouseEvent &e) override {
+    if (e.mods.isPopupMenu()) {
+      if (onRightClick)
+        onRightClick();
+      return;
+    }
+    if (e.mods.isShiftDown() && macroParamRef != nullptr) {
+      handleShiftClick();
+      return;
+    }
+    juce::ComboBox::mouseDown(e);
+  }
+
+ private:
+  void handleShiftClick() {
+    if (macroParamRef == nullptr)
+      return;
+
+    auto &bindings = macroParamRef->bindings;
+    int macroIdx = (selectedMacroPtr != nullptr) ? *selectedMacroPtr : -1;
+
+    if (macroIdx == -1) {
+      // No macro selected: clear all bindings if any exist, else grab a free one
+      if (!bindings.empty()) {
+        bindings.clear();
+      } else {
+        if (getNextFreeMacro)
+          macroIdx = getNextFreeMacro();
+        if (macroIdx >= 0)
+          bindings.push_back({macroIdx, 1.0f});
+      }
+    } else {
+      auto it = std::find_if(bindings.begin(), bindings.end(),
+                             [macroIdx](const MacroBinding &b) {
+                               return b.macroIndex == macroIdx;
+                             });
+      if (it == bindings.end()) {
+        bindings.push_back({macroIdx, 1.0f});
+      } else {
+        bindings.erase(it);
+      }
+    }
+
+    if (onMappingChanged)
+      onMappingChanged();
+    if (onBindingChanged) {
+      juce::MessageManager::callAsync([cb = onBindingChanged]() { cb(); });
+    }
+  }
+};
+
 class MacroAttachment : public juce::AudioProcessorValueTreeState::Listener,
                         public juce::Slider::Listener,
                         private juce::AsyncUpdater {

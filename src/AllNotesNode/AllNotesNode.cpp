@@ -4,7 +4,7 @@
 #include "BinaryData.h"
 // --- AllNotesNode Impl
 
-AllNotesNode::AllNotesNode() = default;
+AllNotesNode::AllNotesNode() { addMacroParam(&macroBaseOctave); }
 
 NodeLayout AllNotesNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::AllNotesNode_json,
@@ -14,6 +14,7 @@ NodeLayout AllNotesNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "baseOctave") {
       el.valueRef = const_cast<int *>(&baseOctave);
+      el.macroParamRef = const_cast<MacroParam *>(&macroBaseOctave);
     }
   }
 
@@ -23,18 +24,20 @@ NodeLayout AllNotesNode::getLayout() const {
 void AllNotesNode::saveNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     xml->setAttribute("baseOctave", baseOctave);
+    saveMacroBindings(xml);
   }
 }
 
 void AllNotesNode::loadNodeState(juce::XmlElement *xml) {
   if (xml != nullptr) {
     baseOctave = xml->getIntAttribute("baseOctave", 3);
+    loadMacroBindings(xml);
   }
 }
 
 void AllNotesNode::process() {
   NoteSequence outSeq;
-  int baseNoteNumber = baseOctave * 12;
+  int baseNoteNumber = resolveMacroInt(macroBaseOctave, baseOctave, 0, 10) * 12;
 
   // Generate 12 steps, one for each chromatic note C -> B
   for (int i = 0; i < 12; ++i) {

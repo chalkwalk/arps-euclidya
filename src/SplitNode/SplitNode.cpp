@@ -14,7 +14,8 @@ void SplitNode::process() {
   NoteSequence out0;
   NoteSequence out1;
 
-  switch (splitMode) {
+  int effectiveSplitMode = resolveMacroInt(macroSplitMode, splitMode, 0, 4);
+  switch (effectiveSplitMode) {
     case 0: {  // First half / Second half
       size_t mid = seq.size() / 2;
       if (mid == 0) {
@@ -88,6 +89,7 @@ void SplitNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("splitMode", splitMode);
     xml->setAttribute("splitPercent", splitPercent);
+    saveMacroBindings(xml);
   }
 }
 
@@ -95,6 +97,7 @@ void SplitNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     splitMode = xml->getIntAttribute("splitMode", 0);
     splitPercent = xml->getIntAttribute("splitPercent", 50);
+    loadMacroBindings(xml);
   }
 }
 
@@ -106,6 +109,7 @@ NodeLayout SplitNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "splitMode") {
       el.valueRef = const_cast<int *>(&splitMode);
+      el.macroParamRef = const_cast<MacroParam *>(&macroSplitMode);
     } else if (el.label == "splitPercent") {
       el.valueRef = const_cast<int *>(&splitPercent);
     }

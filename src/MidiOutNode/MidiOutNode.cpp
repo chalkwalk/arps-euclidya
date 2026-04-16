@@ -10,6 +10,10 @@ MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
   addMacroParam(&macroRSteps);
   addMacroParam(&macroRBeats);
   addMacroParam(&macroROffset);
+  addMacroParam(&macroClockDivisionIndex);
+  addMacroParam(&macroSyncModeParam);
+  addMacroParam(&macroPatternModeParam);
+  addMacroParam(&macroChannelMode);
   addMacroParam(&macroPressureToVelocity);
   addMacroParam(&macroTimbreToVelocity);
   addMacroParam(&macroHumTiming);
@@ -108,8 +112,9 @@ void MidiOutNode::clampParameters() {
   rBeats = std::clamp(rBeats, 1, rSteps);
   rOffset = std::clamp(rOffset, -(rSteps + 1) / 2, (rSteps + 1) / 2);
 
-  syncMode = static_cast<SyncMode>(ui_syncMode);
-  patternMode = static_cast<PatternMode>(ui_patternMode);
+  syncMode = static_cast<SyncMode>(resolveMacroInt(macroSyncModeParam, ui_syncMode, 0, 3));
+  patternMode = static_cast<PatternMode>(resolveMacroInt(macroPatternModeParam, ui_patternMode, 0, 1));
+  channelMode = resolveMacroInt(macroChannelMode, ui_channelMode, 0, 1);
   patternResetOnRelease = (ui_patternResetOnRelease != 0);
   rhythmResetOnRelease = (ui_rhythmResetOnRelease != 0);
   triplet = (ui_triplet != 0);
@@ -277,7 +282,9 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   double currentPpq = clockManager.getCumulativePpq();
 
   // --- Compute current division ---
-  int divIdx = std::clamp(clockDivisionIndex, 0, NUM_DIVISIONS - 1);
+  int divIdx = std::clamp(
+      resolveMacroInt(macroClockDivisionIndex, clockDivisionIndex, 0, NUM_DIVISIONS - 1),
+      0, NUM_DIVISIONS - 1);
   double division = DIVISIONS[divIdx];
   if (triplet) {
     division *= (2.0 / 3.0);
@@ -944,7 +951,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("pressureToVelocity", pressureToVelocity);
     xml->setAttribute("timbreToVelocity", timbreToVelocity);
     xml->setAttribute("passExpressions", passExpressions ? 1 : 0);
-    xml->setAttribute("channelMode", channelMode);
+    xml->setAttribute("channelMode", ui_channelMode);
 
     xml->setAttribute("humTiming", humTiming);
     xml->setAttribute("humVelocity", humVelocity);
@@ -983,7 +990,7 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     pressureToVelocity = xml->getDoubleAttribute("pressureToVelocity", 0.0);
     timbreToVelocity = xml->getDoubleAttribute("timbreToVelocity", 0.0);
     passExpressions = xml->getIntAttribute("passExpressions", 0) != 0;
-    channelMode = xml->getIntAttribute("channelMode", 0);
+    ui_channelMode = xml->getIntAttribute("channelMode", 0);
     humTiming = static_cast<float>(xml->getDoubleAttribute("humTiming", 0.0));
     humVelocity =
         static_cast<float>(xml->getDoubleAttribute("humVelocity", 0.0));

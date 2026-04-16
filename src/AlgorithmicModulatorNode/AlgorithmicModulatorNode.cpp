@@ -102,6 +102,7 @@ class ModulatorStepEditor : public juce::Component, public juce::Timer {
 // ──────────────────────────────────────────────────────────────────────────────
 
 AlgorithmicModulatorNode::AlgorithmicModulatorNode() {
+  addMacroParam(&macroAlgorithm);
   addMacroParam(&macroCCNumber);
   addMacroParam(&macroLength);
   addMacroParam(&macroRangeMin);
@@ -124,6 +125,7 @@ NodeLayout AlgorithmicModulatorNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "algorithm") {
       el.valueRef = const_cast<int *>(&algorithm);
+      el.macroParamRef = const_cast<MacroParam *>(&macroAlgorithm);
     } else if (el.label == "ccNumber") {
       el.valueRef = const_cast<int *>(&ccNumber);
       el.macroParamRef = const_cast<MacroParam *>(&macroCCNumber);
@@ -151,6 +153,7 @@ NodeLayout AlgorithmicModulatorNode::getLayout() const {
   for (auto &el : layout.extendedElements) {
     if (el.label == "algorithm") {
       el.valueRef = const_cast<int *>(&algorithm);
+      el.macroParamRef = const_cast<MacroParam *>(&macroAlgorithm);
     } else if (el.label == "ccNumber") {
       el.valueRef = const_cast<int *>(&ccNumber);
       el.macroParamRef = const_cast<MacroParam *>(&macroCCNumber);
@@ -188,6 +191,7 @@ AlgorithmicModulatorNode::createCustomComponent(
 }
 
 void AlgorithmicModulatorNode::process() {
+  int actualAlgo   = resolveMacroInt(macroAlgorithm, algorithm, 0, (int)Custom);
   int actualLength = resolveMacroInt(macroLength, length, 1, 64);
   int actualCC = resolveMacroInt(macroCCNumber, ccNumber, 0, 127);
   float actualMin = resolveMacroFloat(macroRangeMin, rangeMin, 0.0f, 1.0f);
@@ -195,7 +199,7 @@ void AlgorithmicModulatorNode::process() {
 
   EventSequence outSeq;
 
-  if (algorithm == EuclideanGates) {
+  if (actualAlgo == EuclideanGates) {
     int actualSteps = resolveMacroInt(macroSteps, steps, 1, 64);
     int actualBeats = resolveMacroInt(macroBeats, beats, 1, actualSteps);
     int actualOffset = resolveMacroInt(macroOffset, offset, 0, 63);
@@ -226,7 +230,7 @@ void AlgorithmicModulatorNode::process() {
       float normalValue = 0.0f;
       const float pi = 3.14159265f;
 
-      switch (algorithm) {
+      switch (actualAlgo) {
         case Sine:
           normalValue =
               0.5f * (1.0f + std::sin(2.0f * pi * (float)i / (float)actualLength));

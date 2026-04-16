@@ -7,7 +7,11 @@
 
 // --- UnfoldNode Impl
 
-UnfoldNode::UnfoldNode() = default;
+UnfoldNode::UnfoldNode() {
+  addMacroParam(&macroOrdering);
+  addMacroParam(&macroFixedWidth);
+  addMacroParam(&macroNoteBias);
+}
 
 NodeLayout UnfoldNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::UnfoldNode_json,
@@ -17,10 +21,13 @@ NodeLayout UnfoldNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "ordering") {
       el.valueRef = const_cast<int *>(&ordering);
+      el.macroParamRef = const_cast<MacroParam *>(&macroOrdering);
     } else if (el.label == "fixedWidth") {
       el.valueRef = const_cast<int *>(&fixedWidth);
+      el.macroParamRef = const_cast<MacroParam *>(&macroFixedWidth);
     } else if (el.label == "noteBias") {
       el.valueRef = const_cast<int *>(&noteBias);
+      el.macroParamRef = const_cast<MacroParam *>(&macroNoteBias);
     }
   }
 
@@ -32,6 +39,7 @@ void UnfoldNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("ordering", ordering);
     xml->setAttribute("fixedWidth", fixedWidth);
     xml->setAttribute("noteBias", noteBias);
+    saveMacroBindings(xml);
   }
 }
 
@@ -40,6 +48,7 @@ void UnfoldNode::loadNodeState(juce::XmlElement *xml) {
     ordering = xml->getIntAttribute("ordering", 0);
     fixedWidth = xml->getIntAttribute("fixedWidth", 0);
     noteBias = xml->getIntAttribute("noteBias", 0);
+    loadMacroBindings(xml);
   }
 }
 
@@ -51,10 +60,14 @@ void UnfoldNode::process() {
     const NoteSequence &inSeq = it->second;
     NoteSequence outSeq;
 
+    int effectiveOrdering = resolveMacroInt(macroOrdering, ordering, 0, 1);
+    int effectiveFixedWidth = resolveMacroInt(macroFixedWidth, fixedWidth, 0, 1);
+    int effectiveNoteBias = resolveMacroInt(macroNoteBias, noteBias, 0, 2);
+
     // Helper: sort a step's events by note number (ascending or descending).
     // Non-note events sort to the front with key 0.
-    auto sortNotes = [this](EventStep step) {
-      if (ordering == 0) {
+    auto sortNotes = [effectiveOrdering](EventStep step) {
+      if (effectiveOrdering == 0) {
         std::sort(step.begin(), step.end(),
                   [](const SequenceEvent &a, const SequenceEvent &b) {
                     const auto *na = asNote(a);
@@ -74,7 +87,7 @@ void UnfoldNode::process() {
       return step;
     };
 
-    if (fixedWidth == 0) {
+    if (effectiveFixedWidth == 0) {
       // --- Variable width (original behaviour) ---
       for (const auto &step : inSeq) {
         if (step.empty()) {
@@ -110,11 +123,11 @@ void UnfoldNode::process() {
 
         // If more notes than slots, trim by bias
         if ((int)sorted.size() > maxChordSize) {
-          if (noteBias == 0) {
+          if (effectiveNoteBias == 0) {
             // Bottom: keep first maxChordSize (lowest when asc, highest when
             // desc)
             sorted.resize((size_t)maxChordSize);
-          } else if (noteBias == 2) {
+          } else if (effectiveNoteBias == 2) {
             // Top: keep last maxChordSize
             sorted.erase(sorted.begin(),
                          sorted.begin() + ((int)sorted.size() - maxChordSize));

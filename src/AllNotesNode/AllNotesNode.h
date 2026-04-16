@@ -19,4 +19,6 @@ class AllNotesNode : public GraphNode {
   void loadNodeState(juce::XmlElement *xml) override;
 
   int baseOctave = 3;
+
+  MacroParam macroBaseOctave{"Base Octave", {}};
 };

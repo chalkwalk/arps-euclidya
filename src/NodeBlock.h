@@ -45,7 +45,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
   // Called by GraphCanvas after construction to share the editor's selection state
   void setSelectedMacroPtr(int *ptr) {
     selectedMacroPtr = ptr;
-    // Propagate to all macro-aware sliders and buttons created during construction
+    // Propagate to all macro-aware sliders, buttons, and combos
     for (auto &info : sliderMacroInfos)
       if (auto *s = dynamic_cast<CustomMacroSlider *>(info.slider))
         s->selectedMacroPtr = ptr;
@@ -55,6 +55,8 @@ class NodeBlock : public juce::Component, private juce::Timer {
     for (auto *comp : extendedComponents)
       if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
         b->selectedMacroPtr = ptr;
+    for (auto &info : comboMacroInfos)
+      info.combo->selectedMacroPtr = ptr;
   }
 
   std::function<void()> onDelete;
@@ -124,6 +126,14 @@ class NodeBlock : public juce::Component, private juce::Timer {
     int *valueRef;  // pointer to the node's local int value (may be nullptr)
   };
   std::vector<ButtonMacroInfo> buttonMacroInfos;
+
+  // Tracks combo boxes that have a macroParamRef, for overlay rendering
+  struct ComboMacroInfo {
+    CustomMacroComboBox *combo;
+    MacroParam *macroParamRef;
+    int *valueRef;  // pointer to the node's local int value (may be nullptr)
+  };
+  std::vector<ComboMacroInfo> comboMacroInfos;
 
   void paintOverChildren(juce::Graphics &g) override;
 

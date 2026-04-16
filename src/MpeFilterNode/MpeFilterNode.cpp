@@ -22,7 +22,7 @@ void MpeFilterNode::process() {
       HeldNote trueNote = *note;
       HeldNote falseNote = *note;
 
-      switch (axis) {
+      switch (resolveMacroInt(macroAxis, axis, 0, 2)) {
         case 0:  // Bend (X)
           trueNote.mpeCondition.intersectX(threshold, 1.0f);
           falseNote.mpeCondition.intersectX(0.0f, threshold);
@@ -51,6 +51,7 @@ void MpeFilterNode::saveNodeState(juce::XmlElement *xml) {
   if (xml) {
     xml->setAttribute("axis", axis);
     xml->setAttribute("threshold", (double)threshold);
+    saveMacroBindings(xml);
   }
 }
 
@@ -58,6 +59,7 @@ void MpeFilterNode::loadNodeState(juce::XmlElement *xml) {
   if (xml) {
     axis = xml->getIntAttribute("axis", 0);
     threshold = (float)xml->getDoubleAttribute("threshold", 0.5);
+    loadMacroBindings(xml);
   }
 }
 
@@ -68,6 +70,7 @@ NodeLayout MpeFilterNode::getLayout() const {
   for (auto &el : layout.elements) {
     if (el.label == "axis") {
       el.valueRef = const_cast<int *>(&axis);
+      el.macroParamRef = const_cast<MacroParam *>(&macroAxis);
     } else if (el.label == "threshold") {
       el.floatValueRef = const_cast<float *>(&threshold);
     }

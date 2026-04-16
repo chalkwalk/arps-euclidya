@@ -5,7 +5,7 @@
 
 class FoldNode : public GraphNode {
  public:
-  FoldNode() { addMacroParam(&macroNValue); }
+  FoldNode() { addMacroParam(&macroNValue); addMacroParam(&macroFoldMode); }
   ~FoldNode() override = default;
 
   void process() override;
@@ -19,4 +19,5 @@ class FoldNode : public GraphNode {
   int nValue = 2;
   MacroParam macroNValue{"Fold N", {}};
   int mode = 0;
+  MacroParam macroFoldMode{"Fold Mode", {}};
 };

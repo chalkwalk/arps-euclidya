@@ -325,10 +325,13 @@ NodeLayout MidiOutNode::getLayout() const {
         el.macroParamRef = &self->macroTimbreToVelocity;
       } else if (el.label == "clockDivisionIndex") {
         el.valueRef = &self->clockDivisionIndex;
+        el.macroParamRef = &self->macroClockDivisionIndex;
       } else if (el.label == "syncMode") {
         el.valueRef = &self->ui_syncMode;
+        el.macroParamRef = &self->macroSyncModeParam;
       } else if (el.label == "patternMode") {
         el.valueRef = &self->ui_patternMode;
+        el.macroParamRef = &self->macroPatternModeParam;
       } else if (el.label == "triplet") {
         el.valueRef = &self->ui_triplet;
       } else if (el.label == "patternResetOnRelease") {
@@ -338,7 +341,8 @@ NodeLayout MidiOutNode::getLayout() const {
       } else if (el.label == "outputChannel") {
         el.valueRef = &self->outputChannel;
       } else if (el.label == "channelMode") {
-        el.valueRef = &self->channelMode;
+        el.valueRef = &self->ui_channelMode;
+        el.macroParamRef = &self->macroChannelMode;
       } else if (el.label == "passExpressions") {
         el.valueRef = &self->ui_passExpressions;
       } else if (el.label == "humTiming") {

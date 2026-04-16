@@ -49,6 +49,7 @@ class AlgorithmicModulatorNode : public GraphNode {
   std::vector<float> customValues;
 
   // --- Macro params ---
+  MacroParam macroAlgorithm{"Algorithm", {}};
   MacroParam macroCCNumber{"CC Number", {}};
   MacroParam macroLength{"Length", {}};
   MacroParam macroRangeMin{"Range Min", {}};

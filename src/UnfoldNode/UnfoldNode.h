@@ -22,4 +22,8 @@ class UnfoldNode : public GraphNode {
       0;  // 0: Variable length, 1: Fixed width (pad/drop to max chord size)
   int noteBias =
       0;  // 0: Bottom, 1: Middle, 2: Top (which notes to keep when dropping)
+
+  MacroParam macroOrdering{"Ordering", {}};
+  MacroParam macroFixedWidth{"Fixed Width", {}};
+  MacroParam macroNoteBias{"Note Bias", {}};
 };

@@ -18,6 +18,7 @@ NodeLayout FoldNode::getLayout() const {
       el.macroParamRef = const_cast<MacroParam *>(&macroNValue);
     } else if (el.label == "mode") {
       el.valueRef = const_cast<int *>(&mode);
+      el.macroParamRef = const_cast<MacroParam *>(&macroFoldMode);
     }
   }
 
@@ -77,7 +78,7 @@ void FoldNode::process() {
       s.erase(last, s.end());
     };
 
-    if (mode == 0) {  // Chunked
+    if (resolveMacroInt(macroFoldMode, mode, 0, 1) == 0) {  // Chunked
       EventStep currentAggregatedStep;
       int itemsInCurrentStep = 0;
 

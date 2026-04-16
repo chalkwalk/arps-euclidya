@@ -287,7 +287,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
         }
         comp = button;
       } else if (element.type == UIElementType::ComboBox) {
-        auto *combo = new juce::ComboBox();
+        auto *combo = new CustomMacroComboBox();
         int i = 1;
         for (const auto &opt : element.options) {
           combo->addItem(opt, i++);
@@ -303,6 +303,70 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
               node->onNodeDirtied();
             }
           };
+        }
+
+        if (element.macroParamRef != nullptr) {
+          GraphCanvas *canvasPtr = &parentCanvas;
+          combo->onRightClick = [node = targetNode, combo,
+                                 macroParam = element.macroParamRef,
+                                 canvasPtr]() {
+            juce::PopupMenu menu;
+            if (macroParam->bindings.empty()) {
+              menu.addItem(1, "No macro bindings", false, false);
+            } else {
+              for (const auto &b : macroParam->bindings) {
+                menu.addItem(b.macroIndex + 2,
+                             "Remove: Macro " + juce::String(b.macroIndex + 1));
+              }
+            }
+            auto options = juce::PopupMenu::Options().withTargetScreenArea(
+                combo->getScreenBounds());
+            menu.showMenuAsync(
+                options, [node, macroParam, canvasPtr](int result) {
+                  if (result < 2)
+                    return;
+                  int macroIndex = result - 2;
+                  canvasPtr->performMutation([node, macroParam, macroIndex]() {
+                    auto &bindings = macroParam->bindings;
+                    bindings.erase(
+                        std::remove_if(bindings.begin(), bindings.end(),
+                                       [macroIndex](const MacroBinding &b) {
+                                         return b.macroIndex == macroIndex;
+                                       }),
+                        bindings.end());
+                    node->parameterChanged();
+                    if (node->onMappingChanged)
+                      node->onMappingChanged();
+                  });
+                  canvasPtr->rebuild();
+                });
+          };
+
+          combo->selectedMacroPtr = selectedMacroPtr;
+          combo->macroParamRef = element.macroParamRef;
+          combo->getNextFreeMacro = [canvasPtr]() {
+            return canvasPtr->getEngine().getNextFreeMacro();
+          };
+          combo->onHoverMacros = [this](std::vector<int> v) {
+            if (onHoverMacros) {
+              onHoverMacros(std::move(v));
+            }
+          };
+          combo->onMappingChanged = [node = targetNode]() {
+            node->parameterChanged();
+            if (node->onMappingChanged) {
+              node->onMappingChanged();
+            }
+          };
+          combo->onBindingChanged = [node = targetNode, canvasPtr]() {
+            node->parameterChanged();
+            if (node->onMappingChanged) {
+              node->onMappingChanged();
+            }
+            canvasPtr->rebuild();
+          };
+          comboMacroInfos.push_back({combo, element.macroParamRef,
+                                     element.valueRef});
         }
         comp = combo;
       } else if (element.type == UIElementType::Custom) {
@@ -452,6 +516,21 @@ void NodeBlock::timerCallback() {
     syncElements(layout.extendedElements, extendedComponents);
   }
 
+  // Update combo boxes that have active macro bindings to show the effective value
+  for (const auto &info : comboMacroInfos) {
+    if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty())
+      continue;
+    if (info.valueRef == nullptr || info.combo->isMouseButtonDown())
+      continue;
+    int numItems = info.combo->getNumItems();
+    if (numItems <= 0) continue;
+    int effective = targetNode->resolveMacroInt(
+        *info.macroParamRef, *info.valueRef, 0, numItems - 1);
+    int effectiveId = effective + 1;
+    if (info.combo->getSelectedId() != effectiveId)
+      info.combo->setSelectedId(effectiveId, juce::dontSendNotification);
+  }
+
   // Repaint when macro selection state changes, or when any slider has active
   // bindings (effective value indicator follows live macro knob movement)
   int currentSelected = selectedMacroPtr ? *selectedMacroPtr : -1;
@@ -464,6 +543,15 @@ void NodeBlock::timerCallback() {
   }
   if (!hasActiveBindings) {
     for (const auto &info : buttonMacroInfos) {
+      if (info.macroParamRef != nullptr &&
+          !info.macroParamRef->bindings.empty()) {
+        hasActiveBindings = true;
+        break;
+      }
+    }
+  }
+  if (!hasActiveBindings) {
+    for (const auto &info : comboMacroInfos) {
       if (info.macroParamRef != nullptr &&
           !info.macroParamRef->bindings.empty()) {
         hasActiveBindings = true;
@@ -767,6 +855,25 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
     }
   }
 
+  // ComboBox binding indicators — colored border rings, matching button style.
+  for (const auto &info : comboMacroInfos) {
+    if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty()) {
+      continue;
+    }
+
+    auto bounds = info.combo->getBoundsInParent().toFloat();
+
+    // Colored border ring per binding
+    int borderIndex = 0;
+    for (const auto &binding : info.macroParamRef->bindings) {
+      auto bindColour = getMacroColour(binding.macroIndex);
+      float inset = 0.5f + (static_cast<float>(borderIndex) * 2.5f);
+      g.setColour(bindColour.withAlpha(0.75f));
+      g.drawRoundedRectangle(bounds.reduced(inset), 3.0f, 1.5f);
+      ++borderIndex;
+    }
+  }
+
   // Palette hover: bright white ring around controls bound to the hovered macro
   if (highlightedMacroIndex != -1) {
     for (const auto &info : sliderMacroInfos) {
@@ -796,6 +903,20 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
                       });
       if (bound) {
         auto bounds = info.button->getBoundsInParent().toFloat();
+        g.setColour(juce::Colours::white);
+        g.drawRoundedRectangle(bounds.expanded(2.0f), 3.0f, 2.0f);
+      }
+    }
+    for (const auto &info : comboMacroInfos) {
+      if (info.macroParamRef == nullptr) continue;
+      bool bound =
+          std::any_of(info.macroParamRef->bindings.begin(),
+                      info.macroParamRef->bindings.end(),
+                      [this](const MacroBinding &b) {
+                        return b.macroIndex == highlightedMacroIndex;
+                      });
+      if (bound) {
+        auto bounds = info.combo->getBoundsInParent().toFloat();
         g.setColour(juce::Colours::white);
         g.drawRoundedRectangle(bounds.expanded(2.0f), 3.0f, 2.0f);
       }
@@ -844,6 +965,22 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
     }
     if (!alreadyBound) {
       auto bounds = info.button->getBoundsInParent().toFloat().reduced(0.5f);
+      g.setColour(colour.withAlpha(0.30f));
+      g.drawRoundedRectangle(bounds, 3.0f, 2.0f);
+    }
+  }
+
+  // Faint "bindable" outline on unbound combos when a macro is selected
+  for (const auto &info : comboMacroInfos) {
+    bool alreadyBound = false;
+    for (const auto &b : info.macroParamRef->bindings) {
+      if (b.macroIndex == macroIdx) {
+        alreadyBound = true;
+        break;
+      }
+    }
+    if (!alreadyBound) {
+      auto bounds = info.combo->getBoundsInParent().toFloat().reduced(0.5f);
       g.setColour(colour.withAlpha(0.30f));
       g.drawRoundedRectangle(bounds, 3.0f, 2.0f);
     }
