@@ -94,11 +94,33 @@ struct CCLaneState {
   juce::String name;        // display name, editable in UI
   float anchorValue = 0.0f; // 0..1 — emitted on rest in Reset mode
   bool holdOnRest = true;   // true = Hold (silence), false = Reset (→ anchor)
-  float slewAmount = 0.0f;  // 0..1  (0 = instant, 1 = ~8 ticks to converge)
+  float slewAmount = 0.0f;  // 0..1  (1 = linear ramp over one clock division)
   // --- runtime state (audio thread) ---
   float currentValue = 0.0f;
-  float targetValue = 0.0f;
+  float targetValue = 0.0f;   // end value of current ramp
+  float slewFromValue = 0.0f; // start value of current ramp
+  float slewElapsedSamples = 0.0f; // samples elapsed since ramp start
+  float slewTotalSamples = 0.0f;   // total ramp duration in samples (0 = instant)
   int lastEmitted127 = -1;  // de-dupe: only emit when quantised value changes
+
+  // Sets a new target, beginning a centered linear ramp.
+  // samplesPerTick = current clock division length in samples.
+  // Centered means the ramp spans [-slewDuration/2, +slewDuration/2] around the
+  // beat.  Since we can't go back in time to start the first half, we jump to
+  // the midpoint value immediately and complete the second half linearly.
+  void setTarget(float newTarget, float samplesPerTick) {
+    targetValue = newTarget;
+    float slewDuration = slewAmount * samplesPerTick;
+    if (slewDuration < 1.0f) {
+      currentValue = newTarget;
+      slewTotalSamples = 0.0f;
+      slewElapsedSamples = 0.0f;
+    } else {
+      slewFromValue = currentValue;
+      slewTotalSamples = slewDuration;
+      slewElapsedSamples = slewDuration * 0.5f;  // start at ramp midpoint
+    }
+  }
 };
 
 class MidiOutNode : public GraphNode {
@@ -231,8 +253,7 @@ class MidiOutNode : public GraphNode {
 
  private:
   void flushPlayingNotes(NoteEventCollector &collector, int numSamples);
-  void flushCCSlew(NoteEventCollector &collector, int numSamples,
-                   double samplesPerTick);
+  void flushCCSlew(NoteEventCollector &collector, int numSamples);
 
   NoteExpressionManager &noteExpressionManager;
   ClockManager &clockManager;

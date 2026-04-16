@@ -162,11 +162,7 @@ class CCRegistryPanel : public juce::Component, private juce::Timer {
     }
   }
 
-  void mouseDown(const juce::MouseEvent &e) override { handleMouse(e); }
-  void mouseDrag(const juce::MouseEvent &e) override { handleMouse(e); }
-
- private:
-  void handleMouse(const juce::MouseEvent &e) {
+  void mouseDown(const juce::MouseEvent &e) override {
     auto &lanes = midiOutNode.ccLanes;
     const int rowH = 18;
     const int padX = 4;
@@ -176,14 +172,14 @@ class CCRegistryPanel : public juce::Component, private juce::Timer {
     const int colHold = 40;
     const int colSlew = 40;
 
-    int row = (e.y / rowH) - 1;  // -1 for header
+    int row = (e.y / rowH) - 1;
     if (row < 0 || row >= (int)lanes.size()) return;
 
     auto &lane = lanes[(size_t)row];
     int y = (row + 1) * rowH;
     int rx = padX + colCC + colName;
 
-    // Anchor bar
+    // Anchor bar — also draggable, handle on mouseDown too
     {
       auto ab = juce::Rectangle<int>(rx, y + 3, colAnchor - 4, rowH - 6);
       if (ab.contains(e.x, e.y)) {
@@ -195,12 +191,10 @@ class CCRegistryPanel : public juce::Component, private juce::Timer {
     }
     rx += colAnchor;
 
-    // Hold/Reset toggle (only on mouseDown, not drag)
+    // Hold/Reset toggle — only on mouseDown (not drag)
     {
       auto tb = juce::Rectangle<int>(rx + 2, y + 3, colHold - 6, rowH - 6);
-      if (tb.contains(e.x, e.y) &&
-          e.getNumberOfClicks() >= 1 &&
-          !e.source.isDragging()) {
+      if (tb.contains(e.x, e.y)) {
         lane.holdOnRest = !lane.holdOnRest;
         repaint();
         return;
@@ -208,10 +202,51 @@ class CCRegistryPanel : public juce::Component, private juce::Timer {
     }
     rx += colHold;
 
-    // Slew bar
+    // Slew bar — also draggable, handle on mouseDown too
     {
       auto sb = juce::Rectangle<int>(rx, y + 3, colSlew - 4, rowH - 6);
       if (sb.contains(e.x, e.y)) {
+        float v = (float)(e.x - sb.getX()) / (float)sb.getWidth();
+        lane.slewAmount = std::clamp(v, 0.0f, 1.0f);
+        repaint();
+        return;
+      }
+    }
+  }
+
+  void mouseDrag(const juce::MouseEvent &e) override {
+    auto &lanes = midiOutNode.ccLanes;
+    const int rowH = 18;
+    const int padX = 4;
+    const int colCC = 28;
+    const int colName = 60;
+    const int colAnchor = 40;
+    const int colHold = 40;
+    const int colSlew = 40;
+
+    int row = (e.y / rowH) - 1;
+    if (row < 0 || row >= (int)lanes.size()) return;
+
+    auto &lane = lanes[(size_t)row];
+    int y = (row + 1) * rowH;
+    int rx = padX + colCC + colName;
+
+    // Anchor bar drag
+    {
+      auto ab = juce::Rectangle<int>(rx, y + 3, colAnchor - 4, rowH - 6);
+      if (ab.contains(e.getMouseDownX(), e.getMouseDownY())) {
+        float v = (float)(e.x - ab.getX()) / (float)ab.getWidth();
+        lane.anchorValue = std::clamp(v, 0.0f, 1.0f);
+        repaint();
+        return;
+      }
+    }
+    rx += colAnchor + colHold;  // skip Hold column — never draggable
+
+    // Slew bar drag
+    {
+      auto sb = juce::Rectangle<int>(rx, y + 3, colSlew - 4, rowH - 6);
+      if (sb.contains(e.getMouseDownX(), e.getMouseDownY())) {
         float v = (float)(e.x - sb.getX()) / (float)sb.getWidth();
         lane.slewAmount = std::clamp(v, 0.0f, 1.0f);
         repaint();

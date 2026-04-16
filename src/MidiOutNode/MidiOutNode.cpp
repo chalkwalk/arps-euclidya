@@ -236,18 +236,29 @@ void MidiOutNode::process() {
   }
 }
 
-void MidiOutNode::flushCCSlew(NoteEventCollector &collector, int numSamples,
-                              double samplesPerTick) {
-  // Per-block slew: advance currentValue toward targetValue, emit when the
-  // quantised int changes.  slewAmount=0 → instant snap; slewAmount=1 → ~8
-  // ticks to converge.
+void MidiOutNode::flushCCSlew(NoteEventCollector &collector, int numSamples) {
+  // Per-block slew: advance a centered linear ramp toward targetValue.
+  // setTarget() initialises elapsed = slewTotal/2, so the value jumps to the
+  // midpoint immediately on the beat and completes the second half linearly
+  // slewTotal/2 samples later.  slewAmount=1 → full division to settle.
   for (auto &lane : ccLanes) {
-    float slewSamples =
-        lane.slewAmount * 8.0f * (float)samplesPerTick + 1.0f;
-    float smoothFactor =
-        std::min(1.0f, (float)numSamples / slewSamples);
-    lane.currentValue +=
-        (lane.targetValue - lane.currentValue) * smoothFactor;
+    if (lane.slewTotalSamples < 1.0f) {
+      // Instant or already complete: hold at target.
+      lane.currentValue = lane.targetValue;
+    } else {
+      float elapsed = lane.slewElapsedSamples;
+      float total = lane.slewTotalSamples;
+      if (elapsed < total) {
+        float frac = elapsed / total;
+        lane.currentValue =
+            lane.slewFromValue +
+            (lane.targetValue - lane.slewFromValue) * frac;
+        lane.slewElapsedSamples += (float)numSamples;
+      } else {
+        lane.currentValue = lane.targetValue;
+        lane.slewTotalSamples = 0.0f;  // mark complete
+      }
+    }
 
     int quantised = juce::roundToInt(
         std::clamp(lane.currentValue, 0.0f, 1.0f) * 127.0f);
@@ -384,7 +395,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
   // Advance CC slew interpolation every block.
   double samplesPerTick = clockManager.getSamplesPerPpq() * division;
-  flushCCSlew(collector, numSamples, samplesPerTick);
+  flushCCSlew(collector, numSamples);
 
   bool prevWasPlaying = wasPlaying;
   wasHoldingNotes = holdingNotes;
@@ -408,35 +419,114 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     playingNotes.clear();
   }
 
-  // --- CC tick: advance ccIndex and update CC lane targets ---
-  // Fires on every tick in Synchronized/Deterministic (transport-gated), or
-  // only while notes are held in Gestural/Forgiving (key-gated).
-  if (isTick && (holdingNotes || ccTicksWithTransport)) {
-    auto ccIt = inputSequences.find(1);
-    if (ccIt != inputSequences.end() && !ccIt->second.empty()) {
-      const auto &ccSeq = ccIt->second;
-      int ccLen = (int)ccSeq.size();
-      if (ccLen > 0) {
-        const auto &ccStep = ccSeq[(size_t)(ccIndex % ccLen)];
-        if (ccStep.empty()) {
-          for (auto &lane : ccLanes) {
-            if (!lane.holdOnRest) {
-              lane.targetValue = lane.anchorValue;
+  // --- CC-only path: transport-driven modes, no notes held ---
+  // Runs the full Euclidean rhythm/pattern clock for CC when the transport is
+  // playing but nothing is connected to the note input.  Shares rhythmIndex,
+  // patternIndex, and ccIndex with the note path so that positions stay aligned
+  // when notes eventually come in.
+  if (isTick && ccTicksWithTransport && !holdingNotes) {
+    auto ccIt1 = inputSequences.find(1);
+    if (ccIt1 != inputSequences.end() && !ccIt1->second.empty()) {
+      const auto &ccSeqT = ccIt1->second;
+      int ccLenT = (int)ccSeqT.size();
+      if (ccLenT > 0) {
+        clampParameters();
+        int aRS = resolveMacroInt(macroRSteps, rSteps, 1, 32);
+        int aRB = resolveMacroInt(macroRBeats, rBeats, 1, aRS);
+        aRB = std::clamp(aRB, 1, aRS);
+        int aRO = resolveMacroOffset(macroROffset, rOffset, aRS);
+        aRO = std::clamp(aRO, -(aRS + 1) / 2, (aRS + 1) / 2);
+        std::vector<bool> rPat =
+            EuclideanMath::generatePattern(aRS, aRB, aRO);
+        int aPS = resolveMacroInt(macroPSteps, pSteps, 1, 32);
+        int aPB = resolveMacroInt(macroPBeats, pBeats, 1, aPS);
+        aPB = std::clamp(aPB, 1, aPS);
+        int aPO = resolveMacroOffset(macroPOffset, pOffset, aPS);
+        aPO = std::clamp(aPO, -(aPS + 1) / 2, (aPS + 1) / 2);
+        std::vector<bool> pat =
+            EuclideanMath::generatePattern(aPS, aPB, aPO);
+        if (!rPat.empty() && !pat.empty()) {
+          // Helper: apply rest behaviour to all CC lanes
+          auto applyRest = [this, samplesPerTick]() {
+            for (auto &lane : ccLanes) {
+              if (!lane.holdOnRest)
+                lane.setTarget(lane.anchorValue, (float)samplesPerTick);
             }
-          }
-        } else {
-          for (const auto &ev : ccStep) {
-            if (const auto *cc = asCC(ev)) {
-              for (auto &lane : ccLanes) {
-                if (lane.ccNumber == cc->ccNumber) {
-                  lane.targetValue = cc->value;
-                  break;
+          };
+          // Helper: set CC lane targets from a sequence step
+          auto applyStep = [this, samplesPerTick](const EventStep &step) {
+            for (const auto &ev : step) {
+              if (const auto *cc = asCC(ev)) {
+                for (auto &lane : ccLanes) {
+                  if (lane.ccNumber == cc->ccNumber) {
+                    lane.setTarget(cc->value, (float)samplesPerTick);
+                    break;
+                  }
                 }
               }
             }
+          };
+
+          if (syncMode == SyncMode::Deterministic) {
+            long long absTick = (long long)currTick;
+            rhythmIndex = (int)(absTick % (long long)aRS);
+            long long cycles = absTick / (long long)aRS;
+            int partial = (int)(absTick % (long long)aRS);
+            long long nR = (cycles * (long long)aRB) +
+                           (long long)countOnes(rPat, partial);
+            if (patternMode == PatternMode::Clocked) {
+              if (nR > 0) {
+                long long k = nR - 1;
+                long long pCyc = k / (long long)aPB;
+                int pNoteIdx = (int)(k % (long long)aPB);
+                long long pos = (pCyc * (long long)aPS) +
+                                (long long)findIndexOfNote(pat, pNoteIdx);
+                patternIndex = (int)(pos % (long long)aPS);
+                ccIndex = (int)(pos % (long long)ccLenT);
+              } else {
+                patternIndex = 0;
+                ccIndex = 0;
+              }
+            } else {
+              patternIndex = (int)(nR % (long long)aPS);
+              ccIndex = (int)(nR % (long long)ccLenT);
+            }
+            bool isBeat = rPat[(size_t)rhythmIndex % rPat.size()];
+            visualRhythmIndex = rhythmIndex % (int)rPat.size();
+            if (!isBeat) {
+              applyRest();
+            } else {
+              const auto &ccStep = ccSeqT[(size_t)(ccIndex % ccLenT)];
+              ccStep.empty() ? applyRest() : applyStep(ccStep);
+            }
+          } else {
+            // Synchronized (non-Deterministic) CC-only
+            bool isBeat = rPat[(size_t)rhythmIndex % rPat.size()];
+            visualRhythmIndex = rhythmIndex % (int)rPat.size();
+            rhythmIndex = (rhythmIndex + 1) % (int)rPat.size();
+            if (!isBeat) {
+              applyRest();
+            } else {
+              if (patternMode == PatternMode::Clocked) {
+                int limit = (int)pat.size();
+                while (!pat[(size_t)patternIndex % pat.size()] &&
+                       limit-- > 0) {
+                  patternIndex = (patternIndex + 1) % aPS;
+                  ccIndex = (ccIndex + 1) % ccLenT;
+                }
+              }
+              bool shouldPlay = pat[(size_t)patternIndex % pat.size()];
+              const auto &ccStep = ccSeqT[(size_t)(ccIndex % ccLenT)];
+              if (shouldPlay) {
+                ccStep.empty() ? applyRest() : applyStep(ccStep);
+              } else {
+                applyRest();
+              }
+              ccIndex = (ccIndex + 1) % ccLenT;
+              patternIndex = (patternIndex + 1) % aPS;
+            }
           }
         }
-        ccIndex = (ccIndex + 1) % ccLen;
       }
     }
   }
@@ -448,6 +538,14 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   if (isTick) {
     const auto &sequence = it0->second;
     clampParameters();
+
+    // CC sequence (port 1) — may be absent
+    auto ccIt2 = inputSequences.find(1);
+    const EventSequence *ccSeqPtr =
+        (ccIt2 != inputSequences.end() && !ccIt2->second.empty())
+            ? &ccIt2->second
+            : nullptr;
+    int ccLen = ccSeqPtr ? (int)ccSeqPtr->size() : 0;
 
     // --- Retrieve Parameters (Macros etc) ---
     int actualRSteps = resolveMacroInt(macroRSteps, rSteps, 1, 32);
@@ -500,14 +598,17 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
           patternIndex = (int)(pos % (long long)actualPSteps);
           sequenceIndex = (int)(pos % (long long)sequence.size());
+          if (ccLen > 0) ccIndex = (int)(pos % (long long)ccLen);
         } else {
           patternIndex = 0;
           sequenceIndex = 0;
+          ccIndex = 0;
         }
       } else {
         // Gated: Rhythm counts map directly to Indices
         patternIndex = (int)(nR % (long long)actualPSteps);
         sequenceIndex = (int)(nR % (long long)sequence.size());
+        if (ccLen > 0) ccIndex = (int)(nR % (long long)ccLen);
       }
     }
 
@@ -520,22 +621,61 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     }
 
     if (!isRhythmBeat) {
+      // CC rest: rhythm didn't fire this tick
+      if (ccLen > 0) {
+        for (auto &lane : ccLanes) {
+          if (!lane.holdOnRest)
+            lane.setTarget(lane.anchorValue, (float)samplesPerTick);
+        }
+      }
       return;
     }
 
     // --- Note Triggering & Advance ---
     if (syncMode != SyncMode::Deterministic) {
       if (patternMode == PatternMode::Clocked) {
-        // Skip over rests instantaneously
+        // Skip over rests instantaneously; CC sequence mirrors the skip
         int limit = (int)pattern.size();
         while (!pattern[(size_t)patternIndex % pattern.size()] && limit-- > 0) {
           patternIndex = ((patternIndex + 1) % actualPSteps);
           sequenceIndex = ((sequenceIndex + 1) % (int)sequence.size());
+          if (ccLen > 0) ccIndex = (ccIndex + 1) % ccLen;
         }
       }
     }
 
     bool shouldPlay = pattern[(size_t)patternIndex % pattern.size()];
+
+    // --- CC emission (Gated: also fires on !shouldPlay as a rest) ---
+    if (ccLen > 0 && ccSeqPtr) {
+      const auto &ccStep = (*ccSeqPtr)[(size_t)(ccIndex % ccLen)];
+      if (shouldPlay) {
+        if (ccStep.empty()) {
+          for (auto &lane : ccLanes) {
+            if (!lane.holdOnRest)
+              lane.setTarget(lane.anchorValue, (float)samplesPerTick);
+          }
+        } else {
+          for (const auto &ev : ccStep) {
+            if (const auto *cc = asCC(ev)) {
+              for (auto &lane : ccLanes) {
+                if (lane.ccNumber == cc->ccNumber) {
+                  lane.setTarget(cc->value, (float)samplesPerTick);
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Pattern rest: CC also rests this step
+        for (auto &lane : ccLanes) {
+          if (!lane.holdOnRest)
+            lane.setTarget(lane.anchorValue, (float)samplesPerTick);
+        }
+      }
+    }
+
     if (shouldPlay) {
       const auto &step =
           sequence[(size_t)sequenceIndex % (size_t)sequence.size()];
@@ -721,6 +861,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       // Advance to prepare for next rhythm beat
       patternIndex = ((patternIndex + 1) % actualPSteps);
       sequenceIndex = ((sequenceIndex + 1) % (int)sequence.size());
+      if (ccLen > 0) ccIndex = (ccIndex + 1) % ccLen;
     }
   }
 }
