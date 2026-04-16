@@ -87,48 +87,58 @@ Patches are serialized as XML to disk. `GraphEngine` drives `saveNodeState` / `l
 
 ## 4. Node Dictionary
 
-The system provides 27 node types, categorized by their role in the processing pipeline. Every node carries a `NoteSequence` input/output (except pure generation nodes). Nodes marked *(Macros)* expose one or more parameters to the macro system via `MacroParam` members.
+The system provides 29 node types, categorized by their role in the processing pipeline. Every node carries an `EventSequence` input/output (except pure generation nodes). Nodes marked *(Macros)* expose one or more parameters to the macro system via `MacroParam` members.
 
 ### 4.1 Core I/O & Generation
 
 - **Midi In Node** *(Macros)*: The entry point for live performance. Captures notes and MPE data from the DAW or the on-screen keyboard. Supports channel filtering.
-- **Midi Out Node** *(Macros)*: The terminal destination. Implements the **Euclidean Engine** (Pattern & Rhythm separation) and sends real-time MIDI events to the host. Features Humanize parameters (timing, velocity, gate) and an interactive circular visualizer.
+- **Midi Out Node** *(Macros)*: The terminal destination. Implements the **Euclidean Engine** (Pattern & Rhythm separation), sends real-time MIDI note and CC events to the host. Features Humanize parameters (timing, velocity, gate) and an interactive circular visualizer. Accepts a CC sequence on Port 1 (violet) and provides per-CC# anchor, slew, and rest-behaviour controls in the registry panel.
 - **Sequence Node** *(Macros)*: A 16×128 "piano roll" generator. Users draw patterns on a scrollable grid; the pattern plays independently of held keys. Sequence length is macro-bindable.
 - **All Notes Node**: Outputs every MIDI note (0–127) as a single sequence step per note. Useful as a source for `Fold` or scale-quantizer chains.
-- **Diagnostic Node**: Displays step count, chord density, and basic stats of the incoming sequence. Used for debugging patch flow.
+- **CC Modulator Node** *(Macros)*: A CC sequence generator. Produces a CC `EventSequence` from an algorithm (Sine, RampUp, RampDown, Triangle, RandomHold, RandomWalk, EuclideanGates, Custom). CC values are normalised 0..1 internally. The Algorithm selector is macro-bindable.
+- **Diagnostic Node**: Displays step count, chord density, and basic stats of the incoming sequence. Used for debugging patch flow. Accepts both Notes and CC sequences (Agnostic port).
 - **Text Note Node**: A canvas annotation — stores a free-text label with no signal processing. Useful for documenting patches.
 
 ### 4.2 Pattern & Order (Directional)
 
-- **Sort Node**: Reorders the incoming sequence into ascending pitch.
-- **Reverse Node**: Flips the sequence order (descending pitch).
-- **Walk Node** *(Macros)*: Applies a weighted random walk to select steps from the sorted sequence. `Walk Length` sets the number of steps generated; `Walk Skew` biases the walk direction (negative = prefer lower pitches, positive = prefer higher).
-- **Converge Node**: Reorders the sequence from outside-in (alternating highest and lowest remaining notes).
-- **Diverge Node**: Reorders the sequence from inside-out (opposite of Converge).
+Nodes in this category declare **Agnostic** ports and operate identically on Notes and CC sequences.
+
+- **Sort Node**: Reorders steps by velocity-weighted mean pitch (notes) or mean CC value (CC).
+- **Reverse Node**: Flips the sequence order.
+- **Walk Node** *(Macros)*: Applies a weighted random walk to select steps from the sorted sequence. `Walk Length` sets the number of steps generated; `Walk Skew` biases the walk direction.
+- **Converge Node**: Reorders steps from outside-in (alternating highest/lowest remaining).
+- **Diverge Node**: Reorders steps from inside-out (opposite of Converge).
+- **Select Node** *(Macros)*: Passes Input 0 or Input 1 through to the output.
+- **Multiply Node** *(Macros)*: Repeats each step N times consecutively.
+- **Fold Node** *(Macros)*: "Wraps" notes that drift outside a target octave range back into it.
+- **Unfold Node** *(Macros)*: Expands the pitch range iteratively by pushing subsequent steps into higher or lower sub-octaves.
 
 ### 4.3 Combinatorial & Chord Logic
 
-- **Chord N Node** *(Macros)*: Extracts exhaustive N-note combinations from the input chord. Creates complex polyphonic variations from simple held keys.
-- **Chord Split Node**: Extracts the top note to Output 0 and the bottom note to Output 1. Useful for splitting a chord into independent bassline and melody paths.
-- **Octave Stack Node** *(Macros)*: Expands the sequence by adding octave-shifted copies, with deduplication to avoid clustered pitches.
-- **Multiply Node** *(Macros)*: Repeats each step in the sequence N times consecutively.
-- **Concatenate Node**: Appends Sequence B to the end of Sequence A.
-- **Zip Node**: Merges two parallel sequences into one by stacking matching steps into chords.
-- **Unzip Node**: Splits a chord sequence into two mono lines — lowest notes to Output 0, highest to Output 1.
+Nodes in this category also declare **Agnostic** ports unless noted.
+
+- **Chord N Node** *(Macros)*: Extracts exhaustive N-note combinations from the input chord. Creates complex polyphonic variations from simple held keys. *(Notes port — pitch-semantic)*
+- **Chord Split Node**: Extracts the top note to Output 0 and the bottom note to Output 1. *(Agnostic)*
+- **Octave Stack Node** *(Macros)*: Expands the sequence by adding octave-shifted copies, with deduplication. *(Notes port — pitch-semantic)*
+- **Concatenate Node**: Appends Sequence B to the end of Sequence A. *(Agnostic)*
+- **Split Node** *(Macros)*: Divides a sequence into two parts based on percentage, fixed count, or note range. *(Agnostic)*
+- **Zip Node**: Merges two parallel sequences into one by stacking matching steps. *(Agnostic)*
+- **Unzip Node**: Splits a sequence into two lines — lowest-value steps to Output 0, highest to Output 1. *(Agnostic)*
+- **Interleave Node**: Interleaves steps from two input sequences alternately. *(Agnostic)*
 
 ### 4.4 Pitch & Range Manipulation
+
+These nodes declare **Notes** ports — they interpret pitch numerically and should not receive CC sequences.
 
 - **Transpose Node** *(Macros)*: Shifts the entire sequence by a fixed semitone interval.
 - **Octave Transpose Node** *(Macros)*: Shifts by full octaves.
 - **Quantizer Node** *(Macros)*: Constrains all pitches to a specific musical scale and root. Scale mode and rest-on-drop behavior are macro-bindable.
-- **Fold Node** *(Macros)*: "Wraps" notes that drift outside a target octave range back into it.
-- **Unfold Node**: Expands the pitch range iteratively by pushing subsequent steps into higher or lower sub-octaves.
 
 ### 4.5 Routing & Logic
 
-- **Split Node**: Divides a sequence into two parts based on percentage, fixed count, or note range.
-- **Route Node** *(Macros)*: Sends the input sequence to Output 0 or Output 1 exclusively, based on an automatable control value. Useful for switching between song sections.
-- **Select Node** *(Macros)*: Passes Input 0 or Input 1 through to the output, based on a control value.
+Agnostic ports — work identically on Notes and CC sequences.
+
+- **Route Node** *(Macros)*: Sends the input sequence to Output 0 or Output 1 exclusively. Useful for switching between song sections.
 - **Switch Node** *(Macros)*: An on/off mute gate for the entire sequence path.
 
 ## 5. The Euclidean Engine
@@ -178,3 +188,61 @@ The macro system has a rich set of visual indicators that keep the binding state
 - **Euclidean Rings**: The `MidiOutNode` features a large, interactive ring visualization. Users can drag rings to adjust Euclidean offsets or toggle individual steps directly in the UI.
 - **Cable Tooltips**: Hovering over any cable displays a tooltip showing the current `NoteSequence` step count and active note count, with orange/red warnings for dangerously large sequences.
 - **Ghost Placement**: While dragging a node, a ghost outline previews the resolved snap target and changes color to indicate whether the target grid cell is occupied.
+
+## 7. Event Sequence Model & Port Types
+
+### 7.1 Variant Carrier (`src/DataModel.h`)
+
+The fundamental unit of data flowing between nodes is no longer a homogeneous vector of `HeldNote`s. Each inter-node edge carries an `EventSequence` — a vector of `EventStep`s where every step is a vector of `SequenceEvent` variants:
+
+```cpp
+struct CCEvent {
+    int   ccNumber = 0;    // 0..127
+    float value    = 0.0f; // normalised 0..1 (converted to 0..127 only at MIDI emission)
+    int   channel  = 1;
+};
+using SequenceEvent  = std::variant<HeldNote, CCEvent>;
+using EventStep      = std::vector<SequenceEvent>;
+using EventSequence  = std::vector<EventStep>;
+using NoteSequence   = EventSequence;  // backwards-compat alias
+```
+
+Two helper functions make variant access concise throughout the codebase:
+
+```cpp
+inline const HeldNote* asNote(const SequenceEvent& e) { return std::get_if<HeldNote>(&e); }
+inline const CCEvent*  asCC  (const SequenceEvent& e) { return std::get_if<CCEvent>(&e); }
+```
+
+**One step, one type.** A step holds either note events or CC events, never a mixture. This invariant is guaranteed by the generators that produce sequences, not enforced at the container level.
+
+### 7.2 Port Types (`src/GraphNode.h`)
+
+Every node port declares a `PortType` that governs cable compatibility:
+
+```cpp
+enum class PortType { Notes, CC, Agnostic };
+virtual PortType getInputPortType(int port) const;   // default: Notes
+virtual PortType getOutputPortType(int port) const;  // default: Notes
+```
+
+- **Notes** (gold cable): carries only `HeldNote` steps. Nodes with pitch-semantic logic (Transpose, Quantizer, Fold, Walk, etc.) declare gold ports to prevent accidental CC routing.
+- **CC** (violet cable): carries only `CCEvent` steps. `AlgorithmicModulatorNode`'s output and `MidiOutNode`'s CC input port are violet.
+- **Agnostic** (grey/white cable): accepts either type. All pure reorder/route nodes (Sort, Reverse, Converge, Diverge, Split, Concatenate, ChordSplit, Multiply, Zip, Unzip, Interleave, Select, Route, Switch, Diagnostic) are Agnostic — they operate structurally without interpreting the event payload.
+
+### 7.3 Connection Compatibility
+
+When a cable is dropped, `GraphEngine::addExplicitConnection` and `GraphCanvas::endCableDrag` both enforce:
+
+- Notes → CC or CC → Notes: **rejected** (red flash at the drop point).
+- Agnostic ports latch to the type of the first connected edge. A second edge on that port must match the latched type.
+
+Cable colour is determined by the **source port's** effective type (latched type for Agnostic). The `GraphCanvas::drawCable` function queries the source node's `getOutputPortType` and colours accordingly.
+
+### 7.4 `AlgorithmicModulatorNode` (CC Generator)
+
+A generator node with no inputs and one CC output. It builds an `EventSequence` of configurable length from one of several algorithms (Sine, RampUp, RampDown, Triangle, RandomHold, RandomWalk, EuclideanGates, Custom). CC values are stored as normalised floats 0..1 and converted to the 7-bit range 0..127 only at `MidiOutNode` output time.
+
+### 7.5 `MidiOutNode` CC Input
+
+`MidiOutNode` has a second input port (Port 1, violet) that accepts a CC sequence. It advances a `ccIndex` on the same tick as the note `sequenceIndex`, producing a shared step clock. Per-CC# state is tracked in a `CCLaneState` registry (anchor, slew, rest behaviour). Slew interpolation smooths CC transitions within a step — at slew = 0 the value jumps immediately; at slew = 1 the value ramps linearly across one full step duration. CC output is de-duplicated by 7-bit integer value before emission to avoid redundant MIDI messages.
