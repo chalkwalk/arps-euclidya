@@ -28,11 +28,34 @@ When a "Trigger" occurs in the Rhythm Layer, this Pattern Layer asks: *Which not
 
 ## Global Timings & Sync Modes
 
-The engine provides global time divisions (1/4, 1/8, 1/16, triplets, etc.) but dictates phase and reset behavior through **SyncModes**. You can change these on the MidiOutNode visual UI.
+The engine provides global time divisions (1/4, 1/8, 1/16, triplets, etc.) and controls how playback phase relates to the DAW timeline through four **Sync Modes**. In all modes, tempo always tracks the DAW BPM. What differs is *when* the first note plays and *how* subsequent notes stay in phase.
 
-- **Synchronized Mode (Default)**: Your trigger timeline is snapped to the DAW grid, but the sequence advances incrementally.
-- **Gestural Mode**: Ignores the DAW playhead completely. Whenever you strike the first key, the clock timeline snaps to that exact moment (with relative speed remaining tied to the DAW BPM). This allows for completely un-quantized, human timing and triplet variations.
-- **Deterministic Mode**: Strictly ties both the Rhythm index and the Pattern index absolute lengths directly to the absolute DAW playhead position. Even if you press a key halfway through a bar, it will start playing exactly the note in the sequence that belongs to the middle of that bar.
+### Gestural *(free phase)*
+
+The first note fires the instant you press a key, regardless of where the DAW playhead is. All subsequent notes fall at strict division intervals measured from that key-press moment — so the sequence is always in perfect musical time, just not necessarily locked to the DAW's bar lines.
+
+Use this when you want expressive, human-timed playing. Releasing and re-pressing the keys starts the phase over from wherever you press.
+
+### Synchronized *(grid-locked phase, default)*
+
+When you press a key, the engine waits for the next clock division boundary on the DAW grid before firing the first note — whether you pressed just before or just after a beat. Subsequent notes then follow the grid from that point.
+
+Releasing the keys resets the sequence and rhythm positions, so pressing again always replays the same pattern from the top, just delayed to the next beat. The result sounds identical to Gestural but stays locked to the bar.
+
+### Deterministic *(absolute phase)*
+
+Like Synchronized, the first note waits for the next clock division boundary. The key difference is that the sequence and rhythm positions are derived from the *absolute DAW playhead position*, not from a beat-count since you pressed the key.
+
+This means the pattern is fully reproducible: pressing at bar 1 or bar 32 always plays exactly the notes that belong to that point in the absolute timeline. Jogging or looping in the DAW causes the pattern to jump to the corresponding position — useful for arrangement work where you need the same phrase to be replayable at the same point every time.
+
+### Forgiving *(grace-window hybrid)*
+
+Designed for live performance where you are trying to hit a beat precisely but occasionally land fractionally late. The engine applies a short grace window (1/8 of the current clock division) after each beat:
+
+- **Within the grace window** (pressed slightly after the beat): the first note fires immediately, and the engine gradually corrects the timing phase over the next few ticks — each subsequent note arrives slightly earlier than the last until the sequence is back in phase with the grid.
+- **Outside the grace window** (pressed well before or after a beat): the engine behaves like Synchronized and waits for the next beat before firing.
+
+The correction is subtle and exponential: within a handful of notes you are back in sync, with no jarring tempo jump.
 
 ## Expression and Velocity
 

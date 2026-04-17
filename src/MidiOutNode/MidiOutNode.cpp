@@ -325,9 +325,10 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       syncArmed = false;
     } else if (syncMode == SyncMode::Synchronized ||
                syncMode == SyncMode::Deterministic) {
-      // Snap anchor to the nearest past division boundary of the DAW grid
+      // Snap anchor to the nearest past division boundary of the DAW grid.
+      // No forceTick: both modes delay playback until the next beat naturally
+      // arrives via the floor-based tick detector below.
       anchorPpq = std::floor(currentPpq / division) * division;
-      forceTick = true;
       syncArmed = false;
     } else if (syncMode == SyncMode::Forgiving) {
       // Snap anchor to the nearest past boundary
@@ -337,13 +338,15 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
       if (lateness < graceThreshold) {
         // Close enough to the beat — fire immediately and schedule phase slip
-        // to correct the early drift over the next few beats.
+        // convergence so that subsequent ticks arrive progressively earlier
+        // until we are back in phase with the grid.
         forgivingSlipFraction = lateness / division;
+        forceTick = true;
       } else {
-        // Too late — behave like Synchronized: wait for the next tick
+        // Too late (or before the beat) — behave like Synchronized: no
+        // immediate fire, wait for the next beat via the tick detector below.
         forgivingSlipFraction = 0.0;
       }
-      forceTick = true;
       syncArmed = false;
     }
   }
@@ -363,42 +366,59 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   // --- Tick Detection ---
   bool isTick = false;
 
-  // For Forgiving mode, compute an adjusted division for phase-slip
-  // convergence. Each tick the slip fraction halves, shortening the effective
-  // division slightly so that subsequent ticks arrive a little earlier until
-  // we're back in phase.
+  // adjustedDivision is slightly shorter than division while a Forgiving
+  // phase-slip is in progress (forgivingSlipFraction > 0). Once the slip
+  // converges to zero it equals division and the standard path takes over.
   double adjustedDivision = division;
   if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
     adjustedDivision = division * (1.0 - forgivingSlipFraction);
   }
 
+  // effectivePpq / currTick are always computed: Deterministic mode uses
+  // currTick for its absolute-position index calculation further below.
   double effectivePpq = (syncMode == SyncMode::Deterministic)
                             ? currentPpq
                             : (currentPpq - anchorPpq);
   double prevEffective = (syncMode == SyncMode::Deterministic)
                              ? lastTickPpq
                              : (lastTickPpq - anchorPpq);
-
   double currTick = std::floor(effectivePpq / adjustedDivision);
   double prevTick = std::floor(prevEffective / adjustedDivision);
 
-  if (currTick > prevTick || forceTick) {
+  if (forceTick) {
+    // forceTick is set on Gestural onset and transport-start-on-division.
     if (syncMode == SyncMode::Gestural || isPlaying) {
       isTick = true;
       forceTick = false;
-      // Decay the slip each time a real tick fires
       if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
         forgivingSlipFraction *= 0.5;
         if (forgivingSlipFraction < 0.001)
           forgivingSlipFraction = 0.0;
       }
     }
+  } else if (syncMode == SyncMode::Forgiving && forgivingSlipFraction > 0.0) {
+    // Phase-slip convergence path: measure elapsed time from the previous tick
+    // rather than using a floor comparison.  The floor approach causes a
+    // spurious immediate re-fire each time adjustedDivision grows (i.e. every
+    // tick), because floor(lastTickPpq / newLargerDivision) resets to a lower
+    // integer.  Elapsed-time measurement is immune to this: it only asks "has
+    // enough time passed since the last tick?"  Each interval is
+    // adjustedDivision = division * (1 - slip), converging to division as the
+    // slip fraction halves each tick.
+    if (isPlaying && lastActualTickPpq >= 0.0 &&
+        (currentPpq - lastActualTickPpq) >= adjustedDivision) {
+      isTick = true;
+      forgivingSlipFraction *= 0.5;
+      if (forgivingSlipFraction < 0.001)
+        forgivingSlipFraction = 0.0;
+    }
+  } else {
+    // Standard floor-based grid detection for Gestural, Synchronized, and
+    // Deterministic (and Forgiving once the slip has fully converged).
+    if (currTick > prevTick && (syncMode == SyncMode::Gestural || isPlaying)) {
+      isTick = true;
+    }
   }
-
-  // Advance per-note scheduled NoteOffs every block, not just at ticks.
-  // This is the core of timed-gate delivery: remainingSamples decrements by
-  // numSamples each call, and NoteOff fires when the counter reaches zero.
-  flushPlayingNotes(collector, numSamples);
 
   // Advance CC slew interpolation every block.
   double samplesPerTick = clockManager.getSamplesPerPpq() * division;
@@ -411,6 +431,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
 
   if (isTick) {
     lastTickPlayedNote = false;
+    lastActualTickPpq = currentPpq;
   }
 
   if (!isPlaying && prevWasPlaying) {
@@ -539,6 +560,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   }
 
   if (!holdingNotes) {
+    flushPlayingNotes(collector, numSamples);
     return;
   }
 
@@ -871,6 +893,16 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       if (ccLen > 0) ccIndex = (ccIndex + 1) % ccLen;
     }
   }
+
+  // Advance per-note scheduled NoteOffs every block, after tick/NoteOn
+  // processing.  Running this last ensures that when a tick fires for the same
+  // pitch that is currently playing, the kill loop in the tick block has already
+  // removed the old note and emitted NoteOff at finalSamplePos — so
+  // flushPlayingNotes never sees it and cannot produce a stale NoteOff at a
+  // later offset.  That stale late NoteOff would otherwise arrive AFTER the
+  // new NoteOn for the same pitch, and hosts that match NoteOff by key rather
+  // than note_id would kill the newly-started note early.
+  flushPlayingNotes(collector, numSamples);
 }
 
 juce::String MidiOutNode::getCycleLengthInfo() const {

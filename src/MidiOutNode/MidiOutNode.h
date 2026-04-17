@@ -283,6 +283,11 @@ class MidiOutNode : public GraphNode {
   // Per-node tick tracking
   double lastTickPpq = -1.0;
 
+  // PPQ at which the last tick actually fired (updated only on tick events,
+  // unlike lastTickPpq which is updated every block). Used by the Forgiving
+  // phase-slip path to measure elapsed time since the previous tick.
+  double lastActualTickPpq = -1.0;
+
   // Forgiving mode phase-slip: fractional division shortening remaining
   // (0.0 = no correction needed, decays each tick via *=0.5)
   double forgivingSlipFraction = 0.0;
