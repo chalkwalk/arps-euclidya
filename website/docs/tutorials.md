@@ -52,7 +52,7 @@ Arps Euclidya includes a series of factory patches designed to teach you the mod
 
 ## Tutorial 6: MPE & Expression
 
-**Learning Goal**: Leveraging per-note expression for dynamic performance.
+**Learning Goal**: Using per-note expression for dynamic performance.
 
 - **Path**: `MPE MIDI In` -> `ChordN` -> `Symmetries` -> `MIDI Out` (with Pressure mapping).
 - **Concept**: This tutorial demonstrates MPE integration. Per-note pressure is mapped to output velocity (`Pressure to Velocity` set to 0.5), allowing each note in the generated chords to have its own dynamic intensity.

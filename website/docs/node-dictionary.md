@@ -30,7 +30,7 @@ Patch cables come in three colours that indicate what type of data is flowing:
 
 ## Combinatorial & Chord Logic
 
-- **Chord N Node `(Macros)`**: Generates exhaustive N-note combinations from the incoming sequence or held chords. Transforms simple 4-note input chords into deep, evolving tapestries. *(Inputs: 1, Outputs: 1)*
+- **Chord N Node `(Macros)`**: Generates exhaustive N-note combinations from the incoming sequence or held chords. Transforms simple 4-note input chords into evolving chord options. *(Inputs: 1, Outputs: 1)*
 - **Chord Split Node**: Extracts the "Top" note to Output A, and the "Bottom" note to Output B. Excellent for creating separate basslines and melodies from the same chord pad. *(Inputs: 1, Outputs: 2)*
 - **Octave Stack Node `(Macros)`**: Duplicates the sequence pattern and stacks it at user-defined octave offsets, creating thick textures. Ensures no duplicate pitches are clustered. *(Inputs: 1, Outputs: 1)*
 - **Multiply Node `(Macros)`**: Stretches the sequence by repeating each step N times consecutively. *(Inputs: 1, Outputs: 1)*

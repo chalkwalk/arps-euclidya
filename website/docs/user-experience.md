@@ -6,14 +6,14 @@ Arps Euclidya is designed to prioritize fast, fluid patching over tedious menu-d
 
 To keep you in the "flow state", the UI offers several advanced patching interactions:
 
-- **Library Search**: Open the Module Library sidebar and use the fuzzy-search bar. Simply typing a partial name and pressing `Enter` will instantly spawn the topmost result at your mouse cursor.
-- **Cable Insertion (Splicing)**: If you drag a new node from the library directly over an *active* patch cable, the wire will highlight. Dropping the node will automatically "splice" it into that connection, routing the previous output into the new node, and the new node's output to the original destination.
-- **Edge-Drop Auto-Connect**: Dragging and dropping a node onto the left edge of an existing node automatically connects its outputs to the existing node's inputs. Dropping on the right edge does the reverse.
+- **Library Search**: Open the Module Library sidebar and use the search bar. Typing a partial name and pressing `Enter` will spawn the topmost result at your mouse cursor.
+- **Cable Insertion (Splicing)**: If you drag a new node from the library directly over an *active* patch cable, the wire will highlight. Dropping the node will "splice" it into that connection, routing the previous output into the new node, and the new node's output to the original destination.
+- **Edge-Drop Auto-Connect**: Dragging and dropping a node onto the left edge of an existing node connects its outputs to the existing node's inputs. Dropping on the right edge does the reverse.
 - **Smart Disconnect**: You can pull cables off of ports to break a connection, or delete nodes by selecting them and pressing `Delete`/`Backspace`.
 
-## Advanced Workflows (CUJs)
+## Advanced Workflows
 
-These interactions are designed to support several "Critical User Journeys":
+These interactions are designed to support several "Common Workflows":
 
 ### 1. Rapid Signal Prototyping
 

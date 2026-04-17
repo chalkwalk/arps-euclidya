@@ -24,7 +24,7 @@ When a "Trigger" occurs in the Rhythm Layer, this Pattern Layer asks: *Which not
 - **Pattern Beats**: The density of "Played Notes" versus "Skipped Notes" in the input sequence.
 - **Pattern Offset**: Rotates the melodic pattern phase.
 
-*By using non-matching lengths between Rhythm and Pattern arrays, incredibly complex polymetric loops and evolving melodic syncopations naturally emerge.*
+*By using non-matching lengths between Rhythm and Pattern arrays, you can create complex polymetric loops and syncopated melodies.*
 
 ## Global Timings & Sync Modes
 

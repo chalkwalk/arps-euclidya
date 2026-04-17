@@ -1,6 +1,6 @@
 # User Interface Guide
 
-Arps Euclidya provides a fluid, hardware-accelerated interface designed for complex patching and clear visual feedback. The UI is built to keep you in the "flow state", ensuring you always understand how your MIDI data is routing through the system.
+Arps Euclidya provides a hardware-accelerated interface designed for complex patching and clear visual feedback. The UI is built to keep you in the "flow state", ensuring you always understand how your MIDI data is routing through the system.
 
 ## The Interface Layout
 
@@ -13,7 +13,7 @@ This is your primary workspace where you build and connect your node networks.
 - **Infinite Space**: The canvas expands infinitely in all directions as you add nodes, so you never run out of room for complex patches.
 - **Fluid Navigation**: You can pan smoothly by clicking and dragging on any empty background space. Use `Ctrl + Scroll` (or `Cmd + Scroll` on macOS) to zoom in and out.
 - **Grid-Centric Layout**: To keep your patches organized, nodes automatically snap to a defined grid. When zoomed in, a subtle background grid appears to help you align your modules.
-- **Flight Path Preview**: When dragging nodes or cables, a neon-ribbon path visibly connects your cursor to the resolved snap destination, providing clear, real-time feedback on routing boundaries and placements.
+- **Flight Path Preview**: When dragging nodes or cables, a clear path visibly connects your cursor to the resolved snap destination, providing clear, real-time feedback on routing boundaries and placements.
 
 ### Keyboard Shortcuts
 
@@ -59,4 +59,4 @@ Understanding your patch visually is critical:
 
 - **Nodes**: Each module is represented as a block on the canvas. Inputs are always located on the left edge, and outputs are on the right edge.
 - **Patch Cables**: Connections between nodes glow vividly over the dark background. Cable colour indicates data type: **gold** for note sequences, **violet** for CC sequences, and **grey/white** for agnostic connections that carry whichever type was first routed through them. Dragging a note cable onto a CC input (or vice versa) is rejected with a brief red flash.
-- **Visual Cues**: Active elements, selected nodes, and signal flow warnings use high-contrast neon colors so you can tell at a glance what is happening in your patch.
+- **Visual Cues**: Active elements, selected nodes, and signal flow warnings use high-contrast colors so you can tell at a glance what is happening in your patch.

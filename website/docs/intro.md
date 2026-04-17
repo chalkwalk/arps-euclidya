@@ -11,7 +11,7 @@ Whether you are looking to design complex generative performance patches or deve
 1. [Introduction to Arps Euclidya](introduction.md)
    * The "Big Five" features, core goals, and philosophy.
 2. [User Interface Guide](user-interface.md)
-   * Navigating the Neon Slate UI, modular canvas, and workspace.
+   * Navigating the Interactive Graph UI, modular canvas, and workspace.
 3. [User Experience & Workflows](user-experience.md)
    * Patching gestures, creating macros, and DAW automation.
 4. [Node Dictionary](node-dictionary.md)
