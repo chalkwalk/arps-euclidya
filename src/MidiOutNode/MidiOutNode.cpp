@@ -19,6 +19,7 @@ MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
   addMacroParam(&macroHumTiming);
   addMacroParam(&macroHumVelocity);
   addMacroParam(&macroHumGate);
+  addMacroParam(&macroGatePercent);
 }
 
 namespace {
@@ -781,13 +782,19 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         double jitterPpq = randTimingShift * actualHumTiming * 0.5 * division;
         int tJitter = (int)(jitterPpq * clockManager.getSamplesPerPpq());
 
-        // Gate duration jitter
+        // Gate duration: base from gatePercent, humanize jitters around it.
         double divSamples = division * clockManager.getSamplesPerPpq();
-        // Base gate is 100% of division.
-        // Randomized shift in [0.1, 2.0]
+        float actualGatePercent =
+            resolveMacroFloat(macroGatePercent, gatePercent, 0.01f, 1.50f);
         float randGateFactor = 0.1f + rng.nextFloat() * 1.9f;
-        float finalGateFactor = 1.0f + actualHumGate * (randGateFactor - 1.0f);
-        int duration = (int)(divSamples * std::max(0.05f, finalGateFactor));
+        float humJitter = actualHumGate * (randGateFactor - 1.0f);
+        float finalGateFactor =
+            std::clamp(actualGatePercent + humJitter, 0.01f, 1.50f);
+        double sampleRate =
+            clockManager.getSamplesPerPpq() * clockManager.getBPM() / 60.0;
+        int minDuration = (int)std::ceil(sampleRate * 0.001);
+        int duration =
+            std::max(minDuration, (int)(divSamples * finalGateFactor));
 
         // Calculate a new noteID if possible (for CLAP tracking)
         int32_t outNoteID = noteIDCounter.fetch_add(1);
@@ -996,6 +1003,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("humTiming", humTiming);
     xml->setAttribute("humVelocity", humVelocity);
     xml->setAttribute("humGate", humGate);
+    xml->setAttribute("gatePercent", gatePercent);
     saveMacroBindings(xml);
   }
 }
@@ -1035,6 +1043,8 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     humVelocity =
         static_cast<float>(xml->getDoubleAttribute("humVelocity", 0.0));
     humGate = static_cast<float>(xml->getDoubleAttribute("humGate", 0.0));
+    gatePercent =
+        static_cast<float>(xml->getDoubleAttribute("gatePercent", 1.0));
 
     // Legacy single-macro migration
     struct LegacyMapping {

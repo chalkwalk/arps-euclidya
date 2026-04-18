@@ -221,6 +221,7 @@ class MidiOutNode : public GraphNode {
   float humTiming = 0.0f;
   float humVelocity = 0.0f;
   float humGate = 0.0f;
+  float gatePercent = 1.0f;  // Gate length as fraction of clock division [0.01, 1.50]
 
   MacroParam macroClockDivisionIndex{"Clock Division", {}};
   MacroParam macroSyncModeParam{"Sync Mode", {}};
@@ -232,6 +233,7 @@ class MidiOutNode : public GraphNode {
   MacroParam macroHumTiming{"Hum Timing", {}};
   MacroParam macroHumVelocity{"Hum Velocity", {}};
   MacroParam macroHumGate{"Hum Gate", {}};
+  MacroParam macroGatePercent{"Gate %", {}};
 
   // UI proxy variables (NodeBlock UI needs integer pointers)
   int ui_syncMode = 1;
