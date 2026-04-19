@@ -724,11 +724,13 @@ function onCanvasMouseMove(e) {
   const px = e.clientX - rect.left;
   const py = e.clientY - rect.top;
 
+  const g = getBodyAndPitch();
+  if (!g) return;
+
   const idx = elementAtPoint(px, py);
   if (idx !== -1) {
     const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
     const r = elementRect(elements[idx], g.body, g.sx, g.sy);
-    // 10px corner for resize grip hit
     if (px > r.x + r.w - 10 && py > r.y + r.h - 10) {
       previewCanvas.style.cursor = 'se-resize';
       return;
