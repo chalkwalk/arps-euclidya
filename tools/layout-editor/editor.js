@@ -594,13 +594,16 @@ function drawRotary(ctx, el, r) {
   ctx.lineWidth = trackWidth;
   ctx.stroke();
 
-  // Center value text (radius * 0.9 font, matches JUCE)
-  const fontSize = Math.max(6, radius * 0.9);
+  // Center value text — proportional to knob radius, same as plugin
+  const fontSize = Math.max(6, radius * 0.55);
+  const midVal = el.floatMin !== undefined
+    ? ((el.floatMin + el.floatMax) / 2).toFixed(2)
+    : String(Math.round(((el.minValue ?? 0) + (el.maxValue ?? 1)) / 2));
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `bold ${fontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(el.label || '...', cx, cy + 1);
+  ctx.fillText(midVal, cx, cy + 1);
 
   // Indicator dot
   const dotX = cx + radius * Math.cos(angle - Math.PI / 2);
@@ -665,7 +668,7 @@ function drawToggle(ctx, el, r) {
   roundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, R);
   ctx.stroke();
 
-  const fontSize = Math.max(6, 11 * SCALE / 3);
+  const fontSize = Math.max(6, 11 * SCALE);
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `bold ${fontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'center';
@@ -694,7 +697,7 @@ function drawCombo(ctx, el, r) {
   // Label text (first option or custom label)
   const displayText =
     (el.options && el.options.length > 0) ? el.options[0] : (el.label || '');
-  const fontSize = Math.max(6, 11 * SCALE / 3);
+  const fontSize = Math.max(6, 11 * SCALE);
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'left';
@@ -726,7 +729,7 @@ function drawCustom(ctx, el, r) {
   ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
   ctx.setLineDash([]);
 
-  const fontSize = Math.max(6, 11 * SCALE / 3);
+  const fontSize = Math.max(6, 11 * SCALE);
   ctx.fillStyle = 'rgba(180,180,180,0.6)';
   ctx.font = `italic ${fontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'center';
