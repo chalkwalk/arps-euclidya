@@ -178,6 +178,22 @@ class MidiOutNode : public GraphNode {
 
   void clampParameters();
 
+  // A note-on whose timing-humanize jitter exceeds the current audio block,
+  // deferred to fire in a future generateOutput call.
+  struct PendingNoteOn {
+    int channel;
+    int noteNumber;
+    float velocity;
+    int32_t noteID;
+    float totalPitchBend;
+    float pressure;
+    float timbre;
+    bool passExpr;
+    bool emitTuning;
+    int samplesUntilFire;
+    int noteDuration;
+  };
+
   std::function<void()> onParameterChanged;
 
   int pSteps = 16;
@@ -263,6 +279,7 @@ class MidiOutNode : public GraphNode {
 
  private:
   void flushPlayingNotes(NoteEventCollector &collector, int numSamples);
+  void flushPendingNoteOns(NoteEventCollector &collector, int numSamples);
   void flushCCSlew(NoteEventCollector &collector, int numSamples);
 
   NoteExpressionManager &noteExpressionManager;
@@ -300,4 +317,6 @@ class MidiOutNode : public GraphNode {
   std::vector<NoteInfo> playingNotes;
 
   juce::Random rng;
+
+  std::vector<PendingNoteOn> pendingNoteOns;
 };

@@ -161,6 +161,39 @@ void MidiOutNode::flushPlayingNotes(NoteEventCollector &collector,
   }
 }
 
+void MidiOutNode::flushPendingNoteOns(NoteEventCollector &collector,
+                                      int numSamples) {
+  for (auto it = pendingNoteOns.begin(); it != pendingNoteOns.end();) {
+    it->samplesUntilFire -= numSamples;
+    if (it->samplesUntilFire < numSamples) {
+      int offset = std::max(0, it->samplesUntilFire);
+      if (it->emitTuning) {
+        collector.addNoteExpression(it->channel, it->noteNumber,
+                                    NoteExpressionType::Tuning,
+                                    it->totalPitchBend, offset, it->noteID);
+      }
+      if (it->passExpr) {
+        if (it->pressure > 0.001f)
+          collector.addNoteExpression(it->channel, it->noteNumber,
+                                      NoteExpressionType::Pressure,
+                                      it->pressure, offset, it->noteID);
+        if (it->timbre > 0.001f)
+          collector.addNoteExpression(it->channel, it->noteNumber,
+                                      NoteExpressionType::Brightness,
+                                      it->timbre, offset, it->noteID);
+      }
+      collector.addNoteOn(it->channel, it->noteNumber, it->velocity, offset,
+                          it->noteID);
+      int noteEndSample = offset + it->noteDuration;
+      playingNotes.push_back({it->channel, it->noteNumber, it->noteID,
+                              std::max(0, noteEndSample - numSamples)});
+      it = pendingNoteOns.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 void MidiOutNode::process() {
   clampParameters();
 
@@ -437,6 +470,8 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   }
 
   if (!isPlaying && prevWasPlaying) {
+    // Discard any humanize-deferred note-ons — they should not fire after stop.
+    pendingNoteOns.clear();
     // Cap all pending note-offs to within one clock division so notes
     // drain naturally rather than cutting off hard. flushPlayingNotes
     // handles the actual note-offs and channel-allocator cleanup.
@@ -561,6 +596,8 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   }
 
   if (!holdingNotes) {
+    // Discard any humanize-deferred note-ons — keys are up.
+    pendingNoteOns.clear();
     // Release any indefinitely-held flex-gate notes immediately.
     if (flexGate) {
       for (auto &pn : playingNotes)
@@ -570,6 +607,9 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     flushPlayingNotes(collector, numSamples);
     return;
   }
+
+  // Fire any pending (timing-humanize-delayed) note-ons whose delay has elapsed.
+  flushPendingNoteOns(collector, numSamples);
 
   if (isTick) {
     const auto &sequence = it0->second;
@@ -818,25 +858,25 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
             (actualPressMod * (currentPressure - noteTrigger->velocity)) +
             (actualTimbMod * (currentTimbre - noteTrigger->velocity));
 
-        // --- 2. Humanize Velocity (Interpolation Style) ---
-        float randVTarget = rng.nextFloat();
+        // --- 2. Humanize Velocity ---
+        // actualHumVelocity=1 → ±0.5 uniform jitter around the base value.
         float finalVelocity = std::clamp(
-            vIntermediate + actualHumVelocity * (randVTarget - vIntermediate),
+            vIntermediate + actualHumVelocity * (rng.nextFloat() - 0.5f),
             0.0f, 1.0f);
 
         // --- Humanize Timing & Gate ---
-        // Timing jitter: up to +/- 50% of the division, max 30ms-ish
-        double randTimingShift =
-            (rng.nextDouble() - 0.5) * 2.0;  // Random in [-1, 1]
-        double jitterPpq = randTimingShift * actualHumTiming * 0.5 * division;
+        // Timing jitter: positive-only, up to +50% of the division.
+        // actualHumTiming=1 → uniform delay in [0, 0.5 divisions].
+        double jitterPpq = rng.nextDouble() * actualHumTiming * 0.5 * division;
         int tJitter = (int)(jitterPpq * clockManager.getSamplesPerPpq());
 
         // Gate duration: base from gatePercent, humanize jitters around it.
         double divSamples = division * clockManager.getSamplesPerPpq();
         float actualGatePercent =
             resolveMacroFloat(macroGatePercent, gatePercent, 0.01f, 1.50f);
-        float randGateFactor = 0.1f + rng.nextFloat() * 1.9f;
-        float humJitter = actualHumGate * (randGateFactor - 1.0f);
+        // actualHumGate=1 → ±0.75 uniform jitter around gatePercent,
+        // clamped to the legal [0.01, 1.50] range.
+        float humJitter = actualHumGate * (rng.nextFloat() - 0.5f) * 1.5f;
         float finalGateFactor =
             std::clamp(actualGatePercent + humJitter, 0.01f, 1.50f);
         double sampleRate =
@@ -863,7 +903,8 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         // Calculate a new noteID if possible (for CLAP tracking)
         int32_t outNoteID = noteIDCounter.fetch_add(1);
 
-        int finalSamplePos = std::clamp(tJitter, 0, numSamples - 1);
+        // tJitter < numSamples here (deferred path handles the rest, see below).
+        int finalSamplePos = tJitter;
 
         int usedChannel = outputChannel;
 
@@ -905,6 +946,15 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
               ++itC;
             }
           }
+          // Also cancel any pending (deferred) note for the same pitch so that
+          // a retrigger does not cause a stale note-on in a future block.
+          pendingNoteOns.erase(
+              std::remove_if(pendingNoteOns.begin(), pendingNoteOns.end(),
+                             [noteNum = noteTrigger->noteNumber,
+                              ch = usedChannel](const PendingNoteOn &p) {
+                               return p.noteNumber == noteNum && p.channel == ch;
+                             }),
+              pendingNoteOns.end());
         }
 
         // ── Combined pitch bend: microtone offset + input pitch bend ──
@@ -917,6 +967,19 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         float inputBendSemitones =
             passExpressions ? (noteTrigger->mpeX * 48.0f) : 0.0f;
         float totalPitchBend = tuningOffsetSemitones + inputBendSemitones;
+
+        // If timing jitter exceeds the current block, push the note-on to the
+        // pending queue rather than emitting immediately. Flex-gate notes are
+        // always immediate since held-note state lives in playingNotes, not the
+        // pending queue. The kill loop above has already handled retrigger.
+        if (tJitter >= numSamples && !flexGate) {
+          pendingNoteOns.push_back(
+              {usedChannel, noteTrigger->noteNumber, finalVelocity, outNoteID,
+               totalPitchBend, currentPressure, currentTimbre, passExpressions,
+               /*emitTuning=*/(totalPitchBend != 0.0f || usePerNoteChannels),
+               tJitter, duration});
+          continue;
+        }
 
         // Apply tuning. For MIDI (Pitch Bend), this MUST arrive before NoteOn.
         // For CLAP, it links by outNoteID.

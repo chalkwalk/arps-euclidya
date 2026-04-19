@@ -385,6 +385,7 @@
             "label": "humTiming",
             "floatMin": 0,
             "floatMax": 1,
+            "step": 0.01,
             "gridBounds": [
                 49,
                 64,
@@ -407,6 +408,7 @@
             "label": "humVelocity",
             "floatMin": 0,
             "floatMax": 1,
+            "step": 0.01,
             "gridBounds": [
                 60,
                 64,
@@ -429,6 +431,7 @@
             "label": "humGate",
             "floatMin": 0,
             "floatMax": 1,
+            "step": 0.01,
             "gridBounds": [
                 71,
                 64,
