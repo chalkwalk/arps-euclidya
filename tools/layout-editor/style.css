@@ -110,7 +110,7 @@ select {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  background-color: #090c10;
+  background-color: #060a0f;
   position: relative;
 }
 
@@ -204,4 +204,21 @@ select {
 #node-settings,
 #origami-settings {
   margin-top: 24px;
+}
+
+.mode-badge {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.07);
+  color: #888;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.mode-badge--extended {
+  background: rgba(13, 240, 227, 0.12);
+  color: var(--neon-cyan);
+  border: 1px solid rgba(13, 240, 227, 0.3);
 }

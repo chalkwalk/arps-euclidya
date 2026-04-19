@@ -363,6 +363,18 @@ function renderAll() {
 
   // --- Update overlay interaction handles ---
   renderOverlay(body, sx, sy, editElements);
+
+  // --- Edit mode badge ---
+  const badge = document.getElementById('edit-mode-badge');
+  if (badge) {
+    if (isExtendedMode) {
+      badge.textContent = 'Editing: Extended Panel';
+      badge.className = 'mode-badge mode-badge--extended';
+    } else {
+      badge.textContent = 'Editing: Base Panel';
+      badge.className = 'mode-badge';
+    }
+  }
 }
 
 function drawFoldLine(ctx, body, baseGh, extGh, nodeW) {
@@ -597,6 +609,20 @@ function drawRotary(ctx, el, r) {
   ctx.beginPath();
   ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
   ctx.fill();
+
+  // Bipolar: draw a small center tick at 12 o'clock
+  if (el.bipolar) {
+    const centerAngle = (ROTARY_START + ROTARY_END) / 2 - Math.PI / 2;
+    const tickInner = radius - trackWidth * 0.8;
+    const tickOuter = radius + trackWidth * 0.5;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = Math.max(1, trackWidth * 0.3);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx + tickInner * Math.cos(centerAngle), cy + tickInner * Math.sin(centerAngle));
+    ctx.lineTo(cx + tickOuter * Math.cos(centerAngle), cy + tickOuter * Math.sin(centerAngle));
+    ctx.stroke();
+  }
 }
 
 function drawLabel(ctx, el, r) {
@@ -641,7 +667,7 @@ function drawToggle(ctx, el, r) {
 
   const fontSize = Math.max(6, 11 * SCALE / 3);
   ctx.fillStyle = COLOR_TEXT;
-  ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
+  ctx.font = `bold ${fontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.save();
