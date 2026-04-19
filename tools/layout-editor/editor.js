@@ -882,12 +882,50 @@ function onDocMouseUp() {
 // Properties Panel
 // ============================================================
 
+const ELEMENT_DEFAULTS = {
+  RotarySlider: { type: 'RotarySlider', label: 'param', minValue: 0, maxValue: 1, gridBounds: [0, 0, 13, 13] },
+  Label:        { type: 'Label',        label: 'Label',                               gridBounds: [0, 0, 20, 4]  },
+  Toggle:       { type: 'Toggle',       label: 'toggle',                              gridBounds: [0, 0, 15, 7]  },
+  PushButton:   { type: 'PushButton',   label: 'button',                              gridBounds: [0, 0, 15, 7]  },
+  ComboBox:     { type: 'ComboBox',     label: 'combo',  options: ['Option 1'],       gridBounds: [0, 0, 30, 7]  },
+  Custom:       { type: 'Custom',       label: 'custom', customType: 'MyComponent',   gridBounds: [0, 0, 20, 20] },
+};
+
 function renderProperties() {
   if (selectedElementIndex === -1 || !currentData) {
     const isExtMode = previewMode === 1 && (currentData && (currentData.extendedGridWidth || 0) > 0);
-    propsContent.innerHTML = isExtMode
+    const hint = isExtMode
       ? '<p>Select an extended element to edit.<br><span style="color:#666;font-style:italic">Base elements shown dimmed for reference — not editable here.</span></p>'
       : '<p>Select an element on the canvas to edit its properties.</p>';
+
+    propsContent.innerHTML = hint + (currentData ? `
+      <div style="margin-top:12px">
+        <div class="prop-row">
+          <label>Add New Element</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select id="new-el-type" style="flex:1;min-width:0">
+              ${Object.keys(ELEMENT_DEFAULTS).map(t => `<option value="${t}">${t}</option>`).join('')}
+            </select>
+            <button id="btn-add-element" style="white-space:nowrap">+ Add</button>
+          </div>
+        </div>
+      </div>` : '');
+
+    if (currentData) {
+      document.getElementById('btn-add-element').addEventListener('click', () => {
+        const type = document.getElementById('new-el-type').value;
+        const isExt = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
+        const targetArray = isExt
+          ? (currentData.extendedElements = currentData.extendedElements || [])
+          : currentData.elements;
+        pushUndo();
+        const newEl = JSON.parse(JSON.stringify(ELEMENT_DEFAULTS[type]));
+        targetArray.push(newEl);
+        selectedElementIndex = targetArray.length - 1;
+        renderAll();
+        renderProperties();
+      });
+    }
     return;
   }
 
@@ -926,6 +964,13 @@ function renderProperties() {
       createInput('colorHex', 'Text Color Hex (aarrggbb)', el.colorHex || '');
   }
 
+  if (el.type === 'ComboBox') {
+    html += `<div class="prop-row">
+      <label>Options (one per line)</label>
+      <textarea id="combo-options" rows="5" style="background:#131820;border:1px solid #2e3440;color:white;padding:5px 7px;border-radius:3px;font-size:12px;resize:vertical;width:100%">${(el.options || []).join('\n')}</textarea>
+    </div>`;
+  }
+
   if (el.type === 'Custom') {
     html += createInput('customType', 'Custom Class ID', el.customType || '');
   }
@@ -933,6 +978,14 @@ function renderProperties() {
   html +=
     `<button id="btn-delete-element" style="background-color:#c93434;margin-top:15px;width:100%">Delete Element</button>`;
   propsContent.innerHTML = html;
+
+  if (el.type === 'ComboBox') {
+    document.getElementById('combo-options').addEventListener('change', (e) => {
+      pushUndo();
+      el.options = e.target.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+      renderAll();
+    });
+  }
 
   propsContent.querySelectorAll('.dyn-prop').forEach(inp => {
     inp.addEventListener('change', (e) => {
