@@ -21,10 +21,11 @@ const COLOR_BG_NODE = '#121a24';  // getForegroundSlate
 const COLOR_NEON = '#0df0e3';     // getNeonColor
 const COLOR_NEON_DIM = 'rgba(13, 240, 227, 0.3)';
 const COLOR_TRACK_DARK = '#333333';  // rotarySliderOutlineColourId
-const COLOR_PORT_IN = '#44cc44';
-const COLOR_PORT_IN_BD = '#228822';
-const COLOR_PORT_OUT = '#4499ff';
-const COLOR_PORT_OUT_BD = '#2266aa';
+// Port colours default to Agnostic (grey) — type not stored in JSON
+const COLOR_PORT_IN = '#888888';
+const COLOR_PORT_IN_BD = '#555555';
+const COLOR_PORT_OUT = '#888888';
+const COLOR_PORT_OUT_BD = '#555555';
 const COLOR_TEXT = '#ffffff';
 const COLOR_LABEL = '#cccccc';
 const COLOR_COMBO_BG = '#121a24';
