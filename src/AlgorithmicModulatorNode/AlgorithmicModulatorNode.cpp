@@ -150,7 +150,7 @@ NodeLayout AlgorithmicModulatorNode::getLayout() const {
     }
   }
 
-  for (auto &el : layout.extendedElements) {
+  for (auto &el : layout.unfoldedElements) {
     if (el.label == "algorithm") {
       el.valueRef = const_cast<int *>(&algorithm);
       el.macroParamRef = const_cast<MacroParam *>(&macroAlgorithm);

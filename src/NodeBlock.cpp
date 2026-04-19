@@ -386,7 +386,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
   auto layout = node->getLayout();
   createComponents(layout.elements, dynamicComponents);
 
-  if (layout.extendedGridWidth > 0 && layout.extendedGridHeight > 0) {
+  if (layout.hasUnfoldedLayout()) {
     addAndMakeVisible(expandButton);
     expandButton.setClickingTogglesState(true);
     expandButton.setColour(juce::TextButton::buttonColourId,
@@ -399,8 +399,8 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                            juce::Colours::white);
     expandButton.onClick = [this] { toggleExpansion(); };
 
-    createComponents(layout.extendedElements, extendedComponents);
-    for (auto *comp : extendedComponents) {
+    createComponents(layout.unfoldedElements, unfoldedComponents);
+    for (auto *comp : unfoldedComponents) {
       comp->setVisible(false);
     }
   }
@@ -417,11 +417,23 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
 }
 
 void NodeBlock::toggleExpansion() {
+  // When trying to expand, check that the unfold footprint is clear.
+  if (!isExpanded &&
+      !parentCanvas.getEngine().isUnfoldFootprintClear(targetNode.get())) {
+    // Flash the expand button to signal there's no room.
+    unfoldBlockedFlashCounter = 6;
+    expandButton.setColour(juce::TextButton::textColourOffId,
+                           juce::Colours::orangered);
+    startTimer(80);
+    return;
+  }
+
   isExpanded = !isExpanded;
+  targetNode->isUnfoldedRuntime = isExpanded;
   expandButton.setToggleState(isExpanded, juce::dontSendNotification);
   expandButton.setButtonText(isExpanded ? "<" : ">");
 
-  for (auto *comp : extendedComponents) {
+  for (auto *comp : unfoldedComponents) {
     comp->setVisible(isExpanded);
   }
 
@@ -441,16 +453,25 @@ void NodeBlock::updateSize() {
   int gridW = layout.gridWidth;
   int gridH = layout.gridHeight;
 
-  if (isExpanded && layout.extendedGridWidth > 0 &&
-      layout.extendedGridHeight > 0) {
-    gridW = layout.extendedGridWidth;
-    gridH = layout.extendedGridHeight;
+  if (isExpanded && layout.hasUnfoldedLayout()) {
+    gridW += 2;
+    gridH += 2;
   }
 
   int width = (gridW * Layout::GridPitch) - Layout::TramlineMargin;
   int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
 
   setSize(width, height);
+}
+
+juce::Rectangle<int> NodeBlock::compactBodyRect() const {
+  auto layout = targetNode->getLayout();
+  if (!isExpanded || !layout.hasUnfoldedLayout()) {
+    return getLocalBounds();
+  }
+  int compactW = (layout.gridWidth * Layout::GridPitch) - Layout::TramlineMargin;
+  int compactH = (layout.gridHeight * Layout::GridPitch) - Layout::TramlineMargin;
+  return {Layout::GridPitch, Layout::GridPitch, compactW, compactH};
 }
 
 void NodeBlock::timerCallback() {
@@ -513,7 +534,16 @@ void NodeBlock::timerCallback() {
 
   syncElements(layout.elements, dynamicComponents);
   if (isExpanded) {
-    syncElements(layout.extendedElements, extendedComponents);
+    syncElements(layout.unfoldedElements, unfoldedComponents);
+  }
+
+  // Decay the blocked-unfold flash.
+  if (unfoldBlockedFlashCounter > 0) {
+    --unfoldBlockedFlashCounter;
+    if (unfoldBlockedFlashCounter == 0) {
+      expandButton.setColour(juce::TextButton::textColourOffId,
+                             juce::Colours::white.withAlpha(0.7f));
+    }
   }
 
   // Update combo boxes that have active macro bindings to show the effective value
@@ -566,50 +596,67 @@ void NodeBlock::timerCallback() {
 }
 
 void NodeBlock::paint(juce::Graphics &g) {
+  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
   auto bounds = getLocalBounds().toFloat();
 
-  // Unified Node body: rounded rectangle (no distinct header bar anymore)
-  g.setColour(ArpsLookAndFeel::getForegroundSlate());
-  g.fillRoundedRectangle(bounds, 6.0f);
+  // Body fill — slightly brighter slate when unfolded, normal slate when compact
+  if (unfolded) {
+    g.setColour(ArpsLookAndFeel::getForegroundSlate().brighter(0.1f));
+    g.fillRoundedRectangle(bounds, 8.0f);
+
+    // Dashed hint at the original compact body boundary
+    auto compactHint = compactBodyRect().toFloat().reduced(1.0f);
+    g.setColour(juce::Colour(0xff887755).withAlpha(0.5f));
+    juce::Path dashPath;
+    dashPath.addRoundedRectangle(compactHint, 4.0f);
+    float dashes[] = {5.0f, 3.0f};
+    juce::Path dashedPath;
+    juce::PathStrokeType(1.2f).createDashedStroke(dashedPath, dashPath, dashes, 2);
+    g.fillPath(dashedPath);
+  } else {
+    g.setColour(ArpsLookAndFeel::getForegroundSlate());
+    g.fillRoundedRectangle(bounds, 6.0f);
+  }
 
   if (targetNode->bypassed) {
     g.setColour(juce::Colours::black.withAlpha(0.4f));
     g.fillRoundedRectangle(bounds, 6.0f);
 
     g.setColour(juce::Colours::white.withAlpha(0.1f));
-    for (float x = -bounds.getHeight(); x < bounds.getWidth(); x += 12.0f) {
-      g.drawLine(x, bounds.getHeight(), x + bounds.getHeight(), 0.0f, 2.0f);
+    g.saveState();
+    g.reduceClipRegion(bounds.toNearestInt());
+    for (float x = bounds.getX() - bounds.getHeight();
+         x < bounds.getRight(); x += 12.0f) {
+      g.drawLine(x, bounds.getBottom(), x + bounds.getHeight(),
+                 bounds.getY(), 2.0f);
     }
+    g.restoreState();
   }
 
-  // Border (Neon tinted)
+  // Border (Neon tinted) — wraps the full panel when unfolded
+  float cornerRadius = unfolded ? 8.0f : 6.0f;
   if (parentCanvas.isNodeSelected(targetNode.get())) {
-    // Outer glow for selected node
     g.setColour(juce::Colour(0xff0df0e3));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
-                           2.5f);
-
-    // Selection Halo
+    g.drawRoundedRectangle(bounds.reduced(0.5f), cornerRadius, 2.5f);
     g.setColour(ArpsLookAndFeel::getNeonColor().withAlpha(0.4f));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().expanded(4.0f), 8.0f,
-                           3.0f);
+    g.drawRoundedRectangle(bounds.expanded(4.0f), cornerRadius + 2.0f, 3.0f);
   }
 
   // Highlight for proximity auto-connection
   if (parentCanvas.getProximityTargetNode() == targetNode.get()) {
     auto zone = parentCanvas.getProximityZone();
     g.setColour(juce::Colour(0x600df0e3));  // Semi-transparent neon
+    auto boundsI = bounds.toNearestInt();
     if (zone == GraphCanvas::ProximityZone::Left) {
       g.fillRoundedRectangle(
-          getLocalBounds().removeFromLeft(getWidth() / 4).toFloat(), 6.0f);
+          boundsI.removeFromLeft(boundsI.getWidth() / 4).toFloat(), cornerRadius);
     } else if (zone == GraphCanvas::ProximityZone::Right) {
       g.fillRoundedRectangle(
-          getLocalBounds().removeFromRight(getWidth() / 4).toFloat(), 6.0f);
+          boundsI.removeFromRight(boundsI.getWidth() / 4).toFloat(), cornerRadius);
     }
   } else {
     g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f,
-                           1.5f);
+    g.drawRoundedRectangle(bounds.reduced(0.5f), cornerRadius, 1.5f);
   }
 
   // Helper: pick fill/stroke colours based on port type
@@ -988,69 +1035,68 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
 }
 
 void NodeBlock::resized() {
-  auto bounds = getLocalBounds();
+  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
 
-  // Floating Header Area
-  auto header = bounds.removeFromTop(HEADER_HEIGHT);
+  // Header: top of full panel when unfolded, top of compact body when not.
+  auto headerSource = unfolded ? getLocalBounds() : compactBodyRect();
+  auto compactBody = compactBodyRect();
+  auto header = headerSource.removeFromTop(HEADER_HEIGHT);
 
-  // Right aligned delete button
   deleteButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
-
-  // Left aligned bypass button
   bypassButton.setBounds(header.removeFromLeft(HEADER_HEIGHT).reduced(3));
-
-  // Title
   titleLabel.setBounds(header.withTrimmedLeft(6));
-
   if (expandButton.isVisible()) {
     expandButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
   }
 
-  // Body: dynamic controls
+  // Compact body after-header rect (used even when unfolded, for compact layout)
+  compactBody.removeFromTop(HEADER_HEIGHT);
+
   auto layout = targetNode->getLayout();
 
-  auto layoutElements = [this](
-                            const std::vector<UIElement> &elements,
-                            const juce::OwnedArray<juce::Component> &components,
-                            int gridW, int gridH) {
-    // Available body area for placing controls
-    int bodyWidth = getWidth() - (PORT_MARGIN * 2);
-    int bodyHeight = getHeight() - HEADER_HEIGHT - 4;
+  // Places elements within a given body rect, mapping (gridW x gridH) subgrid
+  // coordinates to pixel positions.
+  auto layoutElementsInRect =
+      [](const std::vector<UIElement> &elements,
+         const juce::OwnedArray<juce::Component> &components,
+         int startX, int startY, int bodyWidth, int bodyHeight,
+         int gridW, int gridH) {
+        constexpr int SUBS_PER_UNIT = 20;
+        int gridCols = gridW * SUBS_PER_UNIT;
+        int gridRows = gridH * SUBS_PER_UNIT;
+        float subGridX = (float)bodyWidth / (float)gridCols;
+        float subGridY = (float)bodyHeight / (float)gridRows;
+        for (int i = 0; i < components.size(); ++i) {
+          if (i < (int)elements.size()) {
+            const auto &element = elements[(size_t)i];
+            auto eb = element.gridBounds;
+            components[i]->setBounds(
+                startX + (int)(static_cast<float>(eb.getX()) * subGridX),
+                startY + (int)(static_cast<float>(eb.getY()) * subGridY),
+                (int)(static_cast<float>(eb.getWidth()) * subGridX),
+                (int)(static_cast<float>(eb.getHeight()) * subGridY));
+          }
+        }
+      };
 
-    constexpr int SUBS_PER_UNIT = 20;
-    int gridCols = gridW * SUBS_PER_UNIT;
-    int gridRows = gridH * SUBS_PER_UNIT;
+  // Compact controls always placed in the compact body (after header).
+  layoutElementsInRect(layout.elements, dynamicComponents,
+                       compactBody.getX() + PORT_MARGIN, compactBody.getY(),
+                       compactBody.getWidth() - (PORT_MARGIN * 2),
+                       compactBody.getHeight() - 4,
+                       layout.gridWidth, layout.gridHeight);
 
-    float subGridX = (float)bodyWidth / (float)gridCols;
-    float subGridY = (float)bodyHeight / (float)gridRows;
-
-    int startX = PORT_MARGIN;
-    int startY = HEADER_HEIGHT;
-
-    for (int i = 0; i < components.size(); ++i) {
-      if (i < (int)elements.size()) {
-        const auto &element = elements[(size_t)i];
-        auto eb = element.gridBounds;
-
-        components[i]->setBounds(
-            startX + (int)(static_cast<float>(eb.getX()) * subGridX),
-            startY + (int)(static_cast<float>(eb.getY()) * subGridY),
-            (int)(static_cast<float>(eb.getWidth()) * subGridX),
-            (int)(static_cast<float>(eb.getHeight()) * subGridY));
-      }
-    }
-  };
-
-  if (isExpanded) {
-    layoutElements(layout.extendedElements, extendedComponents,
-                   layout.extendedGridWidth, layout.extendedGridHeight);
-  } else {
-    layoutElements(layout.elements, dynamicComponents, layout.gridWidth,
-                   layout.gridHeight);
+  // Unfolded controls span the full panel, starting below the header.
+  if (unfolded) {
+    layoutElementsInRect(layout.unfoldedElements, unfoldedComponents,
+                         PORT_MARGIN, HEADER_HEIGHT,
+                         getWidth() - (PORT_MARGIN * 2),
+                         getHeight() - HEADER_HEIGHT - 4,
+                         layout.gridWidth + 2, layout.gridHeight + 2);
   }
 
   if (customControls != nullptr) {
-    customControls->setBounds(bounds.reduced(PORT_MARGIN, 4));
+    customControls->setBounds(compactBody.reduced(PORT_MARGIN, 4));
   }
 }
 
@@ -1340,16 +1386,18 @@ void NodeBlock::cancelDrag() {
   isDraggingCable = false;
 }
 
-juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) {
-  int y = HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
-  // Flush with the left edge. Width is RADIUS. Height is 2*RADIUS.
-  return {0, y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2};
+juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
+  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
+  auto body = unfolded ? getLocalBounds() : compactBodyRect();
+  int y = body.getY() + HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
+  return {body.getX(), y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2};
 }
 
 juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
-  int y = HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
-  // Flush with the right edge. Width is RADIUS. Height is 2*RADIUS.
-  return {getWidth() - PORT_RADIUS, y - PORT_RADIUS, PORT_RADIUS,
+  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
+  auto body = unfolded ? getLocalBounds() : compactBodyRect();
+  int y = body.getY() + HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
+  return {body.getRight() - PORT_RADIUS, y - PORT_RADIUS, PORT_RADIUS,
           PORT_RADIUS * 2};
 }
 

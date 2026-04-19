@@ -39,10 +39,14 @@ struct NodeLayout {
   int gridWidth = 1;
   int gridHeight = 1;
 
-  // For "Origami" extended UI
-  int extendedGridWidth = 0;   // 0 means no extended UI
-  int extendedGridHeight = 0;  // 0 means no extended UI
-
   std::vector<UIElement> elements;
-  std::vector<UIElement> extendedElements;
+
+  // Controls shown only in the unfolded (edge-expanded) state.
+  // Coordinates are in (gridWidth+2) x (gridHeight+2) sub-grid space.
+  // Absent means no unfold UI for this node.
+  std::vector<UIElement> unfoldedElements;
+
+  [[nodiscard]] bool hasUnfoldedLayout() const {
+    return !unfoldedElements.empty();
+  }
 };

@@ -40,6 +40,9 @@ class GraphEngine {
   bool isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
                       const std::unordered_set<GraphNode *> &ignoreSet) const;
 
+  // Returns true when the 1-cell border around node is clear of other nodes.
+  [[nodiscard]] bool isUnfoldFootprintClear(const GraphNode *node) const;
+
   // Helpers to get specific node types
   std::vector<class MidiOutNode *> getMidiOutNodes() const;
 

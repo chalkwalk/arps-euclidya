@@ -18,6 +18,8 @@ let SCALE = 3;
 // ============================================================
 const COLOR_BG_DARK = '#0b1016';  // getBackgroundCharcoal
 const COLOR_BG_NODE = '#121a24';  // getForegroundSlate
+// getForegroundSlate.brighter(0.1) ≈ #141d28
+const COLOR_BG_NODE_UNFOLDED = '#141d28';
 const COLOR_NEON = '#0df0e3';     // getNeonColor
 const COLOR_NEON_DIM = 'rgba(13, 240, 227, 0.3)';
 const COLOR_TRACK_DARK = '#333333';  // rotarySliderOutlineColourId
@@ -189,10 +191,17 @@ selNode.addEventListener('change', async (e) => {
 
     document.getElementById('node-w').value = currentData.gridWidth || 1;
     document.getElementById('node-h').value = currentData.gridHeight || 1;
-    document.getElementById('node-ew').value = currentData.extendedGridWidth || 0;
-    document.getElementById('node-eh').value = currentData.extendedGridHeight || 0;
     document.getElementById('sel-preview-mode').value = "0";
     previewMode = 0;
+
+    // Show/hide unfold info
+    const hasUnfold = (currentData.unfoldedElements || []).length > 0;
+    const unfoldInfo = document.getElementById('unfold-info');
+    if (unfoldInfo) {
+      unfoldInfo.textContent = hasUnfold
+        ? `Unfolded size: ${(currentData.gridWidth || 1) + 2} × ${(currentData.gridHeight || 1) + 2} (auto)`
+        : 'No unfoldedElements — add some to enable unfold mode.';
+    }
 
     initCanvas();
     renderAll();
@@ -219,8 +228,8 @@ btnSave.addEventListener('click', async () => {
     currentData.elements.forEach(el => {
       el.gridBounds = el.gridBounds.map(v => Math.round(v));
     });
-    if (currentData.extendedElements) {
-      currentData.extendedElements.forEach(el => {
+    if (currentData.unfoldedElements) {
+      currentData.unfoldedElements.forEach(el => {
         el.gridBounds = el.gridBounds.map(v => Math.round(v));
       });
     }
@@ -237,16 +246,29 @@ btnSave.addEventListener('click', async () => {
 });
 
 document.getElementById('node-w').addEventListener('change', (e) => {
-  if (currentData) { pushUndo(); currentData.gridWidth = parseInt(e.target.value); renderAll(); }
+  if (currentData) {
+    pushUndo();
+    currentData.gridWidth = parseInt(e.target.value);
+    // Update unfold info
+    const hasUnfold = (currentData.unfoldedElements || []).length > 0;
+    const unfoldInfo = document.getElementById('unfold-info');
+    if (unfoldInfo && hasUnfold) {
+      unfoldInfo.textContent = `Unfolded size: ${currentData.gridWidth + 2} × ${(currentData.gridHeight || 1) + 2} (auto)`;
+    }
+    renderAll();
+  }
 });
 document.getElementById('node-h').addEventListener('change', (e) => {
-  if (currentData) { pushUndo(); currentData.gridHeight = parseInt(e.target.value); renderAll(); }
-});
-document.getElementById('node-ew').addEventListener('change', (e) => {
-  if (currentData) { pushUndo(); currentData.extendedGridWidth = parseInt(e.target.value); if (previewMode === 1) renderAll(); }
-});
-document.getElementById('node-eh').addEventListener('change', (e) => {
-  if (currentData) { pushUndo(); currentData.extendedGridHeight = parseInt(e.target.value); if (previewMode === 1) renderAll(); }
+  if (currentData) {
+    pushUndo();
+    currentData.gridHeight = parseInt(e.target.value);
+    const hasUnfold = (currentData.unfoldedElements || []).length > 0;
+    const unfoldInfo = document.getElementById('unfold-info');
+    if (unfoldInfo && hasUnfold) {
+      unfoldInfo.textContent = `Unfolded size: ${(currentData.gridWidth || 1) + 2} × ${currentData.gridHeight + 2} (auto)`;
+    }
+    renderAll();
+  }
 });
 
 scaleSlider.addEventListener('input', () => {
@@ -266,17 +288,46 @@ function nodePixelSize(gw, gh) {
   };
 }
 
+// Body region for the compact panel (or the full panel header area).
+// Mirrors NodeBlock::resized() compact layout:
+//   startX = PORT_MARGIN, startY = HEADER_HEIGHT
+//   bodyWidth = width - PORT_MARGIN*2, bodyHeight = height - HEADER_HEIGHT - BOTTOM_PAD
 function bodyRegion(nodeW, nodeH) {
-  // Mirrors NodeBlock::resized():
-  //   startX = PORT_MARGIN
-  //   startY = HEADER_HEIGHT
-  //   bodyWidth  = width  - PORT_MARGIN * 2
-  //   bodyHeight = height - HEADER_HEIGHT - BOTTOM_PAD
   return {
     x: PORT_MARGIN * SCALE,
     y: HEADER_HEIGHT * SCALE,
     w: nodeW - PORT_MARGIN * 2 * SCALE,
     h: nodeH - HEADER_HEIGHT * SCALE - BOTTOM_PAD * SCALE,
+  };
+}
+
+// Body region for unfolded elements — spans the full expanded panel.
+// Mirrors the unfolded layout in NodeBlock::resized():
+//   startX = PORT_MARGIN, startY = HEADER_HEIGHT (header at top of full panel)
+//   bodyWidth = getWidth() - PORT_MARGIN*2, bodyHeight = getHeight() - HEADER_HEIGHT - 4
+function unfoldedBodyRegion(nodeW, nodeH) {
+  return {
+    x: PORT_MARGIN * SCALE,
+    y: HEADER_HEIGHT * SCALE,
+    w: nodeW - PORT_MARGIN * 2 * SCALE,
+    h: nodeH - HEADER_HEIGHT * SCALE - BOTTOM_PAD * SCALE,
+  };
+}
+
+// Body region for compact elements shown as ghosts inside the unfolded panel.
+// Mirrors NodeBlock::resized() compact layout but with the compact body inset:
+//   compact body offset: (GridPitch, GridPitch) within the expanded panel
+//   after header: startX = GridPitch + PORT_MARGIN, startY = GridPitch + HEADER_HEIGHT
+function compactGhostBodyRegion(baseGw, baseGh) {
+  const cpx = GRID_PITCH * SCALE;
+  const cpy = GRID_PITCH * SCALE;
+  const cpw = (baseGw * GRID_PITCH - TRAMLINE_MARGIN) * SCALE;
+  const cph = (baseGh * GRID_PITCH - TRAMLINE_MARGIN) * SCALE;
+  return {
+    x: cpx + PORT_MARGIN * SCALE,
+    y: cpy + HEADER_HEIGHT * SCALE,
+    w: cpw - PORT_MARGIN * 2 * SCALE,
+    h: cph - HEADER_HEIGHT * SCALE - BOTTOM_PAD * SCALE,
   };
 }
 
@@ -300,76 +351,97 @@ function elementRect(el, body, sx, sy) {
 // Main Render
 // ============================================================
 
+function isUnfoldedMode() {
+  return previewMode === 1 && currentData &&
+    (currentData.unfoldedElements || []).length > 0;
+}
+
 function renderAll() {
   if (!currentData || !previewCtx) return;
 
   const baseGw = currentData.gridWidth || 1;
   const baseGh = currentData.gridHeight || 1;
   const baseElements = currentData.elements || [];
+  const unfoldedElements = currentData.unfoldedElements || [];
+  const unfolded = isUnfoldedMode();
 
-  const isExtendedMode = previewMode === 1 &&
-    (currentData.extendedGridWidth || 0) > 0 &&
-    (currentData.extendedGridHeight || 0) > 0;
-
-  const gw = isExtendedMode ? currentData.extendedGridWidth : baseGw;
-  const gh = isExtendedMode ? currentData.extendedGridHeight : baseGh;
-  const editElements = isExtendedMode
-    ? (currentData.extendedElements || [])
-    : baseElements;
+  // Unfolded dimensions are always base + 2 on each axis
+  const gw = unfolded ? baseGw + 2 : baseGw;
+  const gh = unfolded ? baseGh + 2 : baseGh;
 
   const { w: nodeW, h: nodeH } = nodePixelSize(gw, gh);
   previewCanvas.width = nodeW;
   previewCanvas.height = nodeH;
 
   const ctx = previewCtx;
-  const body = bodyRegion(nodeW, nodeH);
-  const { sx, sy } = subGridPitch(body.w, body.h, gw, gh);
 
   // --- Node body ---
-  drawNodeBody(ctx, nodeW, nodeH);
+  drawNodeBody(ctx, nodeW, nodeH, unfolded, baseGw, baseGh);
 
-  // --- Sub-grid in body area ---
-  drawSubGrid(ctx, body, gw, gh, sx, sy);
+  if (unfolded) {
+    // Subgrid spans the full unfolded panel
+    const fullBody = unfoldedBodyRegion(nodeW, nodeH);
+    const { sx, sy } = subGridPitch(fullBody.w, fullBody.h, gw, gh);
+    drawSubGrid(ctx, fullBody, gw, gh, sx, sy);
 
-  if (isExtendedMode) {
-    // Draw base elements dimmed — positioned at the extended grid's pitch
+    // Compact elements shown dimmed in their compact body sub-area
+    const ghostBody = compactGhostBodyRegion(baseGw, baseGh);
+    const { sx: gsx, sy: gsy } = subGridPitch(ghostBody.w, ghostBody.h, baseGw, baseGh);
     ctx.globalAlpha = 0.35;
     baseElements.forEach((el) => {
-      const r = elementRect(el, body, sx, sy);
+      const r = elementRect(el, ghostBody, gsx, gsy);
       drawElement(ctx, el, r, false);
     });
     ctx.globalAlpha = 1.0;
 
-    // Draw fold-line annotation at the base-grid boundary
-    drawFoldLine(ctx, body, baseGh, gh, nodeW);
+    // Unfolded elements at full opacity
+    unfoldedElements.forEach((el, i) => {
+      const r = elementRect(el, fullBody, sx, sy);
+      const selected = (i === selectedElementIndex);
+      drawElement(ctx, el, r, selected);
+    });
+
+    // Selected element border
+    if (selectedElementIndex >= 0 && selectedElementIndex < unfoldedElements.length) {
+      const el = unfoldedElements[selectedElementIndex];
+      const r = elementRect(el, fullBody, sx, sy);
+      ctx.strokeStyle = COLOR_NEON;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+      ctx.setLineDash([]);
+    }
+
+    renderOverlay(fullBody, sx, sy, unfoldedElements);
+  } else {
+    const body = bodyRegion(nodeW, nodeH);
+    const { sx, sy } = subGridPitch(body.w, body.h, baseGw, baseGh);
+    drawSubGrid(ctx, body, baseGw, baseGh, sx, sy);
+
+    baseElements.forEach((el, i) => {
+      const r = elementRect(el, body, sx, sy);
+      const selected = (i === selectedElementIndex);
+      drawElement(ctx, el, r, selected);
+    });
+
+    if (selectedElementIndex >= 0 && selectedElementIndex < baseElements.length) {
+      const el = baseElements[selectedElementIndex];
+      const r = elementRect(el, body, sx, sy);
+      ctx.strokeStyle = COLOR_NEON;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+      ctx.setLineDash([]);
+    }
+
+    renderOverlay(body, sx, sy, baseElements);
   }
-
-  // --- Editable elements ---
-  editElements.forEach((el, i) => {
-    const r = elementRect(el, body, sx, sy);
-    const selected = (i === selectedElementIndex);
-    drawElement(ctx, el, r, selected);
-  });
-
-  // --- Selected element border (on top) ---
-  if (selectedElementIndex >= 0 && selectedElementIndex < editElements.length) {
-    const el = editElements[selectedElementIndex];
-    const r = elementRect(el, body, sx, sy);
-    ctx.strokeStyle = COLOR_NEON;
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 3]);
-    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
-    ctx.setLineDash([]);
-  }
-
-  // --- Update overlay interaction handles ---
-  renderOverlay(body, sx, sy, editElements);
 
   // --- Edit mode badge ---
   const badge = document.getElementById('edit-mode-badge');
   if (badge) {
-    if (isExtendedMode) {
-      badge.textContent = 'Editing: Extended Panel';
+    if (unfolded) {
+      badge.textContent = 'Editing: Unfolded Panel';
       badge.className = 'mode-badge mode-badge--extended';
     } else {
       badge.textContent = 'Editing: Base Panel';
@@ -378,54 +450,79 @@ function renderAll() {
   }
 }
 
-function drawFoldLine(ctx, body, baseGh, extGh, nodeW) {
-  const foldY = body.y + body.h * (baseGh / extGh);
+// Draws a dashed rounded rect at the compact body boundary within the unfolded panel.
+function drawCompactBodyHint(ctx, baseGw, baseGh) {
+  const cpx = GRID_PITCH * SCALE;
+  const cpy = GRID_PITCH * SCALE;
+  const cpw = (baseGw * GRID_PITCH - TRAMLINE_MARGIN) * SCALE;
+  const cph = (baseGh * GRID_PITCH - TRAMLINE_MARGIN) * SCALE;
+  const R = 4 * (SCALE / 3);
+
   ctx.save();
-  ctx.strokeStyle = 'rgba(13, 240, 227, 0.45)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.moveTo(0, foldY);
-  ctx.lineTo(nodeW, foldY);
+  ctx.strokeStyle = 'rgba(136, 119, 85, 0.5)';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([5, 3]);
+  roundRect(ctx, cpx + 1, cpy + 1, cpw - 2, cph - 2, R);
   ctx.stroke();
   ctx.setLineDash([]);
-
-  ctx.fillStyle = 'rgba(13, 240, 227, 0.55)';
-  ctx.font = `${Math.max(7, 9 * SCALE / 3)}px "Segoe UI", sans-serif`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText('▲ base panel', 4 * SCALE / 3, foldY - 2);
   ctx.restore();
 }
 
-function drawNodeBody(ctx, nodeW, nodeH) {
+function drawNodeBody(ctx, nodeW, nodeH, unfolded, baseGw, baseGh) {
   const R = 6 * (SCALE / 3);
+  const Ru = 8 * (SCALE / 3);
 
-  // Background
-  ctx.fillStyle = COLOR_BG_NODE;
-  roundRect(ctx, 0, 0, nodeW, nodeH, R);
-  ctx.fill();
+  if (unfolded) {
+    // Brighter slate for the expanded panel
+    ctx.fillStyle = COLOR_BG_NODE_UNFOLDED;
+    roundRect(ctx, 0, 0, nodeW, nodeH, Ru);
+    ctx.fill();
 
-  // Neon border
-  ctx.strokeStyle = COLOR_NEON_DIM;
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, 0.5, 0.5, nodeW - 1, nodeH - 1, R);
-  ctx.stroke();
+    // Dashed compact body hint
+    drawCompactBodyHint(ctx, baseGw, baseGh);
 
-  // Header divider line
-  ctx.strokeStyle = 'rgba(13, 240, 227, 0.2)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, HEADER_HEIGHT * SCALE);
-  ctx.lineTo(nodeW, HEADER_HEIGHT * SCALE);
-  ctx.stroke();
+    // Border around full panel
+    ctx.strokeStyle = COLOR_NEON_DIM;
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 0.5, 0.5, nodeW - 1, nodeH - 1, Ru);
+    ctx.stroke();
+
+    // Header divider at top of full panel
+    ctx.strokeStyle = 'rgba(13, 240, 227, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, HEADER_HEIGHT * SCALE);
+    ctx.lineTo(nodeW, HEADER_HEIGHT * SCALE);
+    ctx.stroke();
+
+    // Ports at outer edges of full panel
+    drawPort(ctx, 0, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, true);
+    drawPort(ctx, nodeW, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, false);
+  } else {
+    ctx.fillStyle = COLOR_BG_NODE;
+    roundRect(ctx, 0, 0, nodeW, nodeH, R);
+    ctx.fill();
+
+    ctx.strokeStyle = COLOR_NEON_DIM;
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, 0.5, 0.5, nodeW - 1, nodeH - 1, R);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(13, 240, 227, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, HEADER_HEIGHT * SCALE);
+    ctx.lineTo(nodeW, HEADER_HEIGHT * SCALE);
+    ctx.stroke();
+
+    drawPort(ctx, 0, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, true);
+    drawPort(ctx, nodeW, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, false);
+  }
 
   // Title text
-  const nodeName = currentNodeKey ? currentNodeKey.split('/')
-    .pop()
-    .replace('.json', '')
-    .replace('Node', ' Node') :
-    'Node';
+  const nodeName = currentNodeKey
+    ? currentNodeKey.split('/').pop().replace('.json', '').replace('Node', ' Node')
+    : 'Node';
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `bold ${Math.max(9, 14 * SCALE / 3)}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'left';
@@ -445,8 +542,9 @@ function drawNodeBody(ctx, nodeW, nodeH) {
   ctx.textBaseline = 'middle';
   ctx.fillText('×', btnX + btnSize / 2, btnY + btnSize / 2);
 
-  // Expand button placeholder — only for nodes with an extended panel
-  if (currentData && (currentData.extendedGridWidth || 0) > 0) {
+  // Expand button — shown for nodes that have unfoldedElements
+  const hasUnfold = currentData && (currentData.unfoldedElements || []).length > 0;
+  if (hasUnfold) {
     const gap = 4 * (SCALE / 3);
     const expBtnX = btnX - btnSize - gap;
     ctx.fillStyle = 'rgba(13, 240, 227, 0.12)';
@@ -456,24 +554,12 @@ function drawNodeBody(ctx, nodeW, nodeH) {
     ctx.lineWidth = 1;
     roundRect(ctx, expBtnX + 0.5, btnY + 0.5, btnSize - 1, btnSize - 1, 3);
     ctx.stroke();
-    ctx.fillStyle = previewMode === 1 ? COLOR_NEON : 'rgba(13, 240, 227, 0.7)';
+    ctx.fillStyle = unfolded ? COLOR_NEON : 'rgba(13, 240, 227, 0.7)';
     ctx.font = `${Math.max(7, 10 * SCALE / 3)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(
-      previewMode === 1 ? '⤡' : '⤢',
-      expBtnX + btnSize / 2,
-      btnY + btnSize / 2
-    );
+    ctx.fillText(unfolded ? '<' : '>', expBtnX + btnSize / 2, btnY + btnSize / 2);
   }
-
-  // Input ports (left edge half-stadiums) — 1 shown as representative
-  drawPort(
-    ctx, 0, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE, true);
-  // Output ports (right edge)
-  drawPort(
-    ctx, nodeW, HEADER_HEIGHT * SCALE + 10 * SCALE, PORT_RADIUS * SCALE,
-    false);
 }
 
 function drawPort(ctx, edgeX, centreY, r, isInput) {
@@ -481,7 +567,6 @@ function drawPort(ctx, edgeX, centreY, r, isInput) {
   const borderColor = isInput ? COLOR_PORT_IN_BD : COLOR_PORT_OUT_BD;
 
   ctx.save();
-  // Clip to the half facing inward
   ctx.beginPath();
   if (isInput)
     ctx.rect(edgeX, centreY - r, r, r * 2);
@@ -489,7 +574,6 @@ function drawPort(ctx, edgeX, centreY, r, isInput) {
     ctx.rect(edgeX - r, centreY - r, r, r * 2);
   ctx.clip();
 
-  // Full rounded rect centered such that one half is visible
   const rx = isInput ? edgeX - r : edgeX - r;
   const rw = r * 2;
   const rh = r * 2;
@@ -556,24 +640,19 @@ function drawElement(ctx, el, r, selected) {
 // ============================================================
 
 function drawRotary(ctx, el, r) {
-  // Mirror ArpsLookAndFeel::drawRotarySlider
-  // The knob occupies the full bounds. The text appears inside the arc.
   const cx = r.x + r.w / 2;
   const cy = r.y + r.h / 2;
   const radius = (Math.min(r.w, r.h) / 2) - 2;
   const trackWidth = radius * 0.4;
 
-  // Demo at mid-position
   const sliderPos = 0.5;
   const angle = ROTARY_START + sliderPos * (ROTARY_END - ROTARY_START);
 
-  // Background ellipse
   ctx.fillStyle = 'rgba(0,0,0,0.1)';
   ctx.beginPath();
   ctx.ellipse(cx, cy, radius, radius, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Background track arc
   ctx.beginPath();
   ctx.arc(cx, cy, radius, ROTARY_START, ROTARY_END);
   ctx.strokeStyle = COLOR_TRACK_DARK;
@@ -581,21 +660,18 @@ function drawRotary(ctx, el, r) {
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  // Neon glow arc (wider, semi-transparent)
   ctx.beginPath();
   ctx.arc(cx, cy, radius, ROTARY_START, angle);
   ctx.strokeStyle = 'rgba(13, 240, 227, 0.2)';
   ctx.lineWidth = trackWidth * 1.5;
   ctx.stroke();
 
-  // Neon fill arc
   ctx.beginPath();
   ctx.arc(cx, cy, radius, ROTARY_START, angle);
   ctx.strokeStyle = COLOR_NEON;
   ctx.lineWidth = trackWidth;
   ctx.stroke();
 
-  // Center value text — proportional to knob radius, same as plugin
   const fontSize = Math.max(6, radius * 0.55);
   const midVal = el.floatMin !== undefined
     ? ((el.floatMin + el.floatMax) / 2).toFixed(2)
@@ -606,7 +682,6 @@ function drawRotary(ctx, el, r) {
   ctx.textBaseline = 'middle';
   ctx.fillText(midVal, cx, cy + 1);
 
-  // Indicator dot
   const dotX = cx + radius * Math.cos(angle - Math.PI / 2);
   const dotY = cy + radius * Math.sin(angle - Math.PI / 2);
   ctx.fillStyle = COLOR_TEXT;
@@ -614,7 +689,6 @@ function drawRotary(ctx, el, r) {
   ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
   ctx.fill();
 
-  // Bipolar: draw a small center tick at 12 o'clock
   if (el.bipolar) {
     const centerAngle = (ROTARY_START + ROTARY_END) / 2 - Math.PI / 2;
     const tickInner = radius - trackWidth * 0.8;
@@ -630,13 +704,10 @@ function drawRotary(ctx, el, r) {
 }
 
 function drawLabel(ctx, el, r) {
-  // Mirror NodeBlock: 13pt bold, centred, with optional colorHex
   let color = COLOR_LABEL;
   let bold = false;
   if (el.colorHex) {
-    // Strip leading 'ff' alpha prefix if present (aarrggbb → rrggbb)
-    const hex =
-      el.colorHex.length === 8 ? el.colorHex.substring(2) : el.colorHex;
+    const hex = el.colorHex.length === 8 ? el.colorHex.substring(2) : el.colorHex;
     color = '#' + hex;
     bold = true;
   }
@@ -647,7 +718,6 @@ function drawLabel(ctx, el, r) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  // Clip to label bounds
   ctx.save();
   ctx.rect(r.x, r.y, r.w, r.h);
   ctx.clip();
@@ -656,8 +726,6 @@ function drawLabel(ctx, el, r) {
 }
 
 function drawToggle(ctx, el, r) {
-  // Mirrors TextButton (getForegroundSlate background, white text, neon border
-  // on hover)
   const R = 4 * SCALE / 3;
 
   ctx.fillStyle = COLOR_BG_NODE;
@@ -682,22 +750,18 @@ function drawToggle(ctx, el, r) {
 }
 
 function drawCombo(ctx, el, r) {
-  // Mirrors ComboBox (getForegroundSlate, white text, neon arrow)
   const R = 2 * SCALE / 3;
 
   ctx.fillStyle = COLOR_COMBO_BG;
   roundRect(ctx, r.x, r.y, r.w, r.h, R);
   ctx.fill();
 
-  // Subtle border
   ctx.strokeStyle = COLOR_COMBO_BORDER;
   ctx.lineWidth = 1;
   roundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, R);
   ctx.stroke();
 
-  // Label text (first option or custom label)
-  const displayText =
-    (el.options && el.options.length > 0) ? el.options[0] : (el.label || '');
+  const displayText = (el.options && el.options.length > 0) ? el.options[0] : (el.label || '');
   const fontSize = Math.max(6, 11 * SCALE);
   ctx.fillStyle = COLOR_TEXT;
   ctx.font = `${fontSize}px "Segoe UI", sans-serif`;
@@ -709,7 +773,6 @@ function drawCombo(ctx, el, r) {
   ctx.fillText(displayText, r.x + 4 * SCALE / 3, r.y + r.h / 2);
   ctx.restore();
 
-  // Neon dropdown arrow (right side)
   const arrowSize = Math.max(4, r.h * 0.4);
   const ax = r.x + r.w - arrowSize - 3 * SCALE / 3;
   const ay = r.y + r.h / 2;
@@ -735,8 +798,7 @@ function drawCustom(ctx, el, r) {
   ctx.font = `italic ${fontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(
-    el.customType || el.type || 'Custom', r.x + r.w / 2, r.y + r.h / 2);
+  ctx.fillText(el.customType || el.type || 'Custom', r.x + r.w / 2, r.y + r.h / 2);
 }
 
 // ============================================================
@@ -751,27 +813,25 @@ let interactIdx = -1;
 
 function getBodyAndPitch() {
   if (!currentData) return null;
-  const isExtMode = previewMode === 1 &&
-    (currentData.extendedGridWidth || 0) > 0 &&
-    (currentData.extendedGridHeight || 0) > 0;
-  const gw = isExtMode ? currentData.extendedGridWidth : (currentData.gridWidth || 1);
-  const gh = isExtMode ? currentData.extendedGridHeight : (currentData.gridHeight || 1);
+  const baseGw = currentData.gridWidth || 1;
+  const baseGh = currentData.gridHeight || 1;
+  const unfolded = isUnfoldedMode();
+  const gw = unfolded ? baseGw + 2 : baseGw;
+  const gh = unfolded ? baseGh + 2 : baseGh;
   const { w: nw, h: nh } = nodePixelSize(gw, gh);
-  const body = bodyRegion(nw, nh);
+  const body = unfolded ? unfoldedBodyRegion(nw, nh) : bodyRegion(nw, nh);
   const { sx, sy } = subGridPitch(body.w, body.h, gw, gh);
   return { body, sx, sy };
 }
 
 function renderOverlay(body, sx, sy, editElements) {
   overlayDiv.innerHTML = '';
-  // Position overlay to exactly cover the canvas
   overlayDiv.style.width = previewCanvas.width + 'px';
   overlayDiv.style.height = previewCanvas.height + 'px';
   overlayDiv.style.left = previewCanvas.offsetLeft + 'px';
   overlayDiv.style.top = previewCanvas.offsetTop + 'px';
 
-  const elements = editElements;
-  elements.forEach((el, index) => {
+  editElements.forEach((el, index) => {
     const r = elementRect(el, body, sx, sy);
     const handle = document.createElement('div');
     handle.className = 'overlay-element';
@@ -779,12 +839,10 @@ function renderOverlay(body, sx, sy, editElements) {
     handle.style.top = r.y + 'px';
     handle.style.width = r.w + 'px';
     handle.style.height = r.h + 'px';
-    // pointer-events:none so all mouse events fall through to the canvas
     handle.style.pointerEvents = 'none';
 
     if (index === selectedElementIndex) {
       handle.style.outline = `1.5px dashed ${COLOR_NEON}`;
-      // Resize grip indicator (visual only)
       const grip = document.createElement('div');
       grip.className = 'resize-grip';
       handle.appendChild(grip);
@@ -794,20 +852,18 @@ function renderOverlay(body, sx, sy, editElements) {
   });
 }
 
-// Hit-test: which editable element was clicked?
+function currentElements() {
+  if (!currentData) return [];
+  return isUnfoldedMode()
+    ? (currentData.unfoldedElements || [])
+    : (currentData.elements || []);
+}
+
 function elementAtPoint(px, py) {
   const g = getBodyAndPitch();
   if (!g) return -1;
   const { body, sx, sy } = g;
-
-  const isExtendedMode = previewMode === 1 &&
-    (currentData.extendedGridWidth || 0) > 0 &&
-    (currentData.extendedGridHeight || 0) > 0;
-  const elements = isExtendedMode
-    ? (currentData.extendedElements || [])
-    : (currentData.elements || []);
-
-  // Iterate in reverse (top elements first)
+  const elements = currentElements();
   for (let i = elements.length - 1; i >= 0; i--) {
     const r = elementRect(elements[i], body, sx, sy);
     if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return i;
@@ -829,8 +885,7 @@ function onCanvasMouseDown(e) {
     return;
   }
 
-  const isExtMode = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
-  const elements = isExtMode ? (currentData.extendedElements || []) : (currentData.elements || []);
+  const elements = currentElements();
   selectedElementIndex = idx;
   interactIdx = idx;
   dragStartX = e.clientX;
@@ -838,7 +893,6 @@ function onCanvasMouseDown(e) {
   dragStartBounds = [...elements[idx].gridBounds];
   pushUndo();
 
-  // Check if we're near the bottom-right (resize zone = 10px corner)
   const g = getBodyAndPitch();
   const r = elementRect(elements[idx], g.body, g.sx, g.sy);
   const inResizeZone = (px > r.x + r.w - 10) && (py > r.y + r.h - 10);
@@ -862,7 +916,7 @@ function onCanvasMouseMove(e) {
 
   const idx = elementAtPoint(px, py);
   if (idx !== -1) {
-    const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+    const elements = currentElements();
     const r = elementRect(elements[idx], g.body, g.sx, g.sy);
     if (px > r.x + r.w - 10 && py > r.y + r.h - 10) {
       previewCanvas.style.cursor = 'se-resize';
@@ -887,8 +941,7 @@ function onDocMouseMove(e) {
   const gridDx = Math.round(dx / sx);
   const gridDy = Math.round(dy / sy);
 
-  const isExtMode2 = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
-  const elements = isExtMode2 ? (currentData.extendedElements || []) : (currentData.elements || []);
+  const elements = currentElements();
   const b = elements[interactIdx].gridBounds;
   if (isDragging) {
     b[0] = Math.max(0, dragStartBounds[0] + gridDx);
@@ -923,9 +976,9 @@ const ELEMENT_DEFAULTS = {
 
 function renderProperties() {
   if (selectedElementIndex === -1 || !currentData) {
-    const isExtMode = previewMode === 1 && (currentData && (currentData.extendedGridWidth || 0) > 0);
-    const hint = isExtMode
-      ? '<p>Select an extended element to edit.<br><span style="color:#666;font-style:italic">Base elements shown dimmed for reference — not editable here.</span></p>'
+    const unfolded = isUnfoldedMode();
+    const hint = unfolded
+      ? '<p>Select an unfolded element to edit.<br><span style="color:#666;font-style:italic">Base elements shown dimmed for reference — switch to Base mode to edit them.</span></p>'
       : '<p>Select an element on the canvas to edit its properties.</p>';
 
     propsContent.innerHTML = hint + (currentData ? `
@@ -944,9 +997,8 @@ function renderProperties() {
     if (currentData) {
       document.getElementById('btn-add-element').addEventListener('click', () => {
         const type = document.getElementById('new-el-type').value;
-        const isExt = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
-        const targetArray = isExt
-          ? (currentData.extendedElements = currentData.extendedElements || [])
+        const targetArray = isUnfoldedMode()
+          ? (currentData.unfoldedElements = currentData.unfoldedElements || [])
           : currentData.elements;
         pushUndo();
         const newEl = JSON.parse(JSON.stringify(ELEMENT_DEFAULTS[type]));
@@ -959,8 +1011,7 @@ function renderProperties() {
     return;
   }
 
-  const isExtMode = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
-  const elements = isExtMode ? (currentData.extendedElements || []) : (currentData.elements || []);
+  const elements = currentElements();
   const el = elements[selectedElementIndex];
   let html = `
         <div class="prop-row">
@@ -972,26 +1023,16 @@ function renderProperties() {
     `;
 
   if (el.type === 'RotarySlider' || el.type === 'Slider') {
-    html += createInput(
-      'minValue', 'Min Value', el.minValue !== undefined ? el.minValue : 0,
-      'number');
-    html += createInput(
-      'maxValue', 'Max Value', el.maxValue !== undefined ? el.maxValue : 1,
-      'number');
-    html += createInput(
-      'floatMin', 'Float Min', el.floatMin !== undefined ? el.floatMin : '',
-      'number', 'any');
-    html += createInput(
-      'floatMax', 'Float Max', el.floatMax !== undefined ? el.floatMax : '',
-      'number', 'any');
-    html += createInput(
-      'step', 'Step', el.step !== undefined ? el.step : '', 'number', 'any');
+    html += createInput('minValue', 'Min Value', el.minValue !== undefined ? el.minValue : 0, 'number');
+    html += createInput('maxValue', 'Max Value', el.maxValue !== undefined ? el.maxValue : 1, 'number');
+    html += createInput('floatMin', 'Float Min', el.floatMin !== undefined ? el.floatMin : '', 'number', 'any');
+    html += createInput('floatMax', 'Float Max', el.floatMax !== undefined ? el.floatMax : '', 'number', 'any');
+    html += createInput('step', 'Step', el.step !== undefined ? el.step : '', 'number', 'any');
     html += createCheckbox('bipolar', 'Bipolar (Centered Zero)', el.bipolar);
   }
 
   if (el.type === 'Label') {
-    html +=
-      createInput('colorHex', 'Text Color Hex (aarrggbb)', el.colorHex || '');
+    html += createInput('colorHex', 'Text Color Hex (aarrggbb)', el.colorHex || '');
   }
 
   if (el.type === 'ComboBox') {
@@ -1005,8 +1046,7 @@ function renderProperties() {
     html += createInput('customType', 'Custom Class ID', el.customType || '');
   }
 
-  html +=
-    `<button id="btn-delete-element" style="background-color:#c93434;margin-top:15px;width:100%">Delete Element</button>`;
+  html += `<button id="btn-delete-element" style="background-color:#c93434;margin-top:15px;width:100%">Delete Element</button>`;
   propsContent.innerHTML = html;
 
   if (el.type === 'ComboBox') {
@@ -1041,23 +1081,21 @@ function renderProperties() {
     });
   });
 
-  document.getElementById('btn-delete-element')
-    .addEventListener('click', () => {
-      if (confirm('Delete this element?')) {
-        pushUndo();
-        elements.splice(selectedElementIndex, 1);
-        selectedElementIndex = -1;
-        renderAll();
-        renderProperties();
-      }
-    });
+  document.getElementById('btn-delete-element').addEventListener('click', () => {
+    if (confirm('Delete this element?')) {
+      pushUndo();
+      elements.splice(selectedElementIndex, 1);
+      selectedElementIndex = -1;
+      renderAll();
+      renderProperties();
+    }
+  });
 }
 
 function createInput(key, title, val, type = 'text', step = '') {
   return `<div class="prop-row">
         <label>${title}</label>
-        <input type="${type}" ${step ? `step="${step}"` :
-      ''} class="dyn-prop" data-key="${key}" value="${val}">
+        <input type="${type}" ${step ? `step="${step}"` : ''} class="dyn-prop" data-key="${key}" value="${val}">
     </div>`;
 }
 
@@ -1085,7 +1123,6 @@ function createBoundsInputs(bounds) {
 // Keyboard Shortcuts
 // ============================================================
 document.addEventListener('keydown', (e) => {
-  // Ignore if focus is inside a text input or select
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
 
   if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
@@ -1100,8 +1137,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     if (selectedElementIndex === -1 || !currentData) return;
-    const isExtMode = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
-    const elements = isExtMode ? (currentData.extendedElements || []) : (currentData.elements || []);
+    const elements = currentElements();
     if (confirm('Delete this element?')) {
       pushUndo();
       elements.splice(selectedElementIndex, 1);

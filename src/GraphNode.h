@@ -72,6 +72,9 @@ class GraphNode {
   int gridX = 0;
   int gridY = 0;
 
+  // Ephemeral unfold state — set by NodeBlock, read by GraphEngine feasibility check.
+  bool isUnfoldedRuntime = false;
+
   // Legacy float coordinates (kept temporarily for runtime dragging during
   // Phase 1-3 transition)
   float nodeX = 0.0f;

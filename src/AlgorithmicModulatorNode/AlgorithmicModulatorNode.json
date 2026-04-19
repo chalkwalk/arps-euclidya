@@ -1,8 +1,6 @@
 {
   "gridWidth": 3,
   "gridHeight": 2,
-  "extendedGridWidth": 3,
-  "extendedGridHeight": 3,
   "elements": [
     {
       "type": "ComboBox",
@@ -106,12 +104,12 @@
       "gridBounds": [30, 38, 13, 2]
     }
   ],
-  "extendedElements": [
+  "unfoldedElements": [
     {
       "type": "Custom",
       "customType": "ModulatorStepEditor",
       "label": "ModulatorStepEditor",
-      "gridBounds": [0, 43, 59, 16]
+      "gridBounds": [20, 62, 60, 16]
     }
   ]
 }

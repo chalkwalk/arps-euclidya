@@ -156,7 +156,12 @@ void GraphCanvas::updateTransforms() {
     if (std::isnan(ny) || std::isinf(ny))
       ny = 0.0f;
 
-    block->setBounds((int)nx, (int)ny, block->getWidth(), block->getHeight());
+    // When a block is unfolded, its component is (gridW+2)×(gridH+2) in size
+    // and its origin shifts one grid pitch above/left the logical position.
+    int offsetX = block->isUnfolded() ? -Layout::GridPitch : 0;
+    int offsetY = block->isUnfolded() ? -Layout::GridPitch : 0;
+    block->setBounds((int)nx + offsetX, (int)ny + offsetY,
+                     block->getWidth(), block->getHeight());
   }
   updateScrollBars();
 }

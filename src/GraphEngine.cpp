@@ -104,6 +104,22 @@ bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
   return false;
 }
 
+bool GraphEngine::isUnfoldFootprintClear(const GraphNode *node) const {
+  int x = node->gridX - 1;
+  int y = node->gridY - 1;
+  int w = node->getGridWidth() + 2;
+  int h = node->getGridHeight() + 2;
+  for (const auto &other : nodes) {
+    if (other.get() == node || !other->isUnfoldedRuntime) continue;
+    int ox = other->gridX, oy = other->gridY;
+    int ow = other->getGridWidth(), oh = other->getGridHeight();
+    bool overlapX = (x < ox + ow) && (x + w > ox);
+    bool overlapY = (y < oy + oh) && (y + h > oy);
+    if (overlapX && overlapY) return false;
+  }
+  return true;
+}
+
 juce::Point<int> GraphEngine::findClosestFreeSpot(
     int startX, int startY, int gridW, int gridH, GraphNode *ignoreNode,
     juce::Point<int> preferredPoint) const {

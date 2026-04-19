@@ -22,11 +22,6 @@ class LayoutParser {
       layout.gridWidth = obj->getProperty("gridWidth");
       layout.gridHeight = obj->getProperty("gridHeight");
 
-      if (obj->hasProperty("extendedGridWidth"))
-        layout.extendedGridWidth = obj->getProperty("extendedGridWidth");
-      if (obj->hasProperty("extendedGridHeight"))
-        layout.extendedGridHeight = obj->getProperty("extendedGridHeight");
-
       auto elementsVar = obj->getProperty("elements");
       if (auto *elementsArray = elementsVar.getArray()) {
         for (const auto &elemVar : *elementsArray) {
@@ -36,11 +31,15 @@ class LayoutParser {
         }
       }
 
-      auto extendedVar = obj->getProperty("extendedElements");
-      if (auto *extendedArray = extendedVar.getArray()) {
-        for (const auto &elemVar : *extendedArray) {
+      // "unfoldedElements" is the current key; "extendedElements" is accepted
+      // for back-compat when loading older JSON layouts.
+      auto unfoldedVar = obj->hasProperty("unfoldedElements")
+                             ? obj->getProperty("unfoldedElements")
+                             : obj->getProperty("extendedElements");
+      if (auto *unfoldedArray = unfoldedVar.getArray()) {
+        for (const auto &elemVar : *unfoldedArray) {
           if (auto *elemObj = elemVar.getDynamicObject()) {
-            layout.extendedElements.push_back(parseElement(elemObj));
+            layout.unfoldedElements.push_back(parseElement(elemObj));
           }
         }
       }

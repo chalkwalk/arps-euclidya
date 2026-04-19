@@ -52,7 +52,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
     for (auto *comp : dynamicComponents)
       if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
         b->selectedMacroPtr = ptr;
-    for (auto *comp : extendedComponents)
+    for (auto *comp : unfoldedComponents)
       if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
         b->selectedMacroPtr = ptr;
     for (auto &info : comboMacroInfos)
@@ -87,15 +87,28 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   bool isExpanded = false;
 
+  // True when a blocked-unfold flash is in progress.
+  int unfoldBlockedFlashCounter = 0;
+
   void toggleExpansion();
   void updateSize();
+
+  // Returns the rect (in local coords) occupied by the compact node body.
+  // When not expanded this is getLocalBounds(); when expanded it is offset
+  // by one grid pitch on each side within the larger component.
+  [[nodiscard]] juce::Rectangle<int> compactBodyRect() const;
+
+ public:
+  [[nodiscard]] bool isUnfolded() const { return isExpanded; }
+
+ private:
 
   // Fallback for nodes not yet migrated to NodeLayout
   std::unique_ptr<juce::Component> customControls;
 
   // Dynamic UI Elements (Layout-driven)
   juce::OwnedArray<juce::Component> dynamicComponents;
-  juce::OwnedArray<juce::Component> extendedComponents;
+  juce::OwnedArray<juce::Component> unfoldedComponents;
 
   // Selected-macro state (pointer into editor's selectedMacro field)
   int *selectedMacroPtr = nullptr;
@@ -152,7 +165,7 @@ class NodeBlock : public juce::Component, private juce::Timer {
   bool isDraggingCable = false;
 
   // Calculate the port rectangles for hit testing
-  [[nodiscard]] static juce::Rectangle<int> getInputPortRect(int portIndex);
+  [[nodiscard]] juce::Rectangle<int> getInputPortRect(int portIndex) const;
   [[nodiscard]] juce::Rectangle<int> getOutputPortRect(int portIndex) const;
   [[nodiscard]] int hitTestInputPort(juce::Point<int> localPoint) const;
   [[nodiscard]] int hitTestOutputPort(juce::Point<int> localPoint) const;
