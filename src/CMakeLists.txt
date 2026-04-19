@@ -23,6 +23,9 @@ juce_generate_juce_header(ArpsEuclidya)
 target_sources(ArpsEuclidya
     PRIVATE
         AllNotesNode/AllNotesNode.cpp
+        AndNode/AndNode.cpp
+        OrNode/OrNode.cpp
+        XorNode/XorNode.cpp
         AppSettings.cpp
         ArpsLookAndFeel.cpp
         ChordNNode/ChordNNode.cpp
@@ -78,6 +81,9 @@ target_sources(ArpsEuclidya
 
 juce_add_binary_data(NodeLayoutData SOURCES
     AlgorithmicModulatorNode/AlgorithmicModulatorNode.json
+    AndNode/AndNode.json
+    OrNode/OrNode.json
+    XorNode/XorNode.json
     AllNotesNode/AllNotesNode.json
     ChordNNode/ChordNNode.json
     ChordSplitNode/ChordSplitNode.json

@@ -1,0 +1,12 @@
+{
+  "gridWidth": 1,
+  "gridHeight": 1,
+  "elements": [
+    {
+      "type": "ComboBox",
+      "label": "lengthMode",
+      "options": ["Pad", "Truncate"],
+      "gridBounds": [0, 12, 20, 8]
+    }
+  ]
+}

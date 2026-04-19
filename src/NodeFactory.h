@@ -5,6 +5,9 @@
 #include <string>
 
 #include "AlgorithmicModulatorNode/AlgorithmicModulatorNode.h"
+#include "AndNode/AndNode.h"
+#include "OrNode/OrNode.h"
+#include "XorNode/XorNode.h"
 #include "AllNotesNode/AllNotesNode.h"
 #include "ChordNNode/ChordNNode.h"
 #include "ChordSplitNode/ChordSplitNode.h"
@@ -84,6 +87,12 @@ class NodeFactory {
       return std::make_shared<MultiplyNode>();
     if (type == "Zip")
       return std::make_shared<ZipNode>();
+    if (type == "And")
+      return std::make_shared<AndNode>();
+    if (type == "Or")
+      return std::make_shared<OrNode>();
+    if (type == "Xor")
+      return std::make_shared<XorNode>();
     if (type == "Unzip")
       return std::make_shared<UnzipNode>();
     if (type == "Sequence")
@@ -111,17 +120,18 @@ class NodeFactory {
 
   static std::vector<std::string> getAvailableNodeTypes() {
     std::vector<std::string> types = {
-        "All Notes",      "CC Modulator",   "Chord Split",
-        "ChordN",         "Concatenate",    "Converge",
-        "Diagnostic",     "Diverge",        "Fold",
-        "Midi In",        "Midi Out",       "MPE Filter",
-        "Multiply",       "Note",           "Note Large",
-        "Octave Stack",   "Octave Transpose", "Quantizer",
-        "Reverse",        "Route",          "Select",
-        "Sequence",       "Sort",           "Split",
-        "Switch",         "Transpose",      "Unfold",
-        "Unzip",          "Interleave",     "Velocity Filter",
-        "Walk",           "Zip"};
+        "All Notes",      "And",            "CC Modulator",
+        "Chord Split",    "ChordN",         "Concatenate",
+        "Converge",       "Diagnostic",     "Diverge",
+        "Fold",           "Midi In",        "Midi Out",
+        "MPE Filter",     "Multiply",       "Note",
+        "Note Large",     "Octave Stack",   "Octave Transpose",
+        "Or",             "Quantizer",      "Reverse",
+        "Route",          "Select",         "Sequence",
+        "Sort",           "Split",          "Switch",
+        "Transpose",      "Unfold",         "Unzip",
+        "Interleave",     "Velocity Filter", "Walk",
+        "Xor",            "Zip"};
     std::sort(types.begin(), types.end());
     return types;
   }
@@ -135,8 +145,8 @@ class NodeFactory {
         {"Generators",    {"All Notes", "ChordN", "Sequence", "Walk"}},
         {"Pattern",       {"Converge", "Diverge", "Fold", "Multiply",
                            "Reverse", "Sort", "Unfold"}},
-        {"Combinatorial", {"Chord Split", "Concatenate", "Interleave",
-                           "Split", "Unzip", "Zip"}},
+        {"Combinatorial", {"And", "Chord Split", "Concatenate", "Interleave",
+                           "Or", "Split", "Unzip", "Xor", "Zip"}},
         {"Pitch & Range", {"Octave Stack", "Octave Transpose",
                            "Quantizer", "Transpose"}},
         {"Routing",       {"Route", "Select", "Switch"}},
@@ -197,7 +207,8 @@ class NodeFactory {
     } else if (type == "Chord Split" || type == "Diverge" || type == "Unzip") {
       m.numOut = 2;
     } else if (type == "Converge" || type == "Zip" || type == "Concatenate" ||
-               type == "Interleave") {
+               type == "Interleave" || type == "And" || type == "Or" ||
+               type == "Xor") {
       m.numIn = 2;
     }
     return m;
