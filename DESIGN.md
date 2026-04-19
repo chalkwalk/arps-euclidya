@@ -87,12 +87,12 @@ Patches are serialized as XML to disk. `GraphEngine` drives `saveNodeState` / `l
 
 ## 4. Node Dictionary
 
-The system provides 29 node types, categorized by their role in the processing pipeline. Every node carries an `EventSequence` input/output (except pure generation nodes). Nodes marked *(Macros)* expose one or more parameters to the macro system via `MacroParam` members.
+The system provides 32 node types, categorized by their role in the processing pipeline. Every node carries an `EventSequence` input/output (except pure generation nodes). Nodes marked *(Macros)* expose one or more parameters to the macro system via `MacroParam` members.
 
 ### 4.1 Core I/O & Generation
 
 - **Midi In Node** *(Macros)*: The entry point for live performance. Captures notes and MPE data from the DAW or the on-screen keyboard. Supports channel filtering.
-- **Midi Out Node** *(Macros)*: The terminal destination. Implements the **Euclidean Engine** (Pattern & Rhythm separation), sends real-time MIDI note and CC events to the host. Features Humanize parameters (timing, velocity, gate) and an interactive circular visualizer. Accepts a CC sequence on Port 1 (violet) and provides per-CC# anchor, slew, and rest-behaviour controls in the registry panel.
+- **Midi Out Node** *(Macros)*: The terminal destination. Implements the **Euclidean Engine** (Pattern & Rhythm separation), sends real-time MIDI note and CC events to the host. Features a **Gate %** control (1–150% of clock division) and **Flex Gate** mode (holds pitches across adjacent steps instead of retriggering), plus Humanize parameters (timing, velocity, gate jitter) and an interactive circular visualizer. Accepts a CC sequence on Port 1 (violet) and provides per-CC# anchor, slew, and rest-behaviour controls in the registry panel. On transport stop, held notes decay within one clock division rather than cutting off hard.
 - **Sequence Node** *(Macros)*: A 16×128 "piano roll" generator. Users draw patterns on a scrollable grid; the pattern plays independently of held keys. Sequence length is macro-bindable.
 - **All Notes Node**: Outputs every MIDI note (0–127) as a single sequence step per note. Useful as a source for `Fold` or scale-quantizer chains.
 - **CC Modulator Node** *(Macros)*: A CC sequence generator. Produces a CC `EventSequence` from an algorithm (Sine, RampUp, RampDown, Triangle, RandomHold, RandomWalk, EuclideanGates, Custom). CC values are normalised 0..1 internally. The Algorithm selector is macro-bindable.
@@ -125,6 +125,9 @@ Nodes in this category also declare **Agnostic** ports unless noted.
 - **Zip Node**: Merges two parallel sequences into one by stacking matching steps. *(Agnostic)*
 - **Unzip Node**: Splits a sequence into two lines — lowest-value steps to Output 0, highest to Output 1. *(Agnostic)*
 - **Interleave Node**: Interleaves steps from two input sequences alternately. *(Agnostic)*
+- **And Node**: Outputs only the notes whose pitch appears in **both** inputs. Highest-velocity version of each matched pitch is emitted; `MpeCondition` is narrowed to the intersection of both predicates. Length policy (Pad/Truncate) is switchable. *(Notes port)*
+- **Or Node**: Outputs the **union** of notes from both inputs. Pitches present in both carry the highest velocity with a hulled `MpeCondition`; pitches in only one input pass through unchanged. Length policy (Pad/Truncate) is switchable. *(Notes port)*
+- **Xor Node**: Outputs notes whose pitch appears in **exactly one** input. Surviving notes pass through with their original `MpeCondition`. Length policy (Pad/Truncate) is switchable. *(Notes port)*
 
 ### 4.4 Pitch & Range Manipulation
 
@@ -165,7 +168,7 @@ The interface uses a high-contrast "Neon Slate" visual language: deep charcoal b
 
 - **Cable Insertion (Splice)**: Dragging a new node over an active cable highlights the wire and inserts the node into that connection on drop.
 - **Edge-Drop Auto-Connect**: Dropping a node onto the left edge of an existing node connects output→input; dropping on the right edge does the reverse.
-- **Library Search**: A collapsible sidebar with fuzzy search. Pressing `Enter` spawns the top result at the mouse cursor.
+- **Library Search**: A collapsible sidebar with multi-token search. Tokens are matched case-insensitively against node name, category, and tags (AND semantics across tokens). Pressing `Enter` spawns the top result at the mouse cursor.
 - **Node Replace**: Right-clicking a node header exposes "Replace with…" — substitutes the node type while preserving compatible connections.
 - **Node Bypass**: Every node has a bypass toggle in its header that passes the input sequence unchanged without altering the patch graph.
 - **Undo/Redo**: All structural changes (node add/remove, connections, parameter mutations) are undoable with `Ctrl+Z` / `Ctrl+Y`.

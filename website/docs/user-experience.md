@@ -6,7 +6,7 @@ Arps Euclidya is designed to prioritize fast, fluid patching over tedious menu-d
 
 To keep you in the "flow state", the UI offers several advanced patching interactions:
 
-- **Library Search**: Open the Module Library sidebar and use the search bar. Typing a partial name and pressing `Enter` will spawn the topmost result at your mouse cursor.
+- **Library Search**: Open the Module Library sidebar and use the search bar. The search matches against node **name**, **category**, and **tags** — you can type multiple space-separated words and all must match (AND). For example, `logic harmony` finds the And/Or/Xor nodes, and `rhythm gen` finds generator-category nodes tagged with rhythm. Pressing `Enter` when exactly one result is shown spawns it at your mouse cursor.
 - **Cable Insertion (Splicing)**: If you drag a new node from the library directly over an *active* patch cable, the wire will highlight. Dropping the node will "splice" it into that connection, routing the previous output into the new node, and the new node's output to the original destination.
 - **Edge-Drop Auto-Connect**: Dragging and dropping a node onto the left edge of an existing node connects its outputs to the existing node's inputs. Dropping on the right edge does the reverse.
 - **Smart Disconnect**: You can pull cables off of ports to break a connection, or delete nodes by selecting them and pressing `Delete`/`Backspace`.

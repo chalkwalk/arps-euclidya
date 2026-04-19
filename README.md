@@ -19,7 +19,7 @@ Traditional arpeggiators are often limited to linear patterns and fixed rhythmic
 ## Key Features
 
 * **Dual-Layer Euclidean Engine**: Independently control pattern (note skip/play) and rhythm (trigger/rest) layers for evolving polyrhythms.
-* **25+ Specialized Nodes**: Includes Brownian Walk, Converge/Diverge, Quantizers, Octave Stacks, Chord Combinations, and much more.
+* **32 Specialized Nodes**: Includes Brownian Walk, Converge/Diverge, Quantizers, Octave Stacks, Chord Combinations, set-logic nodes (And/Or/Xor), and much more.
 * **Interactive Node Graph**: A high-performance interactive graph-based workspace with smooth pan/zoom, snap-to-grid, and intuitive drag-and-drop patching.
 * **Instant Recalculation**: A topological execution engine ensures zero-latency response to parameter changes and MIDI input.
 * **32 Global Macros**: A fully visual macro system with color-coded knobs, shift+drag binding, intensity arcs, dual-value display, and bipolar/unipolar toggling — exposing your internal patch parameters to DAW automation and MIDI controllers.

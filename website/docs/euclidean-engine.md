@@ -65,13 +65,32 @@ Every `MidiOutNode` provides internal scaling for incoming MPE dimensions:
 - **Timbre -> Velocity**: Maps MPE CC74 (Timbre) natively to note velocity output.
 These scaling factors can be inverted, added dynamically, and exposed via Macros for real-time live manipulation.
 
+## Gate Length
+
+The **Gate %** knob sets the base note duration as a percentage of the current clock division — from 1% (very short staccato) up to 150% (notes overlap into the following step). The default is 100% (legato-length). Gate % is macro-bindable for real-time modulation.
+
+An absolute floor of 1 ms is applied after all calculations to prevent stuck notes on synths that round very short durations to zero.
+
+## Flex Gate
+
+When **Flex Gate** is enabled, a pitch that appears on consecutive steps is **held through** rather than retriggered. Only the note-off is deferred — no new note-on is sent for the matching pitch. The note-off fires when the pitch no longer appears in the next step, using the Gate % computed at that final step.
+
+This is useful when driving legato lines or chord-sustain patches where retriggering would cause clicks or unwanted filter resets.
+
+- A **rest step** (empty step) always breaks the hold, firing the note-off at its normal scheduled time.
+- When Flex Gate is **off**, the default retrigger behaviour applies: any active note on the same pitch is closed and the new note-on fires.
+
 ## Humanize
 
-To add organic movement to your sequences, the engine features built-in **Humanize** capabilities:
+To add organic movement to your sequences, the engine features built-in **Humanize** capabilities. All three axes are independent and can coexist with Gate % and Flex Gate:
 
-- Independent variations for Timing (micro-shifts off the rigid grid).
-- Velocity randomization.
-- Gate Length fluctuations, keeping repetitive arpeggios sounding natural and evolving.
+- **Timing**: Micro-shifts each note-on slightly off the rigid grid (up to ±50% of the division).
+- **Velocity**: Randomises note velocity around its sequence value.
+- **Gate**: Jitters the gate length around the **Gate %** base value. The result is clamped to the 1%–150% range and the 1 ms floor.
+
+## Transport Stop
+
+When the DAW transport stops, all playing notes are given at most one clock division to finish before their note-offs are sent. This gives a brief, natural decay rather than an abrupt cutoff — particularly noticeable with long gate percentages or Flex Gate held notes.
 
 ## Multi-Channel Output
 

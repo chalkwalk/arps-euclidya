@@ -40,7 +40,7 @@ Access rapid actions without moving your cursor to the sidebar:
 
 Located in a collapsible sidebar, this is your toolbox. It contains every node available in Arps Euclidya, organized into categories: **I/O**, **Modulation**, **Generators**, **Pattern**, **Combinatorial**, **Pitch & Range**, **Routing**, **Filter**, and **Utility**.
 
-- Browse nodes by category or type in the search bar at the top to switch to a flat filtered list. Pressing `Enter` when exactly one result is shown adds that node at the current canvas position.
+- Browse nodes by category or use the search bar to switch to a flat filtered list. The search supports **multiple space-separated tokens** (AND semantics) and matches against the node name, its category, and any associated tags — so `rhythm gen` finds generator-category nodes tagged with `rhythm`, and `mpe filter` finds the MPE Filter node. Pressing `Enter` when exactly one result is shown adds that node at the current canvas position.
 
 ### 3. Macro Control Panel
 

@@ -1,6 +1,6 @@
 # Node Dictionary
 
-The Arps Euclidya environment offers 29 specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
+The Arps Euclidya environment offers 32 specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
 
 Patch cables come in three colours that indicate what type of data is flowing:
 
@@ -11,7 +11,7 @@ Patch cables come in three colours that indicate what type of data is flowing:
 ## Core I/O & Generation
 
 - **Midi In Node**: The entry point for live performance. Captures notes and MPE data from the DAW or the on-screen keyboard. *(No Inputs, Outputs: 1)*
-- **Midi Out Node `(Macros)`**: The terminal destination and home of the Euclidean Engine. Converts sequenced note and CC data into real-time MIDI events for the host. Port 0 (gold) accepts note sequences; Port 1 (violet) accepts a CC sequence and drives a per-CC# registry with anchor, slew, and rest-behaviour controls. Features four **Sync Modes** (Gestural, Synchronized, Deterministic, Forgiving) that control how playback phase relates to the DAW grid — see [The Euclidean Engine](euclidean-engine.md#global-timings--sync-modes) for details. Also provides "Humanize" parameters (timing, velocity, gate variations) and per-node MIDI channel output routing. *(Inputs: 2, No Outputs)*
+- **Midi Out Node `(Macros)`**: The terminal destination and home of the Euclidean Engine. Converts sequenced note and CC data into real-time MIDI events for the host. Port 0 (gold) accepts note sequences; Port 1 (violet) accepts a CC sequence and drives a per-CC# registry with anchor, slew, and rest-behaviour controls. Features four **Sync Modes** (Gestural, Synchronized, Deterministic, Forgiving) — see [The Euclidean Engine](euclidean-engine.md#global-timings--sync-modes) for details. Provides a **Gate %** knob (1–150% of the clock division) to set note duration, **Flex Gate** to hold pitches across adjacent steps instead of retriggering, and "Humanize" parameters (timing jitter, velocity, gate jitter). On transport stop, held notes decay within one clock division. *(Inputs: 2, No Outputs)*
 - **Sequence Node `(Macros)`**: A 16-step "piano roll" generator. Allows users to draw static patterns that play continuously, independent of held keys. *(No Inputs, Outputs: 1)*
 - **All Notes Node**: A utility node that steadily outputs every possible MIDI note (C-2 to G8). Useful as an input signal for test routing or scale folding. *(No Inputs, Outputs: 1)*
 - **Diagnostic Node**: Displays step count, note pitches, velocities, active MPE conditions, and CC values for each step. Accepts both note and CC sequences (agnostic port). *(Inputs: 1, Outputs: 1)*
@@ -36,6 +36,9 @@ Patch cables come in three colours that indicate what type of data is flowing:
 - **Multiply Node `(Macros)`**: Stretches the sequence by repeating each step N times consecutively. *(Inputs: 1, Outputs: 1)*
 - **Concatenate Node**: Appends Sequence B to the end of Sequence A. Often used with a Sort and Reverse node to build a classic "Up/Down" arpeggiator. *(Inputs: 2, Outputs: 1)*
 - **Interleave Node**: Alternates steps from two inputs: A[0], B[0], A[1], B[1], … If the inputs differ in length, the shorter is padded with rests. Output length = 2 × max(len(A), len(B)). *(Inputs: 2, Outputs: 1)*
+- **And Node**: Outputs only notes whose pitch appears in **both** inputs. The highest-velocity version of each matched pitch is emitted, with the MPE condition narrowed to the intersection of both inputs. A **Pad/Truncate** mode controls how unequal lengths are handled. *(Inputs: 2, Outputs: 1)*
+- **Or Node**: Outputs the **union** of pitches from both inputs. When a pitch appears in both, the highest-velocity note is emitted with a merged (hulled) MPE condition. Pitches unique to one input pass through unchanged. **Pad/Truncate** length mode available. *(Inputs: 2, Outputs: 1)*
+- **Xor Node**: Outputs notes whose pitch appears in **exactly one** input — pitches present in both are cancelled. Surviving notes pass through with their original MPE condition. **Pad/Truncate** length mode available. *(Inputs: 2, Outputs: 1)*
 - **Zip Node**: Zips two parallel sequences into a single sequence of chords. When the same pitch arrives on both inputs with compatible MPE conditions (e.g. the two outputs of an MPE Filter node re-joined), the conditions are automatically merged into their union range — so the note fires whenever either condition would have passed. *(Inputs: 2, Outputs: 1)*
 - **Unzip Node**: Unzips a sequence of chords into two separate mono lines (lowest to Port 0, highest to Port 1). *(Inputs: 1, Outputs: 2)*
 
