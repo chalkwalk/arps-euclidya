@@ -128,16 +128,54 @@ void ModuleLibraryPanel::updateFilter() {
     // Categorized view
     for (const auto &[category, nodes] : NodeFactory::getNodeCategories()) {
       filteredEntries.push_back({category, true});
-      for (const auto &node : nodes) {
+      for (const auto &node : nodes)
         filteredEntries.push_back({node, false});
-      }
     }
   } else {
-    // Flat filtered results — no headers
+    // Tokenised search: all tokens must match name, category, or any tag.
+    // Build lookup maps once per search update.
+    std::map<std::string, std::string> categoryOf;
+    for (const auto &[cat, nodes] : NodeFactory::getNodeCategories())
+      for (const auto &node : nodes)
+        categoryOf[node] = cat;
+
+    auto tagMap = NodeFactory::getNodeTags();
+
+    // Split search text on whitespace into tokens.
+    juce::StringArray tokens;
+    tokens.addTokens(searchText, " \t", "");
+    tokens.removeEmptyStrings();
+
     for (const auto &node : allNodeTypes) {
-      if (juce::String(node).toLowerCase().contains(searchText)) {
-        filteredEntries.push_back({node, false});
+      bool allMatch = true;
+      for (const auto &token : tokens) {
+        bool found = juce::String(node).toLowerCase().contains(token);
+
+        if (!found) {
+          auto catIt = categoryOf.find(node);
+          if (catIt != categoryOf.end())
+            found = juce::String(catIt->second).toLowerCase().contains(token);
+        }
+
+        if (!found) {
+          auto tagIt = tagMap.find(node);
+          if (tagIt != tagMap.end()) {
+            for (const auto &tag : tagIt->second) {
+              if (juce::String(tag).toLowerCase().contains(token)) {
+                found = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!found) {
+          allMatch = false;
+          break;
+        }
       }
+      if (allMatch)
+        filteredEntries.push_back({node, false});
     }
   }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -152,6 +153,36 @@ class NodeFactory {
         {"Routing",       {"Route", "Select", "Switch"}},
         {"Filter",        {"MPE Filter", "Velocity Filter"}},
         {"Utility",       {"Diagnostic", "Note", "Note Large"}},
+    };
+  }
+
+  // Tag vocabulary — disjoint from category names.
+  // Each node may carry 0–4 tags from this set.
+  static std::map<std::string, std::vector<std::string>> getNodeTags() {
+    return {
+        {"All Notes",        {"harmony", "polyphony"}},
+        {"And",              {"logic", "harmony"}},
+        {"CC Modulator",     {"cc", "random"}},
+        {"ChordN",           {"harmony", "polyphony"}},
+        {"Chord Split",      {"harmony", "polyphony"}},
+        {"Concatenate",      {"melody"}},
+        {"Fold",             {"rhythm"}},
+        {"Interleave",       {"rhythm", "melody"}},
+        {"MPE Filter",       {"mpe"}},
+        {"Multiply",         {"rhythm"}},
+        {"Octave Stack",     {"harmony", "polyphony"}},
+        {"Octave Transpose", {"melody"}},
+        {"Or",               {"logic", "harmony"}},
+        {"Quantizer",        {"melody", "tuning"}},
+        {"Reverse",          {"rhythm", "melody"}},
+        {"Sequence",         {"melody", "rhythm"}},
+        {"Sort",             {"melody"}},
+        {"Transpose",        {"melody"}},
+        {"Unfold",           {"rhythm", "melody"}},
+        {"Velocity Filter",  {"velocity"}},
+        {"Walk",             {"melody", "random"}},
+        {"Xor",              {"logic", "harmony"}},
+        {"Zip",              {"melody"}},
     };
   }
 
