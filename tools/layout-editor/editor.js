@@ -382,8 +382,8 @@ function drawNodeBody(ctx, nodeW, nodeH) {
 
   // Delete button placeholder (top-right)
   const btnSize = (HEADER_HEIGHT - 6) * SCALE;
-  const btnX = nodeW - btnSize - 3 * SCALE / 3;
-  const btnY = 3 * SCALE / 3;
+  const btnX = nodeW - btnSize - 3 * (SCALE / 3);
+  const btnY = 3 * (SCALE / 3);
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
   roundRect(ctx, btnX, btnY, btnSize, btnSize, 3);
   ctx.fill();
@@ -392,6 +392,28 @@ function drawNodeBody(ctx, nodeW, nodeH) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('×', btnX + btnSize / 2, btnY + btnSize / 2);
+
+  // Expand button placeholder — only for nodes with an extended panel
+  if (currentData && (currentData.extendedGridWidth || 0) > 0) {
+    const gap = 4 * (SCALE / 3);
+    const expBtnX = btnX - btnSize - gap;
+    ctx.fillStyle = 'rgba(13, 240, 227, 0.12)';
+    roundRect(ctx, expBtnX, btnY, btnSize, btnSize, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(13, 240, 227, 0.5)';
+    ctx.lineWidth = 1;
+    roundRect(ctx, expBtnX + 0.5, btnY + 0.5, btnSize - 1, btnSize - 1, 3);
+    ctx.stroke();
+    ctx.fillStyle = previewMode === 1 ? COLOR_NEON : 'rgba(13, 240, 227, 0.7)';
+    ctx.font = `${Math.max(7, 10 * SCALE / 3)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      previewMode === 1 ? '⤡' : '⤢',
+      expBtnX + btnSize / 2,
+      btnY + btnSize / 2
+    );
+  }
 
   // Input ports (left edge half-stadiums) — 1 shown as representative
   drawPort(
