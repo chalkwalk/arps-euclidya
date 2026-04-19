@@ -352,6 +352,26 @@
         },
         {
             "type": "Label",
+            "label": "Flex Gate",
+            "gridBounds": [
+                33,
+                64,
+                12,
+                4
+            ]
+        },
+        {
+            "type": "Toggle",
+            "label": "flexGate",
+            "gridBounds": [
+                35,
+                69,
+                9,
+                7
+            ]
+        },
+        {
+            "type": "Label",
             "label": "Humanize",
             "gridBounds": [
                 56,

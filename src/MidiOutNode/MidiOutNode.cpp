@@ -120,6 +120,7 @@ void MidiOutNode::clampParameters() {
   rhythmResetOnRelease = (ui_rhythmResetOnRelease != 0);
   triplet = (ui_triplet != 0);
   passExpressions = (ui_passExpressions != 0);
+  flexGate = (ui_flexGate != 0);
 
   ui_pBeatsMin = 1;
   ui_pBeatsMax = pSteps;
@@ -436,16 +437,15 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   }
 
   if (!isPlaying && prevWasPlaying) {
-    const bool usePerNoteChannels =
-        (channelMode == 1) ||
-        (activeTuning != nullptr && !activeTuning->isIdentity());
-    for (const auto &note : playingNotes) {
-      if (usePerNoteChannels) {
-        mptAllocator.release(note.noteID);
+    // Cap all pending note-offs to within one clock division so notes
+    // drain naturally rather than cutting off hard. flushPlayingNotes
+    // handles the actual note-offs and channel-allocator cleanup.
+    int maxRemaining = (int)samplesPerTick;
+    for (auto &note : playingNotes) {
+      if (note.remainingSamples == -1 || note.remainingSamples > maxRemaining) {
+        note.remainingSamples = maxRemaining;
       }
-      collector.addNoteOff(note.channel, note.noteNumber, 0.0f, 0, note.noteID);
     }
-    playingNotes.clear();
   }
 
   // --- CC-only path: transport-driven modes, no notes held ---
@@ -561,6 +561,12 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   }
 
   if (!holdingNotes) {
+    // Release any indefinitely-held flex-gate notes immediately.
+    if (flexGate) {
+      for (auto &pn : playingNotes)
+        if (pn.remainingSamples == -1)
+          pn.remainingSamples = 0;
+    }
     flushPlayingNotes(collector, numSamples);
     return;
   }
@@ -658,6 +664,19 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
             lane.setTarget(lane.anchorValue, (float)samplesPerTick);
         }
       }
+      // Flex gate: a rhythm rest breaks any held notes. Give them their
+      // gate%-based duration so they expire naturally after the last beat.
+      if (flexGate) {
+        float agp =
+            resolveMacroFloat(macroGatePercent, gatePercent, 0.01f, 1.50f);
+        double sr =
+            clockManager.getSamplesPerPpq() * clockManager.getBPM() / 60.0;
+        int minDur = (int)std::ceil(sr * 0.001);
+        int relDur = std::max(minDur, (int)(samplesPerTick * agp));
+        for (auto &pn : playingNotes)
+          if (pn.remainingSamples == -1)
+            pn.remainingSamples = std::max(0, relDur - numSamples);
+      }
       return;
     }
 
@@ -703,6 +722,36 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
           if (!lane.holdOnRest)
             lane.setTarget(lane.anchorValue, (float)samplesPerTick);
         }
+      }
+    }
+
+    // Flex gate Step 1: at each rhythm beat, give finite duration to any
+    // indefinitely-held notes whose pitch is absent from the current step
+    // (including pattern rests where shouldPlay is false). This must run
+    // before the per-note loop so the notes are still in playingNotes when
+    // the extend check runs.
+    if (flexGate) {
+      float agp = resolveMacroFloat(macroGatePercent, gatePercent, 0.01f, 1.50f);
+      double sr = clockManager.getSamplesPerPpq() * clockManager.getBPM() / 60.0;
+      int minDur = (int)std::ceil(sr * 0.001);
+      int relDur = std::max(minDur, (int)(samplesPerTick * agp));
+
+      std::vector<int> stepPitches;
+      if (shouldPlay) {
+        const auto &flexStep =
+            sequence[(size_t)sequenceIndex % sequence.size()];
+        for (const auto &ev : flexStep)
+          if (const auto *n = asNote(ev))
+            stepPitches.push_back(n->noteNumber);
+      }
+
+      for (auto &pn : playingNotes) {
+        if (pn.remainingSamples != -1) continue;
+        bool present = false;
+        for (int p : stepPitches)
+          if (p == pn.noteNumber) { present = true; break; }
+        if (!present)
+          pn.remainingSamples = std::max(0, relDur - numSamples);
       }
     }
 
@@ -796,6 +845,21 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         int duration =
             std::max(minDuration, (int)(divSamples * finalGateFactor));
 
+        // Flex gate: if this pitch is indefinitely held from the previous
+        // step, skip the note-on and leave it held (Step 1 above already
+        // released any notes whose pitch is absent this step).
+        if (flexGate) {
+          bool extended = false;
+          for (auto &pn : playingNotes) {
+            if (pn.noteNumber == noteTrigger->noteNumber &&
+                pn.remainingSamples == -1) {
+              extended = true;
+              break;
+            }
+          }
+          if (extended) continue;
+        }
+
         // Calculate a new noteID if possible (for CLAP tracking)
         int32_t outNoteID = noteIDCounter.fetch_add(1);
 
@@ -881,15 +945,22 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         collector.addNoteOn(usedChannel, noteTrigger->noteNumber, finalVelocity,
                             finalSamplePos, outNoteID);
 
-        // Schedule NoteOff via playingNotes. remainingSamples is how many
-        // samples after this block until the note ends. Clamped to 0 so that
+        // Schedule NoteOff via playingNotes. In flex-gate mode the note is
+        // held indefinitely (remainingSamples = -1); Step 1 above gives it a
+        // finite duration on the tick where its pitch disappears from the
+        // step. In normal mode, remainingSamples is clamped to 0 so that
         // notes whose full duration fits inside the current block still sound
-        // for its remainder — flushPlayingNotes fires the NoteOff at offset 0
-        // of the next block. This prevents in-block NoteOn+NoteOff pairs that
-        // most synths never render (especially critical for MPE/round-robin).
-        int noteEndSample = finalSamplePos + duration;
+        // for the remainder — flushPlayingNotes fires the NoteOff at offset 0
+        // of the next block, preventing in-block NoteOn+NoteOff pairs.
+        int scheduledSamples;
+        if (flexGate) {
+          scheduledSamples = -1;
+        } else {
+          int noteEndSample = finalSamplePos + duration;
+          scheduledSamples = std::max(0, noteEndSample - numSamples);
+        }
         playingNotes.push_back({usedChannel, noteTrigger->noteNumber, outNoteID,
-                                std::max(0, noteEndSample - numSamples)});
+                                scheduledSamples});
       }
     }
 
@@ -1004,6 +1075,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("humVelocity", humVelocity);
     xml->setAttribute("humGate", humGate);
     xml->setAttribute("gatePercent", gatePercent);
+    xml->setAttribute("flexGate", flexGate ? 1 : 0);
     saveMacroBindings(xml);
   }
 }
@@ -1045,6 +1117,8 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     humGate = static_cast<float>(xml->getDoubleAttribute("humGate", 0.0));
     gatePercent =
         static_cast<float>(xml->getDoubleAttribute("gatePercent", 1.0));
+    ui_flexGate = xml->getIntAttribute("flexGate", 0);
+    flexGate = (ui_flexGate != 0);
 
     // Legacy single-macro migration
     struct LegacyMapping {

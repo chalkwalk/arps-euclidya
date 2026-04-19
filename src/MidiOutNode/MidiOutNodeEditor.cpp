@@ -354,6 +354,11 @@ NodeLayout MidiOutNode::getLayout() const {
       } else if (el.label == "humGate") {
         el.floatValueRef = &self->humGate;
         el.macroParamRef = &self->macroHumGate;
+      } else if (el.label == "gatePercent") {
+        el.floatValueRef = &self->gatePercent;
+        el.macroParamRef = &self->macroGatePercent;
+      } else if (el.label == "flexGate") {
+        el.valueRef = &self->ui_flexGate;
       }
     }
   };

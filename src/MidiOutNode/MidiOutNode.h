@@ -222,6 +222,7 @@ class MidiOutNode : public GraphNode {
   float humVelocity = 0.0f;
   float humGate = 0.0f;
   float gatePercent = 1.0f;  // Gate length as fraction of clock division [0.01, 1.50]
+  bool flexGate = false;    // Hold pitches across adjacent steps instead of retriggering
 
   MacroParam macroClockDivisionIndex{"Clock Division", {}};
   MacroParam macroSyncModeParam{"Sync Mode", {}};
@@ -243,6 +244,7 @@ class MidiOutNode : public GraphNode {
   int ui_triplet = 0;
   int ui_passExpressions = 0;
   int ui_channelMode = 0;
+  int ui_flexGate = 0;
 
   int ui_pBeatsMin = 1;
   int ui_pBeatsMax = 32;
