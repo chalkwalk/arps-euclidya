@@ -263,18 +263,21 @@ function elementRect(el, body, sx, sy) {
 function renderAll() {
   if (!currentData || !previewCtx) return;
 
-  let gw = currentData.gridWidth || 1;
-  let gh = currentData.gridHeight || 1;
-  let elements = currentData.elements || [];
+  const baseGw = currentData.gridWidth || 1;
+  const baseGh = currentData.gridHeight || 1;
+  const baseElements = currentData.elements || [];
 
-  if (previewMode === 1 && currentData.extendedGridWidth > 0 && currentData.extendedGridHeight > 0) {
-    gw = currentData.extendedGridWidth;
-    gh = currentData.extendedGridHeight;
-    elements = currentData.extendedElements || [];
-  }
+  const isExtendedMode = previewMode === 1 &&
+    (currentData.extendedGridWidth || 0) > 0 &&
+    (currentData.extendedGridHeight || 0) > 0;
+
+  const gw = isExtendedMode ? currentData.extendedGridWidth : baseGw;
+  const gh = isExtendedMode ? currentData.extendedGridHeight : baseGh;
+  const editElements = isExtendedMode
+    ? (currentData.extendedElements || [])
+    : baseElements;
 
   const { w: nodeW, h: nodeH } = nodePixelSize(gw, gh);
-
   previewCanvas.width = nodeW;
   previewCanvas.height = nodeH;
 
@@ -288,17 +291,29 @@ function renderAll() {
   // --- Sub-grid in body area ---
   drawSubGrid(ctx, body, gw, gh, sx, sy);
 
-  // --- Elements ---
-  elements.forEach((el, i) => {
+  if (isExtendedMode) {
+    // Draw base elements dimmed — positioned at the extended grid's pitch
+    ctx.globalAlpha = 0.35;
+    baseElements.forEach((el) => {
+      const r = elementRect(el, body, sx, sy);
+      drawElement(ctx, el, r, false);
+    });
+    ctx.globalAlpha = 1.0;
+
+    // Draw fold-line annotation at the base-grid boundary
+    drawFoldLine(ctx, body, baseGh, gh, nodeW);
+  }
+
+  // --- Editable elements ---
+  editElements.forEach((el, i) => {
     const r = elementRect(el, body, sx, sy);
     const selected = (i === selectedElementIndex);
     drawElement(ctx, el, r, selected);
   });
 
   // --- Selected element border (on top) ---
-  if (selectedElementIndex >= 0 &&
-    selectedElementIndex < elements.length) {
-    const el = elements[selectedElementIndex];
+  if (selectedElementIndex >= 0 && selectedElementIndex < editElements.length) {
+    const el = editElements[selectedElementIndex];
     const r = elementRect(el, body, sx, sy);
     ctx.strokeStyle = COLOR_NEON;
     ctx.lineWidth = 1.5;
@@ -308,7 +323,27 @@ function renderAll() {
   }
 
   // --- Update overlay interaction handles ---
-  renderOverlay(body, sx, sy);
+  renderOverlay(body, sx, sy, editElements);
+}
+
+function drawFoldLine(ctx, body, baseGh, extGh, nodeW) {
+  const foldY = body.y + body.h * (baseGh / extGh);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(13, 240, 227, 0.45)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, foldY);
+  ctx.lineTo(nodeW, foldY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = 'rgba(13, 240, 227, 0.55)';
+  ctx.font = `${Math.max(7, 9 * SCALE / 3)}px "Segoe UI", sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('▲ base panel', 4 * SCALE / 3, foldY - 2);
+  ctx.restore();
 }
 
 function drawNodeBody(ctx, nodeW, nodeH) {
@@ -625,19 +660,18 @@ let interactIdx = -1;
 
 function getBodyAndPitch() {
   if (!currentData) return null;
-  let gw = currentData.gridWidth || 1;
-  let gh = currentData.gridHeight || 1;
-  if (previewMode === 1 && currentData.extendedGridWidth > 0 && currentData.extendedGridHeight > 0) {
-    gw = currentData.extendedGridWidth;
-    gh = currentData.extendedGridHeight;
-  }
+  const isExtMode = previewMode === 1 &&
+    (currentData.extendedGridWidth || 0) > 0 &&
+    (currentData.extendedGridHeight || 0) > 0;
+  const gw = isExtMode ? currentData.extendedGridWidth : (currentData.gridWidth || 1);
+  const gh = isExtMode ? currentData.extendedGridHeight : (currentData.gridHeight || 1);
   const { w: nw, h: nh } = nodePixelSize(gw, gh);
   const body = bodyRegion(nw, nh);
   const { sx, sy } = subGridPitch(body.w, body.h, gw, gh);
   return { body, sx, sy };
 }
 
-function renderOverlay(body, sx, sy) {
+function renderOverlay(body, sx, sy, editElements) {
   overlayDiv.innerHTML = '';
   // Position overlay to exactly cover the canvas
   overlayDiv.style.width = previewCanvas.width + 'px';
@@ -645,7 +679,7 @@ function renderOverlay(body, sx, sy) {
   overlayDiv.style.left = previewCanvas.offsetLeft + 'px';
   overlayDiv.style.top = previewCanvas.offsetTop + 'px';
 
-  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const elements = editElements;
   elements.forEach((el, index) => {
     const r = elementRect(el, body, sx, sy);
     const handle = document.createElement('div');
@@ -669,13 +703,19 @@ function renderOverlay(body, sx, sy) {
   });
 }
 
-// Hit-test: which element was clicked?
+// Hit-test: which editable element was clicked?
 function elementAtPoint(px, py) {
   const g = getBodyAndPitch();
   if (!g) return -1;
   const { body, sx, sy } = g;
 
-  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const isExtendedMode = previewMode === 1 &&
+    (currentData.extendedGridWidth || 0) > 0 &&
+    (currentData.extendedGridHeight || 0) > 0;
+  const elements = isExtendedMode
+    ? (currentData.extendedElements || [])
+    : (currentData.elements || []);
+
   // Iterate in reverse (top elements first)
   for (let i = elements.length - 1; i >= 0; i--) {
     const r = elementRect(elements[i], body, sx, sy);
@@ -698,7 +738,8 @@ function onCanvasMouseDown(e) {
     return;
   }
 
-  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const isExtMode = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
+  const elements = isExtMode ? (currentData.extendedElements || []) : (currentData.elements || []);
   selectedElementIndex = idx;
   interactIdx = idx;
   dragStartX = e.clientX;
@@ -754,7 +795,8 @@ function onDocMouseMove(e) {
   const gridDx = Math.round(dx / sx);
   const gridDy = Math.round(dy / sy);
 
-  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const isExtMode2 = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
+  const elements = isExtMode2 ? (currentData.extendedElements || []) : (currentData.elements || []);
   const b = elements[interactIdx].gridBounds;
   if (isDragging) {
     b[0] = Math.max(0, dragStartBounds[0] + gridDx);
@@ -780,12 +822,15 @@ function onDocMouseUp() {
 
 function renderProperties() {
   if (selectedElementIndex === -1 || !currentData) {
-    propsContent.innerHTML =
-      '<p>Select an element on the canvas to edit its properties.</p>';
+    const isExtMode = previewMode === 1 && (currentData && (currentData.extendedGridWidth || 0) > 0);
+    propsContent.innerHTML = isExtMode
+      ? '<p>Select an extended element to edit.<br><span style="color:#666;font-style:italic">Base elements shown dimmed for reference — not editable here.</span></p>'
+      : '<p>Select an element on the canvas to edit its properties.</p>';
     return;
   }
 
-  const elements = (previewMode === 1 && currentData.extendedElements) ? currentData.extendedElements : currentData.elements;
+  const isExtMode = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
+  const elements = isExtMode ? (currentData.extendedElements || []) : (currentData.elements || []);
   const el = elements[selectedElementIndex];
   let html = `
         <div class="prop-row">
