@@ -43,9 +43,51 @@ let currentNodeKey = null;
 let previewMode = 0; // 0: folded, 1: unfolded
 let selectedElementIndex = -1;
 
+// ============================================================
+// Undo / Redo
+// ============================================================
+const undoStack = [];
+const redoStack = [];
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(currentData));
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack.length = 0;
+  updateUndoButtons();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(currentData));
+  currentData = JSON.parse(undoStack.pop());
+  selectedElementIndex = -1;
+  renderAll();
+  renderProperties();
+  updateUndoButtons();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(currentData));
+  currentData = JSON.parse(redoStack.pop());
+  selectedElementIndex = -1;
+  renderAll();
+  renderProperties();
+  updateUndoButtons();
+}
+
+function updateUndoButtons() {
+  const btnUndo = document.getElementById('btn-undo');
+  const btnRedo = document.getElementById('btn-redo');
+  if (btnUndo) btnUndo.disabled = undoStack.length === 0;
+  if (btnRedo) btnRedo.disabled = redoStack.length === 0;
+}
+
 const btnOpen = document.getElementById('btn-open-dir');
 const selNode = document.getElementById('sel-node');
 const btnSave = document.getElementById('btn-save');
+document.getElementById('btn-undo').addEventListener('click', undo);
+document.getElementById('btn-redo').addEventListener('click', redo);
 const statusMsg = document.getElementById('status-message');
 const wrapper = document.getElementById('canvas-wrapper');
 const propsContent = document.getElementById('props-content');
@@ -140,6 +182,9 @@ selNode.addEventListener('change', async (e) => {
     currentData = JSON.parse(text);
     currentNodeKey = key;
     selectedElementIndex = -1;
+    undoStack.length = 0;
+    redoStack.length = 0;
+    updateUndoButtons();
 
     document.getElementById('node-w').value = currentData.gridWidth || 1;
     document.getElementById('node-h').value = currentData.gridHeight || 1;
@@ -191,22 +236,16 @@ btnSave.addEventListener('click', async () => {
 });
 
 document.getElementById('node-w').addEventListener('change', (e) => {
-  if (currentData) {
-    currentData.gridWidth = parseInt(e.target.value);
-    renderAll();
-  }
+  if (currentData) { pushUndo(); currentData.gridWidth = parseInt(e.target.value); renderAll(); }
+});
+document.getElementById('node-h').addEventListener('change', (e) => {
+  if (currentData) { pushUndo(); currentData.gridHeight = parseInt(e.target.value); renderAll(); }
 });
 document.getElementById('node-ew').addEventListener('change', (e) => {
-  if (currentData) {
-    currentData.extendedGridWidth = parseInt(e.target.value);
-    if (previewMode === 1) renderAll();
-  }
+  if (currentData) { pushUndo(); currentData.extendedGridWidth = parseInt(e.target.value); if (previewMode === 1) renderAll(); }
 });
 document.getElementById('node-eh').addEventListener('change', (e) => {
-  if (currentData) {
-    currentData.extendedGridHeight = parseInt(e.target.value);
-    if (previewMode === 1) renderAll();
-  }
+  if (currentData) { pushUndo(); currentData.extendedGridHeight = parseInt(e.target.value); if (previewMode === 1) renderAll(); }
 });
 
 scaleSlider.addEventListener('input', () => {
@@ -767,6 +806,7 @@ function onCanvasMouseDown(e) {
   dragStartX = e.clientX;
   dragStartY = e.clientY;
   dragStartBounds = [...elements[idx].gridBounds];
+  pushUndo();
 
   // Check if we're near the bottom-right (resize zone = 10px corner)
   const g = getBodyAndPitch();
@@ -896,6 +936,7 @@ function renderProperties() {
 
   propsContent.querySelectorAll('.dyn-prop').forEach(inp => {
     inp.addEventListener('change', (e) => {
+      pushUndo();
       const key = e.target.dataset.key;
       let val = e.target.value;
       if (e.target.type === 'number') val = parseFloat(val);
@@ -910,6 +951,7 @@ function renderProperties() {
 
   propsContent.querySelectorAll('.dyn-bound').forEach(inp => {
     inp.addEventListener('change', (e) => {
+      pushUndo();
       const idx = parseInt(e.target.dataset.idx);
       el.gridBounds[idx] = parseInt(e.target.value) || 0;
       renderAll();
@@ -919,6 +961,7 @@ function renderProperties() {
   document.getElementById('btn-delete-element')
     .addEventListener('click', () => {
       if (confirm('Delete this element?')) {
+        pushUndo();
         elements.splice(selectedElementIndex, 1);
         selectedElementIndex = -1;
         renderAll();
@@ -954,6 +997,45 @@ function createBoundsInputs(bounds) {
         </div>
     </div>`;
 }
+
+// ============================================================
+// Keyboard Shortcuts
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  // Ignore if focus is inside a text input or select
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+  if (e.ctrlKey && !e.shiftKey && e.key === 'z') {
+    undo();
+    e.preventDefault();
+    return;
+  }
+  if (e.ctrlKey && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+    redo();
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selectedElementIndex === -1 || !currentData) return;
+    const isExtMode = previewMode === 1 && (currentData.extendedGridWidth || 0) > 0 && (currentData.extendedGridHeight || 0) > 0;
+    const elements = isExtMode ? (currentData.extendedElements || []) : (currentData.elements || []);
+    if (confirm('Delete this element?')) {
+      pushUndo();
+      elements.splice(selectedElementIndex, 1);
+      selectedElementIndex = -1;
+      renderAll();
+      renderProperties();
+    }
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Escape') {
+    selectedElementIndex = -1;
+    renderAll();
+    renderProperties();
+    return;
+  }
+});
 
 // ============================================================
 // Utility
