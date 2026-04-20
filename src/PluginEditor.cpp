@@ -21,6 +21,10 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     wrapper->selectedMacroPtr = &selectedMacro;
     wrapper->highlightedMacrosPtr = &highlightedMacros;
     wrapper->macroParamPtr = audioProcessor.macroParams[(size_t)i];
+    wrapper->learnMacroIndexPtr = &audioProcessor.learnMacroIndex;
+    wrapper->learnedCCPtr = (audioProcessor.macroParams[(size_t)i] != nullptr)
+                                ? &audioProcessor.macroParams[(size_t)i]->learnedCC
+                                : nullptr;
     wrapper->onClicked = [this](int idx) { setSelectedMacro(idx); };
     wrapper->onToggleBipolar = [this](int idx) {
       audioProcessor.toggleMacroBipolar(idx);
@@ -52,6 +56,14 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     };
     wrapper->onHoverMacro = [this](int idx) {
       graphCanvas->setHighlightedMacro(idx);
+    };
+    wrapper->onEnterLearn = [this](int idx) {
+      setSelectedMacro(idx);
+      audioProcessor.enterMidiLearn(idx);
+    };
+    wrapper->onClearLearnedCC = [this, idx = i]() {
+      audioProcessor.clearLearnedCC(idx);
+      macroControls[idx]->repaint();
     };
     wrapper->slider.setColour(juce::Slider::rotarySliderFillColourId,
                               getMacroColour(i));
@@ -99,6 +111,66 @@ ArpsEuclidyaEditor::ArpsEuclidyaEditor(ArpsEuclidyaProcessor &p)
     highlightedMacros = std::move(indices);
     for (auto *m : macroControls)
       m->repaint();
+  };
+
+  graphCanvas->onRequestMidiLearn = [this](MacroParam *mp) {
+    if (mp == nullptr) {
+      return;
+    }
+    const int count = static_cast<int>(mp->bindings.size());
+    if (count > 1) {
+      juce::AlertWindow::showMessageBoxAsync(
+          juce::AlertWindow::InfoIcon, "MIDI Learn",
+          "Multiple macros are bound to this control. Use the macro bar directly.",
+          "OK");
+      return;
+    }
+    int macroIdx = -1;
+    if (count == 1) {
+      macroIdx = mp->bindings[0].macroIndex;
+    } else {
+      for (int i = 0; i < 32; ++i) {
+        auto *p = audioProcessor.macroParams[(size_t)i];
+        if (p != nullptr && p->learnedCC < 0) {
+          macroIdx = i;
+          break;
+        }
+      }
+      if (macroIdx < 0) {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::InfoIcon, "MIDI Learn",
+            "No free macro slots. Clear a learned CC first.", "OK");
+        return;
+      }
+      // Defer mutation+rebuild: we're called from mouseDown and rebuild()
+      // destroys the control that fired this callback.
+      juce::MessageManager::callAsync([this, mp, macroIdx]() {
+        graphCanvas->performMutation([this, mp, macroIdx]() {
+          mp->bindings.push_back({macroIdx, 1.0f});
+          for (const auto &node : audioProcessor.graphEngine.getNodes()) {
+            for (auto *param : node->getMacroParams()) {
+              if (param == mp) {
+                node->parameterChanged();
+                if (node->onMappingChanged) {
+                  node->onMappingChanged();
+                }
+                break;
+              }
+            }
+          }
+        });
+        graphCanvas->rebuild();
+      });
+    }
+    setSelectedMacro(macroIdx);
+    audioProcessor.enterMidiLearn(macroIdx);
+  };
+
+  graphCanvas->onCancelMidiLearn = [this]() {
+    const int learnIdx = audioProcessor.learnMacroIndex.exchange(-1);
+    if (learnIdx >= 0 && learnIdx < 32) {
+      macroControls[learnIdx]->repaint();
+    }
   };
 
   graphCanvas->performMutation = [this](std::function<void()> mutation) {
@@ -258,6 +330,12 @@ ArpsEuclidyaEditor::~ArpsEuclidyaEditor() {
 }
 
 void ArpsEuclidyaEditor::timerCallback() {
+  // Repaint the macro currently in learn mode each tick for the pulsing ring.
+  const int learnIdx = audioProcessor.learnMacroIndex.load();
+  if (learnIdx >= 0 && learnIdx < 32) {
+    macroControls[learnIdx]->repaint();
+  }
+
   if (audioProcessor.macrosDirty.exchange(false)) {
     for (int i = 0; i < 32; ++i) {
       if (audioProcessor.macroParams[(size_t)i] != nullptr) {

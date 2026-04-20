@@ -36,6 +36,13 @@ class MacroParameter : public juce::AudioParameterFloat {
   void setBipolar(bool b) { bipolar = b; }
   bool isBipolar() const { return bipolar; }
 
+  // MIDI learn: CC source for this macro. -1 = none.
+  int learnedCC = -1;
+  int learnedChannel = -1;
+
+  bool hasLearnedCC() const { return learnedCC >= 0; }
+  void clearLearnedCC() { learnedCC = -1; learnedChannel = -1; }
+
  private:
   int index;
   juce::String mappingName;

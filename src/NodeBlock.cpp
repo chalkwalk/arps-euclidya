@@ -176,6 +176,11 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             }
             canvasPtr->rebuild();
           };
+          slider->onRequestMidiLearn = [this](MacroParam *mp) {
+            if (onRequestMidiLearn) {
+              onRequestMidiLearn(mp);
+            }
+          };
         }
         comp = slider;
       } else if (element.type == UIElementType::Label) {
@@ -281,6 +286,11 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
               onHoverMacros(std::move(v));
             }
           };
+          button->onRequestMidiLearn = [this](MacroParam *mp) {
+            if (onRequestMidiLearn) {
+              onRequestMidiLearn(mp);
+            }
+          };
 
           buttonMacroInfos.push_back(
               {button, element.macroParamRef, element.valueRef});
@@ -364,6 +374,11 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
               node->onMappingChanged();
             }
             canvasPtr->rebuild();
+          };
+          combo->onRequestMidiLearn = [this](MacroParam *mp) {
+            if (onRequestMidiLearn) {
+              onRequestMidiLearn(mp);
+            }
           };
           comboMacroInfos.push_back({combo, element.macroParamRef,
                                      element.valueRef});

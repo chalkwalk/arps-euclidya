@@ -175,6 +175,27 @@ void ArpsEuclidyaProcessor::handleNoteExpressionEvent(
       event->channel, event->key, type, (float)event->value, event->note_id);
 }
 
+void ArpsEuclidyaProcessor::enterMidiLearn(int macroIndex) {
+  if (macroIndex >= 0 && macroIndex < 32) {
+    learnMacroIndex.store(macroIndex);
+  }
+}
+
+void ArpsEuclidyaProcessor::clearLearnedCC(int macroIndex) {
+  if (macroIndex < 0 || macroIndex >= 32 || macroParams[(size_t)macroIndex] == nullptr) {
+    return;
+  }
+  macroParams[(size_t)macroIndex]->clearLearnedCC();
+  macrosDirty.store(true);
+}
+
+bool ArpsEuclidyaProcessor::macroHasLearnedCC(int macroIndex) const {
+  if (macroIndex < 0 || macroIndex >= 32 || macroParams[(size_t)macroIndex] == nullptr) {
+    return false;
+  }
+  return macroParams[(size_t)macroIndex]->hasLearnedCC();
+}
+
 void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                          juce::MidiBuffer &midiMessages) {
   // Ensure no audio passes through; this is a MIDI effect.
@@ -193,6 +214,9 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
     midiMessages.swapWith(filteredMessages);
   }
+
+  // MIDI learn + CC-to-macro intercept: captures learn and drives learned macros.
+  interceptMacroCC(midiMessages);
 
   const int numSamples = buffer.getNumSamples();
 
@@ -436,6 +460,9 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
   }
   xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
 
+  // Save learned CC sources
+  saveMacroLearnedCC(xmlRoot);
+
   // Save Graph State
   auto *graphXml = xmlRoot.createNewChildElement("Graph");
   {
@@ -540,6 +567,9 @@ bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   }
   xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
 
+  // Save learned CC sources
+  saveMacroLearnedCC(xmlRoot);
+
   // Save Graph State
   auto *graphXml = xmlRoot.createNewChildElement("Graph");
   {
@@ -613,6 +643,9 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
       apvts.replaceState(juce::ValueTree::fromXml(*apvtsXml));
     }
   }
+
+  // Restore learned CC bindings.
+  loadMacroLearnedCC(*xmlState);
 
   // Restore bipolar flags (only if the patch explicitly saved them; otherwise
   // keep the constructor defaults so old patches stay all-unipolar).
@@ -777,6 +810,9 @@ std::unique_ptr<juce::XmlElement> ArpsEuclidyaProcessor::captureState() {
     auto *wrapper = xmlRoot->createNewChildElement("APVTS");
     wrapper->addChildElement(apvtsXml.release());
   }
+
+  // Save learned CC sources
+  saveMacroLearnedCC(*xmlRoot);
 
   // Save Graph State
   auto *graphXml = xmlRoot->createNewChildElement("Graph");
@@ -973,7 +1009,9 @@ void ArpsEuclidyaProcessor::handleDirectEvent(const clap_event_header_t *event,
             reinterpret_cast<const clap_event_midi_t *>(event);
         juce::MidiMessage msg(midiEvent->data[0], midiEvent->data[1],
                               midiEvent->data[2]);
-        noteExpressionManager.handleMidiMessage(msg);
+        if (!interceptMacroCCMessage(msg)) {
+          noteExpressionManager.handleMidiMessage(msg);
+        }
         break;
       }
       case CLAP_EVENT_MIDI_SYSEX: {
@@ -1110,6 +1148,86 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
       std::memcpy(&evt.data, msg.getRawData(), (size_t)msg.getRawDataSize());
       out_events->try_push(out_events,
                            reinterpret_cast<const clap_event_header *>(&evt));
+    }
+  }
+}
+
+bool ArpsEuclidyaProcessor::interceptMacroCCMessage(const juce::MidiMessage &msg) {
+  if (!msg.isController()) {
+    return false;
+  }
+
+  const int ccNum = msg.getControllerNumber();
+  const int ccCh  = msg.getChannel();
+  const int learnIdx = learnMacroIndex.load();
+  bool consumed = false;
+
+  // MIDI learn: capture this CC to the armed macro.
+  if (learnIdx >= 0 && macroParams[(size_t)learnIdx] != nullptr) {
+    macroParams[(size_t)learnIdx]->learnedCC      = ccNum;
+    macroParams[(size_t)learnIdx]->learnedChannel = ccCh;
+    learnMacroIndex.store(-1);
+    macrosDirty.store(true);
+    consumed = true;
+  }
+
+  // CC-to-macro routing: drive ALL macros bound to this CC+channel.
+  for (int i = 0; i < 32; ++i) {
+    auto *mp = macroParams[(size_t)i];
+    if (mp != nullptr && mp->learnedCC == ccNum && mp->learnedChannel == ccCh) {
+      const float norm = static_cast<float>(msg.getControllerValue()) / 127.0f;
+      macros[(size_t)i]->store(norm, std::memory_order_relaxed);
+      consumed = true;
+    }
+  }
+
+  return consumed;
+}
+
+void ArpsEuclidyaProcessor::interceptMacroCC(juce::MidiBuffer &midiMessages) {
+  juce::MidiBuffer passthrough;
+
+  for (const auto metadata : midiMessages) {
+    const auto msg = metadata.getMessage();
+    if (!interceptMacroCCMessage(msg)) {
+      passthrough.addEvent(msg, metadata.samplePosition);
+    }
+  }
+
+  midiMessages.swapWith(passthrough);
+}
+
+void ArpsEuclidyaProcessor::saveMacroLearnedCC(juce::XmlElement &xmlRoot) const {
+  auto *el = xmlRoot.createNewChildElement("MacroLearnedCC");
+  for (int i = 0; i < 32; ++i) {
+    const auto *mp = macroParams[(size_t)i];
+    if (mp != nullptr && mp->hasLearnedCC()) {
+      el->setAttribute("cc"  + juce::String(i), mp->learnedCC);
+      el->setAttribute("ch"  + juce::String(i), mp->learnedChannel);
+    }
+  }
+}
+
+void ArpsEuclidyaProcessor::loadMacroLearnedCC(const juce::XmlElement &xmlRoot) {
+  // Clear all first so a patch with no MacroLearnedCC element starts clean.
+  for (int i = 0; i < 32; ++i) {
+    if (macroParams[(size_t)i] != nullptr) {
+      macroParams[(size_t)i]->clearLearnedCC();
+    }
+  }
+  const auto *el = xmlRoot.getChildByName("MacroLearnedCC");
+  if (el == nullptr) {
+    return;
+  }
+  for (int i = 0; i < 32; ++i) {
+    juce::String ccKey = "cc" + juce::String(i);
+    if (el->hasAttribute(ccKey)) {
+      const int cc = el->getIntAttribute(ccKey, -1);
+      const int ch = el->getIntAttribute("ch" + juce::String(i), 1);
+      if (macroParams[(size_t)i] != nullptr && cc >= 0) {
+        macroParams[(size_t)i]->learnedCC      = cc;
+        macroParams[(size_t)i]->learnedChannel = ch;
+      }
     }
   }
 }

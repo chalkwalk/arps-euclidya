@@ -16,6 +16,7 @@ class CustomMacroSlider : public juce::Slider {
   std::function<void(std::vector<int>)> onHoverMacros;      // notify editor of hover state
   std::function<void()> onMappingChanged;                   // update DAW names + repaint
   std::function<void()> onBindingChanged;                   // deferred rebuild
+  std::function<void(MacroParam *)> onRequestMidiLearn;     // shift+double-click → MIDI learn
 
   void mouseEnter(const juce::MouseEvent &e) override {
     juce::Slider::mouseEnter(e);
@@ -40,6 +41,10 @@ class CustomMacroSlider : public juce::Slider {
       return;
     }
     if (e.mods.isShiftDown() && macroParamRef != nullptr) {
+      if (e.getNumberOfClicks() >= 2 && onRequestMidiLearn) {
+        onRequestMidiLearn(macroParamRef);
+        return;
+      }
       startShiftDrag();
       return;  // suppress normal slider drag while shift is held
     }
@@ -132,6 +137,7 @@ class CustomMacroButton : public juce::TextButton {
   std::function<void(std::vector<int>)> onHoverMacros;
   std::function<void()> onMappingChanged;
   std::function<void()> onBindingChanged;
+  std::function<void(MacroParam *)> onRequestMidiLearn;
 
   void mouseEnter(const juce::MouseEvent &e) override {
     juce::TextButton::mouseEnter(e);
@@ -156,6 +162,10 @@ class CustomMacroButton : public juce::TextButton {
       return;
     }
     if (e.mods.isShiftDown() && macroParamRef != nullptr) {
+      if (e.getNumberOfClicks() >= 2 && onRequestMidiLearn) {
+        onRequestMidiLearn(macroParamRef);
+        return;
+      }
       handleShiftClick();
       return;
     }
@@ -202,6 +212,7 @@ class CustomMacroComboBox : public juce::ComboBox {
   std::function<void(std::vector<int>)> onHoverMacros;
   std::function<void()> onMappingChanged;
   std::function<void()> onBindingChanged;
+  std::function<void(MacroParam *)> onRequestMidiLearn;
 
   void mouseEnter(const juce::MouseEvent &e) override {
     juce::ComboBox::mouseEnter(e);
@@ -226,6 +237,10 @@ class CustomMacroComboBox : public juce::ComboBox {
       return;
     }
     if (e.mods.isShiftDown() && macroParamRef != nullptr) {
+      if (e.getNumberOfClicks() >= 2 && onRequestMidiLearn) {
+        onRequestMidiLearn(macroParamRef);
+        return;
+      }
       handleShiftClick();
       return;
     }

@@ -138,8 +138,10 @@ class GraphCanvas : public juce::Component,
   // Highlight controls bound to the given macro index (-1 to clear)
   void setHighlightedMacro(int macroIndex);
 
-  // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider
+  // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider/Button/ComboBox
   std::function<void(std::vector<int>)> onHoverMacros;
+  std::function<void(MacroParam *)> onRequestMidiLearn;
+  std::function<void()> onCancelMidiLearn;
 
  private:
   GraphEngine &graphEngine;

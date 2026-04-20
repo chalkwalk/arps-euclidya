@@ -107,6 +107,16 @@ class ArpsEuclidyaProcessor
   void toggleMacroBipolar(int index);
   bool getMacroBipolar(int index) const;
 
+  // MIDI learn: set index >= 0 to arm; audio thread captures next global CC.
+  void enterMidiLearn(int macroIndex);
+  void clearLearnedCC(int macroIndex);
+  // Returns the index currently armed for learn (-1 if none).
+  int getLearnMacroIndex() const { return learnMacroIndex.load(); }
+  // Returns true if the macro at index has a learned CC.
+  bool macroHasLearnedCC(int macroIndex) const;
+
+  std::atomic<int> learnMacroIndex{-1};
+
   juce::AbstractFifo midiLogFifo{512};
   std::array<MidiLogEvent, 512> midiLogBuffer;
   void logMidiEvent(int type, int channel, int d1, float d2);
@@ -176,6 +186,12 @@ class ArpsEuclidyaProcessor
   static void upgradePatch(juce::XmlElement *xml, int fromVersion);
   static juce::AudioProcessorValueTreeState::ParameterLayout
   createParameterLayout();
+
+  void saveMacroLearnedCC(juce::XmlElement &xmlRoot) const;
+  void loadMacroLearnedCC(const juce::XmlElement &xmlRoot);
+  void interceptMacroCC(juce::MidiBuffer &midiMessages);
+  // Returns true if msg was a CC consumed by macro learn/routing.
+  bool interceptMacroCCMessage(const juce::MidiMessage &msg);
 
   void pushTuningToNodes();
   void restoreTuningFromXml(juce::XmlElement *xmlState);

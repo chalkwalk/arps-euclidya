@@ -97,6 +97,7 @@ void GraphCanvas::rebuild() {
     };
 
     block->onHoverMacros = onHoverMacros;
+    block->onRequestMidiLearn = onRequestMidiLearn;
 
     block->onReplaceRequest = [this, n = node.get()](const juce::String &type) {
       if (onNodeReplaceRequest) {
@@ -1022,6 +1023,11 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
   }
 
   if (key.isKeyCode(juce::KeyPress::escapeKey)) {
+    // Cancel MIDI learn
+    if (onCancelMidiLearn) {
+      onCancelMidiLearn();
+    }
+
     // Cancel cable dragging
     if (isDraggingCable) {
       endCableDrag(cableDragEnd);  // This cleans up state
