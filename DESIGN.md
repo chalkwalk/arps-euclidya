@@ -59,7 +59,7 @@ The macro system exposes 32 global automatable parameters to the DAW host while 
 
 Nodes compute effective parameter values using `resolveMacroFloat` or `resolveMacroInt`, both defined on `GraphNode`:
 
-```
+```text
 for each binding in MacroParam:
     contribution = isBipolar
         ? (macroVal - 0.5) × 2 × intensity × range   // bipolar: centre = no change
@@ -73,11 +73,15 @@ Intensity is a signed float `[-2, 2]`. Values outside `±1` allow "super-scaling
 
 `GraphNode::onMappingChanged` is a `std::function<void()>` callback set by `PluginProcessor`. Whenever bindings change, UI components call it; this triggers `updateMacroNames()` which scans all nodes via `getMacroParams()`, rebuilds each `MacroParameter`'s display name to reflect its current targets, and sets an `std::atomic<bool> macrosDirty` flag polled by the editor timer.
 
+#### CC Mapping and MIDI Learn
+
+The interface provides MIDI learn functionality to map external MIDI CC messages directly to panel controls and macros. This system integrates intimately with the macro architecture, allowing any bindable knob or macro slot to quickly learn incoming CC values, overriding local or automated values when physical hardware is adjusted.
+
 ### 3.5 UI Layout System (`src/NodeLayout.h`, `src/LayoutParser.h`)
 
 Node UI is data-driven. Each node ships a companion `<NodeName>.json` file that declares the grid footprint and a list of `UIElement` entries. The `LayoutParser` reads these at runtime and `NodeBlock` instantiates the corresponding JUCE widgets, wiring `valueRef` / `macroParamRef` pointers directly to the node's member variables.
 
-`UIElementType` covers: `RotarySlider`, `Toggle`, `Label`, `ComboBox`, `PushButton`, and `Custom` (for nodes with fully bespoke editors). Nodes may also declare an *extended* layout (a collapsible panel) for secondary controls.
+`UIElementType` covers: `RotarySlider`, `Toggle`, `Label`, `ComboBox`, `PushButton`, and `Custom` (for nodes with fully bespoke editors). Nodes may also declare an *unfolded* layout (a collapsible panel) for secondary controls, which supports expansion in all directions (up, down, left, right) and includes tabbing support for richer organization of advanced parameters.
 
 This separation keeps node logic (`process()`) independent of UI and makes adding controls to a node purely a data change.
 
@@ -92,7 +96,7 @@ The system provides 32 node types, categorized by their role in the processing p
 ### 4.1 Core I/O & Generation
 
 - **Midi In Node** *(Macros)*: The entry point for live performance. Captures notes and MPE data from the DAW or the on-screen keyboard. Supports channel filtering.
-- **Midi Out Node** *(Macros)*: The terminal destination. Implements the **Euclidean Engine** (Pattern & Rhythm separation), sends real-time MIDI note and CC events to the host. Features a **Gate %** control (1–150% of clock division) and **Flex Gate** mode (holds pitches across adjacent steps instead of retriggering), plus Humanize parameters (timing, velocity, gate jitter) and an interactive circular visualizer. Accepts a CC sequence on Port 1 (violet) and provides per-CC# anchor, slew, and rest-behaviour controls in the registry panel. On transport stop, held notes decay within one clock division rather than cutting off hard.
+- **Midi Out Node** *(Macros)*: The terminal destination. Implements the **Euclidean Engine** (Pattern & Rhythm separation), sends real-time MIDI note and CC events to the host. Features a **Gate %** control (1–150% of clock division) and **Flex Gate** mode (holds pitches across adjacent steps instead of retriggering), plus Humanize parameters (timing, velocity, gate jitter), realtime MPE controls (ratchet and octave jump), and an interactive circular visualizer. Accepts a CC sequence on Port 1 (violet) and provides per-CC# anchor, slew, and rest-behaviour controls in the registry panel. On transport stop, held notes decay within one clock division rather than cutting off hard.
 - **Sequence Node** *(Macros)*: A 16×128 "piano roll" generator. Users draw patterns on a scrollable grid; the pattern plays independently of held keys. Sequence length is macro-bindable.
 - **All Notes Node**: Outputs every MIDI note (0–127) as a single sequence step per note. Useful as a source for `Fold` or scale-quantizer chains.
 - **CC Modulator Node** *(Macros)*: A CC sequence generator. Produces a CC `EventSequence` from an algorithm (Sine, RampUp, RampDown, Triangle, RandomHold, RandomWalk, EuclideanGates, Custom). CC values are normalised 0..1 internally. The Algorithm selector is macro-bindable.
@@ -110,8 +114,8 @@ Nodes in this category declare **Agnostic** ports and operate identically on Not
 - **Diverge Node**: Reorders steps from inside-out (opposite of Converge).
 - **Select Node** *(Macros)*: Passes Input 0 or Input 1 through to the output.
 - **Multiply Node** *(Macros)*: Repeats each step N times consecutively.
-- **Fold Node** *(Macros)*: "Wraps" notes that drift outside a target octave range back into it.
-- **Unfold Node** *(Macros)*: Expands the pitch range iteratively by pushing subsequent steps into higher or lower sub-octaves.
+- **Fold Node** *(Macros)*: Folds the sequence timeline into chords. Can aggregate sequences in chunks (N steps into 1) or via a rolling window.
+- **Unfold Node** *(Macros)*: Unfolds chords sequentially into an arpeggiated timeline, with options for ascending/descending order and note-dropping biases.
 
 ### 4.3 Combinatorial & Chord Logic
 

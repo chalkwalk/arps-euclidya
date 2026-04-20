@@ -14,6 +14,8 @@ This is your primary workspace where you build and connect your node networks.
 - **Fluid Navigation**: You can pan smoothly by clicking and dragging on any empty background space. Use `Ctrl + Scroll` (or `Cmd + Scroll` on macOS) to zoom in and out.
 - **Grid-Centric Layout**: To keep your patches organized, nodes automatically snap to a defined grid. When zoomed in, a subtle background grid appears to help you align your modules.
 - **Flight Path Preview**: When dragging nodes or cables, a clear path visibly connects your cursor to the resolved snap destination, providing clear, real-time feedback on routing boundaries and placements.
+- **Unfolding Panels**: Node panels can be unfolded to reveal advanced parameters. These unfolded panels support expansion in all directions (up, down, left, right) depending on the node's layout.
+- **Tabbing Support**: Inside expanded node panels, tabbing structures allow deep configuration elements to be grouped neatly without taking up excessive screen real estate.
 
 ### Keyboard Shortcuts
 
@@ -33,8 +35,8 @@ Access rapid actions without moving your cursor to the sidebar:
 
 - **Canvas Background**: Right-click any empty space to instantly **Insert a Module** at that position.
 - **Module Header**: Right-click the title bar of any node to **Replace** it with a different module type while preserving compatible connections, or use the **Bypass** toggle on the header to temporarily disable its effects.
-- **Node Knobs / Buttons**: Right-click any bound parameter to see a "Remove: Macro N" option for each existing binding. Removing a binding is fully undoable.
-- **Macro Palette Slot**: Right-click any macro in the Macro Panel to **clear all bindings** that macro holds across the entire patch.
+- **Node Knobs / Buttons**: Right-click any bound parameter to see a "Remove: Macro N" option for each existing binding (fully undoable), or use the **MIDI Learn** feature to map a hardware CC to the control natively.
+- **Macro Palette Slot**: Right-click any macro in the Macro Panel to **clear all bindings** that macro holds across the entire patch, or map an external CC directly via MIDI learn.
 
 ### 2. Module Library (Sidebar)
 
@@ -51,6 +53,7 @@ The panel along the top of the plugin window surfaces the 32 global "Macro" knob
 - **Bipolar toggle**: Double-click any macro slot to switch between unipolar and bipolar modulation.
 - **Hover feedback**: Hovering over a macro slot highlights every canvas control that is currently bound to it.
 - **Clearing**: Right-click a macro slot to clear all of its bindings across the entire patch.
+- **CC Mapping**: Right-click the macro slot to enable MIDI Learn and map your external hardware controller's CC messages directly.
 - Because the node graph is deep inside the plugin, your DAW cannot naturally see the internal parameters. These 32 macros act as the "bridge" between your DAW's automation system and your custom patch.
 
 ## Reading the Graph

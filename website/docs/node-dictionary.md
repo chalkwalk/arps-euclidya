@@ -11,7 +11,7 @@ Patch cables come in three colours that indicate what type of data is flowing:
 ## Core I/O & Generation
 
 - **Midi In Node**: The entry point for live performance. Captures notes and MPE data from the DAW or the on-screen keyboard. *(No Inputs, Outputs: 1)*
-- **Midi Out Node `(Macros)`**: The terminal destination and home of the Euclidean Engine. Converts sequenced note and CC data into real-time MIDI events for the host. Port 0 (gold) accepts note sequences; Port 1 (violet) accepts a CC sequence and drives a per-CC# registry with anchor, slew, and rest-behaviour controls. Features four **Sync Modes** (Gestural, Synchronized, Deterministic, Forgiving) — see [The Euclidean Engine](euclidean-engine.md#global-timings--sync-modes) for details. Provides a **Gate %** knob (1–150% of the clock division) to set note duration, **Flex Gate** to hold pitches across adjacent steps instead of retriggering, and "Humanize" parameters (timing jitter, velocity, gate jitter). On transport stop, held notes decay within one clock division. *(Inputs: 2, No Outputs)*
+- **Midi Out Node `(Macros)`**: The terminal destination and home of the Euclidean Engine. Converts sequenced note and CC data into real-time MIDI events for the host. Port 0 (gold) accepts note sequences; Port 1 (violet) accepts a CC sequence and drives a per-CC# registry with anchor, slew, and rest-behaviour controls. Features four **Sync Modes** (Gestural, Synchronized, Deterministic, Forgiving) — see [The Euclidean Engine](euclidean-engine.md#global-timings--sync-modes) for details. Provides a **Gate %** knob (1–150% of the clock division) to set note duration, **Flex Gate** to hold pitches across adjacent steps instead of retriggering, "Humanize" parameters (timing jitter, velocity, gate jitter), and realtime MPE controls (ratchet and octave jump). On transport stop, held notes decay within one clock division. *(Inputs: 2, No Outputs)*
 - **Sequence Node `(Macros)`**: A 16-step "piano roll" generator. Allows users to draw static patterns that play continuously, independent of held keys. *(No Inputs, Outputs: 1)*
 - **All Notes Node**: A utility node that steadily outputs every possible MIDI note (C-2 to G8). Useful as an input signal for test routing or scale folding. *(No Inputs, Outputs: 1)*
 - **Diagnostic Node**: Displays step count, note pitches, velocities, active MPE conditions, and CC values for each step. Accepts both note and CC sequences (agnostic port). *(Inputs: 1, Outputs: 1)*
@@ -47,8 +47,8 @@ Patch cables come in three colours that indicate what type of data is flowing:
 - **Transpose Node `(Macros)`**: Shifts the entire sequence chromatically by +/- N semitones. *(Inputs: 1, Outputs: 1)*
 - **Octave Transpose Node `(Macros)`**: Shifts the sequence by +/- N full octaves. *(Inputs: 1, Outputs: 1)*
 - **Quantizer Node `(Macros)`**: Forces every note in the sequence onto a specific musical scale and key. Scale mode and "rest on drop" behavior are macro-bindable. *(Inputs: 1, Outputs: 1)*
-- **Fold Node `(Macros)`**: Constrains sequences that drift out of bounds back into a target octave range by "folding" or wrapping the overflowing pitches. *(Inputs: 1, Outputs: 1)*
-- **Unfold Node**: Expands the pitch range iteratively by pushing subsequent steps into higher or lower sub-octaves. *(Inputs: 1, Outputs: 1)*
+- **Fold Node `(Macros)`**: Condenses the sequence timeline by folding multiple steps into single chords, either in chunks or via a rolling window. *(Inputs: 1, Outputs: 1)*
+- **Unfold Node `(Macros)`**: Extracts chords into sequential linear arpeggios, with controls for ascending/descending sorting, width limits, and note dropping priorities. *(Inputs: 1, Outputs: 1)*
 
 ## Routing & Logic
 

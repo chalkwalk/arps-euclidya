@@ -83,6 +83,14 @@ Macros 1–16 default to unipolar, macros 17–32 default to bipolar.
 
 Route, Select, Switch, and Quantizer nodes expose toggle buttons that can also be macro-bound. The gesture is a **shift+click** on the button instead of a drag. Each click with the macro selected toggles the binding on or off.
 
+### Hardware CC Mapping & MIDI Learn
+
+In addition to DAW automation, you can map your physical hardware knobs dynamically using MIDI Learn:
+
+- **Right-click** any macro slot or node control to activate MIDI Learn mode.
+- Move a knob or fader on your MIDI controller.
+- The control will instantly snap to the incoming physical CC value. This allows you to quickly rig performance interfaces without routing host automation streams manually.
+
 ## Interactive Feedback
 
 The graph isn't just static logic; it provides visual feedback:
