@@ -317,12 +317,42 @@ NodeLayout MidiOutNode::getLayout() const {
         el.macroParamRef = &self->macroROffset;
         el.dynamicMinRef = &self->ui_rOffsetMin;
         el.dynamicMaxRef = &self->ui_rOffsetMax;
-      } else if (el.label == "pressureToVelocity") {
-        el.floatValueRef = &self->pressureToVelocity;
-        el.macroParamRef = &self->macroPressureToVelocity;
-      } else if (el.label == "timbreToVelocity") {
-        el.floatValueRef = &self->timbreToVelocity;
-        el.macroParamRef = &self->macroTimbreToVelocity;
+      } else if (el.label == "mpeVelX") {
+        el.floatValueRef = &self->mpeVelocity.x;
+        el.macroParamRef = &self->macroMpeVelX;
+      } else if (el.label == "mpeVelY") {
+        el.floatValueRef = &self->mpeVelocity.y;
+        el.macroParamRef = &self->macroMpeVelY;
+      } else if (el.label == "mpeVelZ") {
+        el.floatValueRef = &self->mpeVelocity.z;
+        el.macroParamRef = &self->macroMpeVelZ;
+      } else if (el.label == "mpeRatX") {
+        el.floatValueRef = &self->mpeRatchet.x;
+        el.macroParamRef = &self->macroMpeRatX;
+      } else if (el.label == "mpeRatY") {
+        el.floatValueRef = &self->mpeRatchet.y;
+        el.macroParamRef = &self->macroMpeRatY;
+      } else if (el.label == "mpeRatZ") {
+        el.floatValueRef = &self->mpeRatchet.z;
+        el.macroParamRef = &self->macroMpeRatZ;
+      } else if (el.label == "mpeGateX") {
+        el.floatValueRef = &self->mpeGate.x;
+        el.macroParamRef = &self->macroMpeGateX;
+      } else if (el.label == "mpeGateY") {
+        el.floatValueRef = &self->mpeGate.y;
+        el.macroParamRef = &self->macroMpeGateY;
+      } else if (el.label == "mpeGateZ") {
+        el.floatValueRef = &self->mpeGate.z;
+        el.macroParamRef = &self->macroMpeGateZ;
+      } else if (el.label == "mpeOctX") {
+        el.floatValueRef = &self->mpeOctave.x;
+        el.macroParamRef = &self->macroMpeOctX;
+      } else if (el.label == "mpeOctY") {
+        el.floatValueRef = &self->mpeOctave.y;
+        el.macroParamRef = &self->macroMpeOctY;
+      } else if (el.label == "mpeOctZ") {
+        el.floatValueRef = &self->mpeOctave.z;
+        el.macroParamRef = &self->macroMpeOctZ;
       } else if (el.label == "clockDivisionIndex") {
         el.valueRef = &self->clockDivisionIndex;
         el.macroParamRef = &self->macroClockDivisionIndex;

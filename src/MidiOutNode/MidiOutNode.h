@@ -229,8 +229,34 @@ class MidiOutNode : public GraphNode {
   const TuningTable* activeTuning = nullptr;
   MicrotoneChannelAllocator mptAllocator;
 
+  // MPE gesture → playback mapping matrix.
+  // Each field is a bipolar intensity (-1..+1) for one of the three MPE axes:
+  //   x = pitch bend, y = timbre/CC74, z = pressure.
+  // The per-note delta for each target = sum(axis_value * resolved_intensity).
+  struct MpeMapping { float x = 0.0f, y = 0.0f, z = 0.0f; };
+
+  MpeMapping mpeVelocity;  // additive delta on velocity
+  MpeMapping mpeRatchet;   // positive → repeat count 1..4
+  MpeMapping mpeGate;      // additive delta on gatePercent
+  MpeMapping mpeOctave;    // bipolar ±3-octave shift
+
+  MacroParam macroMpeVelX{"MPE Vel X", {}};
+  MacroParam macroMpeVelY{"MPE Vel Y", {}};
+  MacroParam macroMpeVelZ{"MPE Vel Z", {}};
+  MacroParam macroMpeRatX{"MPE Rat X", {}};
+  MacroParam macroMpeRatY{"MPE Rat Y", {}};
+  MacroParam macroMpeRatZ{"MPE Rat Z", {}};
+  MacroParam macroMpeGateX{"MPE Gate X", {}};
+  MacroParam macroMpeGateY{"MPE Gate Y", {}};
+  MacroParam macroMpeGateZ{"MPE Gate Z", {}};
+  MacroParam macroMpeOctX{"MPE Oct X", {}};
+  MacroParam macroMpeOctY{"MPE Oct Y", {}};
+  MacroParam macroMpeOctZ{"MPE Oct Z", {}};
+
+  // Legacy v1 fields — no longer shown in UI; migrated to mpeVelocity on load.
   float pressureToVelocity = 0.0f;
   float timbreToVelocity = 0.0f;
+
   bool passExpressions = false;  // forward mpeX/Y/Z as expressions at trigger
   int channelMode = 0;           // 0 = Fixed (outputChannel), 1 = Round-Robin
 

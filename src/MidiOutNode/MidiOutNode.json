@@ -228,30 +228,147 @@
             "gridBounds": [2, 0, 116, 18]
         },
         {
-            "type": "RotarySlider",
-            "label": "pressureToVelocity",
-            "floatMin": 0,
-            "floatMax": 1,
-            "step": 0.01,
-            "gridBounds": [2, 80, 12, 14]
+            "type": "Label",
+            "label": "X (Bend)",
+            "gridBounds": [14, 19, 32, 4]
         },
         {
             "type": "Label",
-            "label": "Press -> Vel",
-            "gridBounds": [2, 94, 12, 5]
-        },
-        {
-            "type": "RotarySlider",
-            "label": "timbreToVelocity",
-            "floatMin": 0,
-            "floatMax": 1,
-            "step": 0.01,
-            "gridBounds": [16, 80, 12, 14]
+            "label": "Y (Timbre)",
+            "gridBounds": [50, 19, 32, 4]
         },
         {
             "type": "Label",
-            "label": "Timb -> Vel",
-            "gridBounds": [16, 94, 12, 5]
+            "label": "Z (Press)",
+            "gridBounds": [86, 19, 32, 4]
+        },
+        {
+            "type": "Label",
+            "label": "VEL",
+            "gridBounds": [2, 23, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeVelX",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [14, 23, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeVelY",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [50, 23, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeVelZ",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [86, 23, 12, 10]
+        },
+        {
+            "type": "Label",
+            "label": "RAT",
+            "gridBounds": [2, 37, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeRatX",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [14, 37, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeRatY",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [50, 37, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeRatZ",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [86, 37, 12, 10]
+        },
+        {
+            "type": "Label",
+            "label": "GATE",
+            "gridBounds": [2, 51, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeGateX",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [14, 51, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeGateY",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [50, 51, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeGateZ",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [86, 51, 12, 10]
+        },
+        {
+            "type": "Label",
+            "label": "OCT",
+            "gridBounds": [2, 65, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeOctX",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [14, 65, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeOctY",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [50, 65, 12, 10]
+        },
+        {
+            "type": "RotarySlider",
+            "label": "mpeOctZ",
+            "floatMin": -1,
+            "floatMax": 1,
+            "step": 0.01,
+            "bipolar": true,
+            "gridBounds": [86, 65, 12, 10]
         },
         {
             "type": "RotarySlider",

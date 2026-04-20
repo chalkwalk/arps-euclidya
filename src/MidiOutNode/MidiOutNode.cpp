@@ -14,8 +14,18 @@ MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
   addMacroParam(&macroSyncModeParam);
   addMacroParam(&macroPatternModeParam);
   addMacroParam(&macroChannelMode);
-  addMacroParam(&macroPressureToVelocity);
-  addMacroParam(&macroTimbreToVelocity);
+  addMacroParam(&macroMpeVelX);
+  addMacroParam(&macroMpeVelY);
+  addMacroParam(&macroMpeVelZ);
+  addMacroParam(&macroMpeRatX);
+  addMacroParam(&macroMpeRatY);
+  addMacroParam(&macroMpeRatZ);
+  addMacroParam(&macroMpeGateX);
+  addMacroParam(&macroMpeGateY);
+  addMacroParam(&macroMpeGateZ);
+  addMacroParam(&macroMpeOctX);
+  addMacroParam(&macroMpeOctY);
+  addMacroParam(&macroMpeOctZ);
   addMacroParam(&macroHumTiming);
   addMacroParam(&macroHumVelocity);
   addMacroParam(&macroHumGate);
@@ -826,23 +836,47 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
           }
         }
 
-        float currentPressure = 0.0f;
-        float currentTimbre = 0.0f;
+        // --- Fetch MPE axes ---
+        float currentX = 0.0f;
+        float currentY = 0.0f;
+        float currentZ = 0.0f;
 
         if (noteTrigger->sourceNoteNumber != -1) {
-          currentPressure = noteExpressionManager.getMpeZ(
+          currentX = noteExpressionManager.getMpeX(
               noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
               noteTrigger->sourceNoteID);
-          currentTimbre = noteExpressionManager.getMpeY(
+          currentY = noteExpressionManager.getMpeY(
+              noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
+              noteTrigger->sourceNoteID);
+          currentZ = noteExpressionManager.getMpeZ(
               noteTrigger->sourceChannel, noteTrigger->sourceNoteNumber,
               noteTrigger->sourceNoteID);
         }
 
-        float actualPressMod = resolveMacroFloat(
-            macroPressureToVelocity, pressureToVelocity, 0.0f, 1.0f);
+        // --- MPE matrix deltas ---
+        float velDelta =
+            resolveMacroFloat(macroMpeVelX, mpeVelocity.x, -1.0f, 1.0f) * currentX +
+            resolveMacroFloat(macroMpeVelY, mpeVelocity.y, -1.0f, 1.0f) * currentY +
+            resolveMacroFloat(macroMpeVelZ, mpeVelocity.z, -1.0f, 1.0f) * currentZ;
+        float ratchetDelta =
+            resolveMacroFloat(macroMpeRatX, mpeRatchet.x, -1.0f, 1.0f) * currentX +
+            resolveMacroFloat(macroMpeRatY, mpeRatchet.y, -1.0f, 1.0f) * currentY +
+            resolveMacroFloat(macroMpeRatZ, mpeRatchet.z, -1.0f, 1.0f) * currentZ;
+        float gateDelta =
+            resolveMacroFloat(macroMpeGateX, mpeGate.x, -1.0f, 1.0f) * currentX +
+            resolveMacroFloat(macroMpeGateY, mpeGate.y, -1.0f, 1.0f) * currentY +
+            resolveMacroFloat(macroMpeGateZ, mpeGate.z, -1.0f, 1.0f) * currentZ;
+        float octaveDelta =
+            resolveMacroFloat(macroMpeOctX, mpeOctave.x, -1.0f, 1.0f) * currentX +
+            resolveMacroFloat(macroMpeOctY, mpeOctave.y, -1.0f, 1.0f) * currentY +
+            resolveMacroFloat(macroMpeOctZ, mpeOctave.z, -1.0f, 1.0f) * currentZ;
 
-        float actualTimbMod = resolveMacroFloat(macroTimbreToVelocity,
-                                                timbreToVelocity, 0.0f, 1.0f);
+        int finalNoteNumber = std::clamp(
+            noteTrigger->noteNumber +
+                (int)std::round(std::clamp(octaveDelta, -1.0f, 1.0f) * 3.0f) * 12,
+            0, 127);
+        int ratchetCount =
+            1 + (int)std::floor(std::clamp(ratchetDelta, 0.0f, 1.0f) * 3.0f);
 
         // --- Humanize Calculation ---
         float actualHumTiming =
@@ -852,14 +886,10 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         float actualHumGate =
             resolveMacroFloat(macroHumGate, humGate, 0.0f, 1.0f);
 
-        // --- 1. Base + Expression Mapping ---
-        float vIntermediate =
-            noteTrigger->velocity +
-            (actualPressMod * (currentPressure - noteTrigger->velocity)) +
-            (actualTimbMod * (currentTimbre - noteTrigger->velocity));
+        // --- 1. Base Velocity + MPE delta ---
+        float vIntermediate = std::clamp(noteTrigger->velocity + velDelta, 0.0f, 1.0f);
 
         // --- 2. Humanize Velocity ---
-        // actualHumVelocity=1 → ±0.5 uniform jitter around the base value.
         float finalVelocity = std::clamp(
             vIntermediate + actualHumVelocity * (rng.nextFloat() - 0.5f),
             0.0f, 1.0f);
@@ -870,20 +900,19 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         double jitterPpq = rng.nextDouble() * actualHumTiming * 0.5 * division;
         int tJitter = (int)(jitterPpq * clockManager.getSamplesPerPpq());
 
-        // Gate duration: base from gatePercent, humanize jitters around it.
+        // Gate duration: base from gatePercent, MPE gate delta + humanize jitter.
         double divSamples = division * clockManager.getSamplesPerPpq();
         float actualGatePercent =
             resolveMacroFloat(macroGatePercent, gatePercent, 0.01f, 1.50f);
-        // actualHumGate=1 → ±0.75 uniform jitter around gatePercent,
-        // clamped to the legal [0.01, 1.50] range.
         float humJitter = actualHumGate * (rng.nextFloat() - 0.5f) * 1.5f;
         float finalGateFactor =
-            std::clamp(actualGatePercent + humJitter, 0.01f, 1.50f);
+            std::clamp(actualGatePercent + humJitter + gateDelta, 0.01f, 1.50f);
         double sampleRate =
             clockManager.getSamplesPerPpq() * clockManager.getBPM() / 60.0;
         int minDuration = (int)std::ceil(sampleRate * 0.001);
         int duration =
             std::max(minDuration, (int)(divSamples * finalGateFactor));
+        int subDuration = std::max(minDuration, duration / ratchetCount);
 
         // Flex gate: if this pitch is indefinitely held from the previous
         // step, skip the note-on and leave it held (Step 1 above already
@@ -891,7 +920,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         if (flexGate) {
           bool extended = false;
           for (auto &pn : playingNotes) {
-            if (pn.noteNumber == noteTrigger->noteNumber &&
+            if (pn.noteNumber == finalNoteNumber &&
                 pn.remainingSamples == -1) {
               extended = true;
               break;
@@ -938,7 +967,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
           auto itC = playingNotes.begin();
           while (itC != playingNotes.end()) {
             if (itC->channel == usedChannel &&
-                itC->noteNumber == noteTrigger->noteNumber) {
+                itC->noteNumber == finalNoteNumber) {
               collector.addNoteOff(itC->channel, itC->noteNumber, 0.0f,
                                    finalSamplePos, itC->noteID);
               itC = playingNotes.erase(itC);
@@ -950,7 +979,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
           // a retrigger does not cause a stale note-on in a future block.
           pendingNoteOns.erase(
               std::remove_if(pendingNoteOns.begin(), pendingNoteOns.end(),
-                             [noteNum = noteTrigger->noteNumber,
+                             [noteNum = finalNoteNumber,
                               ch = usedChannel](const PendingNoteOn &p) {
                                return p.noteNumber == noteNum && p.channel == ch;
                              }),
@@ -968,62 +997,74 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
             passExpressions ? (noteTrigger->mpeX * 48.0f) : 0.0f;
         float totalPitchBend = tuningOffsetSemitones + inputBendSemitones;
 
-        // If timing jitter exceeds the current block, push the note-on to the
-        // pending queue rather than emitting immediately. Flex-gate notes are
-        // always immediate since held-note state lives in playingNotes, not the
-        // pending queue. The kill loop above has already handled retrigger.
+        // If timing jitter exceeds the current block, push all ratchet notes to
+        // the pending queue. Flex-gate notes are always immediate.
         if (tJitter >= numSamples && !flexGate) {
-          pendingNoteOns.push_back(
-              {usedChannel, noteTrigger->noteNumber, finalVelocity, outNoteID,
-               totalPitchBend, currentPressure, currentTimbre, passExpressions,
-               /*emitTuning=*/(totalPitchBend != 0.0f || usePerNoteChannels),
-               tJitter, duration});
+          for (int ri = 0; ri < ratchetCount; ++ri) {
+            int32_t subNoteID =
+                (ri == 0) ? outNoteID : noteIDCounter.fetch_add(1);
+            pendingNoteOns.push_back(
+                {usedChannel, finalNoteNumber, finalVelocity, subNoteID,
+                 totalPitchBend, currentZ, currentY, passExpressions,
+                 /*emitTuning=*/(totalPitchBend != 0.0f || usePerNoteChannels),
+                 tJitter + ri * subDuration, subDuration});
+          }
           continue;
         }
 
-        // Apply tuning. For MIDI (Pitch Bend), this MUST arrive before NoteOn.
-        // For CLAP, it links by outNoteID.
-        if (totalPitchBend != 0.0f || usePerNoteChannels) {
-          collector.addNoteExpression(
-              usedChannel, noteTrigger->noteNumber, NoteExpressionType::Tuning,
-              totalPitchBend, finalSamplePos, outNoteID);
-        }
+        // Ratchet emission loop: emit 1..ratchetCount evenly-spaced notes.
+        // Notes whose subSamplePos overflows the current block go to pending.
+        for (int ri = 0; ri < ratchetCount; ++ri) {
+          int subSamplePos = finalSamplePos + ri * subDuration;
 
-        // ── Pressure and timbre pass-through ──
-        if (passExpressions) {
-          if (currentPressure > 0.001f) {
-            collector.addNoteExpression(usedChannel, noteTrigger->noteNumber,
-                                        NoteExpressionType::Pressure,
-                                        currentPressure, finalSamplePos,
-                                        outNoteID);
+          if (subSamplePos >= numSamples) {
+            int32_t subNoteID = noteIDCounter.fetch_add(1);
+            pendingNoteOns.push_back(
+                {usedChannel, finalNoteNumber, finalVelocity, subNoteID,
+                 totalPitchBend, currentZ, currentY,
+                 passExpressions && ri == 0,
+                 /*emitTuning=*/(totalPitchBend != 0.0f || usePerNoteChannels),
+                 subSamplePos, subDuration});
+            continue;
           }
-          if (currentTimbre > 0.001f) {
-            collector.addNoteExpression(usedChannel, noteTrigger->noteNumber,
-                                        NoteExpressionType::Brightness,
-                                        currentTimbre, finalSamplePos,
-                                        outNoteID);
+
+          int32_t subNoteID =
+              (ri == 0) ? outNoteID : noteIDCounter.fetch_add(1);
+
+          // Apply tuning before NoteOn (MIDI requires this ordering).
+          if (totalPitchBend != 0.0f || usePerNoteChannels) {
+            collector.addNoteExpression(
+                usedChannel, finalNoteNumber, NoteExpressionType::Tuning,
+                totalPitchBend, subSamplePos, subNoteID);
           }
-        }
 
-        collector.addNoteOn(usedChannel, noteTrigger->noteNumber, finalVelocity,
-                            finalSamplePos, outNoteID);
+          // Pressure and timbre pass-through on first ratchet note only.
+          if (passExpressions && ri == 0) {
+            if (currentZ > 0.001f) {
+              collector.addNoteExpression(usedChannel, finalNoteNumber,
+                                          NoteExpressionType::Pressure,
+                                          currentZ, subSamplePos, subNoteID);
+            }
+            if (currentY > 0.001f) {
+              collector.addNoteExpression(usedChannel, finalNoteNumber,
+                                          NoteExpressionType::Brightness,
+                                          currentY, subSamplePos, subNoteID);
+            }
+          }
 
-        // Schedule NoteOff via playingNotes. In flex-gate mode the note is
-        // held indefinitely (remainingSamples = -1); Step 1 above gives it a
-        // finite duration on the tick where its pitch disappears from the
-        // step. In normal mode, remainingSamples is clamped to 0 so that
-        // notes whose full duration fits inside the current block still sound
-        // for the remainder — flushPlayingNotes fires the NoteOff at offset 0
-        // of the next block, preventing in-block NoteOn+NoteOff pairs.
-        int scheduledSamples;
-        if (flexGate) {
-          scheduledSamples = -1;
-        } else {
-          int noteEndSample = finalSamplePos + duration;
-          scheduledSamples = std::max(0, noteEndSample - numSamples);
+          collector.addNoteOn(usedChannel, finalNoteNumber, finalVelocity,
+                              subSamplePos, subNoteID);
+
+          int scheduledSamples;
+          if (flexGate) {
+            scheduledSamples = -1;
+          } else {
+            int subNoteEndSample = subSamplePos + subDuration;
+            scheduledSamples = std::max(0, subNoteEndSample - numSamples);
+          }
+          playingNotes.push_back(
+              {usedChannel, finalNoteNumber, subNoteID, scheduledSamples});
         }
-        playingNotes.push_back({usedChannel, noteTrigger->noteNumber, outNoteID,
-                                scheduledSamples});
       }
     }
 
@@ -1129,8 +1170,18 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("triplet", triplet ? 1 : 0);
     xml->setAttribute("outputChannel", outputChannel);
 
-    xml->setAttribute("pressureToVelocity", pressureToVelocity);
-    xml->setAttribute("timbreToVelocity", timbreToVelocity);
+    xml->setAttribute("mpeVelX", mpeVelocity.x);
+    xml->setAttribute("mpeVelY", mpeVelocity.y);
+    xml->setAttribute("mpeVelZ", mpeVelocity.z);
+    xml->setAttribute("mpeRatX", mpeRatchet.x);
+    xml->setAttribute("mpeRatY", mpeRatchet.y);
+    xml->setAttribute("mpeRatZ", mpeRatchet.z);
+    xml->setAttribute("mpeGateX", mpeGate.x);
+    xml->setAttribute("mpeGateY", mpeGate.y);
+    xml->setAttribute("mpeGateZ", mpeGate.z);
+    xml->setAttribute("mpeOctX", mpeOctave.x);
+    xml->setAttribute("mpeOctY", mpeOctave.y);
+    xml->setAttribute("mpeOctZ", mpeOctave.z);
     xml->setAttribute("passExpressions", passExpressions ? 1 : 0);
     xml->setAttribute("channelMode", ui_channelMode);
 
@@ -1170,8 +1221,25 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
     triplet = xml->getIntAttribute("triplet", 0) != 0;
     outputChannel = xml->getIntAttribute("outputChannel", 0);
 
-    pressureToVelocity = xml->getDoubleAttribute("pressureToVelocity", 0.0);
-    timbreToVelocity = xml->getDoubleAttribute("timbreToVelocity", 0.0);
+    mpeVelocity.x = (float)xml->getDoubleAttribute("mpeVelX", 0.0);
+    mpeVelocity.y = (float)xml->getDoubleAttribute("mpeVelY", 0.0);
+    mpeVelocity.z = (float)xml->getDoubleAttribute("mpeVelZ", 0.0);
+    mpeRatchet.x = (float)xml->getDoubleAttribute("mpeRatX", 0.0);
+    mpeRatchet.y = (float)xml->getDoubleAttribute("mpeRatY", 0.0);
+    mpeRatchet.z = (float)xml->getDoubleAttribute("mpeRatZ", 0.0);
+    mpeGate.x = (float)xml->getDoubleAttribute("mpeGateX", 0.0);
+    mpeGate.y = (float)xml->getDoubleAttribute("mpeGateY", 0.0);
+    mpeGate.z = (float)xml->getDoubleAttribute("mpeGateZ", 0.0);
+    mpeOctave.x = (float)xml->getDoubleAttribute("mpeOctX", 0.0);
+    mpeOctave.y = (float)xml->getDoubleAttribute("mpeOctY", 0.0);
+    mpeOctave.z = (float)xml->getDoubleAttribute("mpeOctZ", 0.0);
+    // Legacy v1 migration: pressureToVelocity → mpeVelocity.z, timbreToVelocity → mpeVelocity.y
+    pressureToVelocity = (float)xml->getDoubleAttribute("pressureToVelocity", 0.0);
+    timbreToVelocity = (float)xml->getDoubleAttribute("timbreToVelocity", 0.0);
+    if (pressureToVelocity != 0.0f && mpeVelocity.z == 0.0f)
+      mpeVelocity.z = pressureToVelocity;
+    if (timbreToVelocity != 0.0f && mpeVelocity.y == 0.0f)
+      mpeVelocity.y = timbreToVelocity;
     passExpressions = xml->getIntAttribute("passExpressions", 0) != 0;
     ui_channelMode = xml->getIntAttribute("channelMode", 0);
     humTiming = static_cast<float>(xml->getDoubleAttribute("humTiming", 0.0));
@@ -1195,8 +1263,6 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
         {"macroRSteps", macroRSteps},
         {"macroRBeats", macroRBeats},
         {"macroROffset", macroROffset},
-        {"macroPressureToVelocity", macroPressureToVelocity},
-        {"macroTimbreToVelocity", macroTimbreToVelocity},
         {"macroHumTiming", macroHumTiming},
         {"macroHumVelocity", macroHumVelocity},
         {"macroHumGate", macroHumGate}};
