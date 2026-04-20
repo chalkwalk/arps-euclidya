@@ -394,7 +394,7 @@ NodeLayout MidiOutNode::getLayout() const {
   };
 
   bindElements(layout.elements);
-  bindElements(layout.unfoldedElements);
+  bindElements(layout.expandedElements);
 
   return layout;
 }
