@@ -156,10 +156,15 @@ void GraphCanvas::updateTransforms() {
     if (std::isnan(ny) || std::isinf(ny))
       ny = 0.0f;
 
-    // When a block is unfolded, its component is (gridW+2)×(gridH+2) in size
-    // and its origin shifts one grid pitch above/left the logical position.
-    int offsetX = block->isUnfolded() ? -Layout::GridPitch : 0;
-    int offsetY = block->isUnfolded() ? -Layout::GridPitch : 0;
+    // When a block is unfolded, its component origin shifts by the unfold extents
+    // above/left the logical position.
+    int offsetX = 0;
+    int offsetY = 0;
+    if (block->isUnfolded()) {
+      auto e = block->getNode()->getLayout().unfoldExtents;
+      offsetX = -(e.left * Layout::GridPitch);
+      offsetY = -(e.up * Layout::GridPitch);
+    }
     block->setBounds((int)nx + offsetX, (int)ny + offsetY,
                      block->getWidth(), block->getHeight());
   }

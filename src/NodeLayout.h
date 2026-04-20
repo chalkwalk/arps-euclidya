@@ -35,18 +35,62 @@ struct UIElement {
   juce::Rectangle<int> gridBounds;
 };
 
+// Per-direction unfold extension counts. Defaults to 1 in all directions.
+struct UnfoldExtents {
+  int up = 1, down = 1, left = 1, right = 1;
+};
+
 struct NodeLayout {
   int gridWidth = 1;
   int gridHeight = 1;
 
+  // ── Compact state ───────────────────────────────────────────────────────────
+  // All compact tab elements, flattened in tab order.
+  // Single unnamed tab ("") = flat view with no visible tab bar — backward compat.
   std::vector<UIElement> elements;
+  juce::StringArray compactTabLabels;   // one entry per tab; size 0 or 1 = no bar
+  std::vector<int> compactTabBoundaries; // [t] = first index of tab t in elements
 
-  // Controls shown only in the unfolded (edge-expanded) state.
-  // Coordinates are in (gridWidth+2) x (gridHeight+2) sub-grid space.
-  // Absent means no unfold UI for this node.
+  // ── Tab-expanded state (optional) ───────────────────────────────────────────
+  // Replaces compact view; displaces layout (does NOT overlay neighbours).
+  int expandedGridWidth = 0;   // 0 = no tab-expanded mode
+  int expandedGridHeight = 0;
+  std::vector<UIElement> expandedElements;
+  juce::StringArray expandedTabLabels;
+  std::vector<int> expandedTabBoundaries;
+
+  // ── Unfold state (optional) ─────────────────────────────────────────────────
+  // Overlays neighbours; asymmetric per-direction extents.
   std::vector<UIElement> unfoldedElements;
+  UnfoldExtents unfoldExtents;
+  juce::StringArray unfoldedTabLabels;
+  std::vector<int> unfoldedTabBoundaries;
 
-  [[nodiscard]] bool hasUnfoldedLayout() const {
-    return !unfoldedElements.empty();
+  // ── Queries ─────────────────────────────────────────────────────────────────
+  [[nodiscard]] bool hasCompactTabs()   const { return compactTabLabels.size() > 1; }
+  [[nodiscard]] bool hasTabExpanded()   const { return expandedGridWidth > 0; }
+  [[nodiscard]] bool hasExpandedTabs()  const { return expandedTabLabels.size() > 1; }
+  [[nodiscard]] bool hasUnfoldedLayout() const { return !unfoldedElements.empty(); }
+  [[nodiscard]] bool hasUnfoldedTabs()  const { return unfoldedTabLabels.size() > 1; }
+
+  // Element range {start, count} for a specific tab in each section.
+  [[nodiscard]] std::pair<int, int> compactTabRange(int t) const {
+    return tabRange(compactTabBoundaries, (int)elements.size(), t);
+  }
+  [[nodiscard]] std::pair<int, int> expandedTabElementRange(int t) const {
+    return tabRange(expandedTabBoundaries, (int)expandedElements.size(), t);
+  }
+  [[nodiscard]] std::pair<int, int> unfoldedTabElementRange(int t) const {
+    return tabRange(unfoldedTabBoundaries, (int)unfoldedElements.size(), t);
+  }
+
+ private:
+  [[nodiscard]] static std::pair<int, int> tabRange(const std::vector<int> &bounds,
+                                                    int total, int t) {
+    if (bounds.empty() || t >= (int)bounds.size())
+      return {0, total};
+    int start = bounds[(size_t)t];
+    int end = (t + 1 < (int)bounds.size()) ? bounds[(size_t)(t + 1)] : total;
+    return {start, end - start};
   }
 };

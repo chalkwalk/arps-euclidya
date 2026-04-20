@@ -105,17 +105,22 @@ bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
 }
 
 bool GraphEngine::isUnfoldFootprintClear(const GraphNode *node) const {
-  int x = node->gridX - 1;
-  int y = node->gridY - 1;
-  int w = node->getGridWidth() + 2;
-  int h = node->getGridHeight() + 2;
+  auto e = node->getLayout().unfoldExtents;
+  int x = node->gridX - e.left;
+  int y = node->gridY - e.up;
+  int w = node->getGridWidth() + e.left + e.right;
+  int h = node->getGridHeight() + e.up + e.down;
   for (const auto &other : nodes) {
-    if (other.get() == node || !other->isUnfoldedRuntime) continue;
+    if (other.get() == node || !other->isUnfoldedRuntime) {
+      continue;
+    }
     int ox = other->gridX, oy = other->gridY;
     int ow = other->getGridWidth(), oh = other->getGridHeight();
     bool overlapX = (x < ox + ow) && (x + w > ox);
     bool overlapY = (y < oy + oh) && (y + h > oy);
-    if (overlapX && overlapY) return false;
+    if (overlapX && overlapY) {
+      return false;
+    }
   }
   return true;
 }

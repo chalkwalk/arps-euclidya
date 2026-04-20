@@ -385,8 +385,9 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
 
   auto layout = node->getLayout();
   createComponents(layout.elements, dynamicComponents);
+  createComponents(layout.expandedElements, expandedComponents);
 
-  if (layout.hasUnfoldedLayout()) {
+  if (layout.hasUnfoldedLayout() || layout.hasTabExpanded()) {
     addAndMakeVisible(expandButton);
     expandButton.setClickingTogglesState(true);
     expandButton.setColour(juce::TextButton::buttonColourId,
@@ -397,12 +398,13 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
                            juce::Colours::white.withAlpha(0.7f));
     expandButton.setColour(juce::TextButton::textColourOnId,
                            juce::Colours::white);
-    expandButton.onClick = [this] { toggleExpansion(); };
+    if (layout.hasTabExpanded() && !layout.hasUnfoldedLayout()) {
+      expandButton.onClick = [this] { toggleTabExpansion(); };
+    } else {
+      expandButton.onClick = [this] { toggleExpansion(); };
+    }
 
     createComponents(layout.unfoldedElements, unfoldedComponents);
-    for (auto *comp : unfoldedComponents) {
-      comp->setVisible(false);
-    }
   }
 
   if (layout.elements.empty()) {
@@ -412,6 +414,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
     }
   }
 
+  updateTabVisibility();
   updateSize();
   startTimerHz(12);  // Steady UI sync
 }
@@ -433,18 +436,73 @@ void NodeBlock::toggleExpansion() {
   expandButton.setToggleState(isExpanded, juce::dontSendNotification);
   expandButton.setButtonText(isExpanded ? "<" : ">");
 
-  for (auto *comp : unfoldedComponents) {
-    comp->setVisible(isExpanded);
-  }
-
   if (isExpanded) {
     toFront(false);
   }
 
+  updateTabVisibility();
   updateSize();
 
   if (onPositionChanged) {
     onPositionChanged();
+  }
+}
+
+void NodeBlock::toggleTabExpansion() {
+  isTabExpanded = !isTabExpanded;
+  expandButton.setToggleState(isTabExpanded, juce::dontSendNotification);
+  expandButton.setButtonText(isTabExpanded ? "<" : ">");
+
+  if (isTabExpanded) {
+    toFront(false);
+  }
+
+  updateTabVisibility();
+  updateSize();
+
+  if (onPositionChanged) {
+    onPositionChanged();
+  }
+}
+
+void NodeBlock::updateTabVisibility() {
+  auto layout = targetNode->getLayout();
+
+  // Compact elements: hidden only in tab-expanded mode.
+  // When unfolded they remain visible in their compact sub-area.
+  if (!isTabExpanded) {
+    auto [start, count] = layout.compactTabRange(activeCompactTab);
+    for (int i = 0; i < dynamicComponents.size(); ++i) {
+      dynamicComponents[i]->setVisible(i >= start && i < start + count);
+    }
+  } else {
+    for (auto *c : dynamicComponents) {
+      c->setVisible(false);
+    }
+  }
+
+  // Expanded elements: visible only in tab-expanded mode
+  if (isTabExpanded) {
+    auto [start, count] = layout.expandedTabElementRange(activeExpandedTab);
+    for (int i = 0; i < expandedComponents.size(); ++i) {
+      expandedComponents[i]->setVisible(i >= start && i < start + count);
+    }
+  } else {
+    for (auto *c : expandedComponents) {
+      c->setVisible(false);
+    }
+  }
+
+  // Unfolded elements: visible only when unfolded
+  if (isExpanded) {
+    auto [start, count] = layout.unfoldedTabElementRange(activeUnfoldedTab);
+    for (int i = 0; i < unfoldedComponents.size(); ++i) {
+      unfoldedComponents[i]->setVisible(i >= start && i < start + count);
+    }
+  } else {
+    for (auto *c : unfoldedComponents) {
+      c->setVisible(false);
+    }
   }
 }
 
@@ -453,15 +511,17 @@ void NodeBlock::updateSize() {
   int gridW = layout.gridWidth;
   int gridH = layout.gridHeight;
 
-  if (isExpanded && layout.hasUnfoldedLayout()) {
-    gridW += 2;
-    gridH += 2;
+  if (isTabExpanded && layout.hasTabExpanded()) {
+    gridW = layout.expandedGridWidth;
+    gridH = layout.expandedGridHeight;
+  } else if (isExpanded && layout.hasUnfoldedLayout()) {
+    const auto &e = layout.unfoldExtents;
+    gridW += e.left + e.right;
+    gridH += e.up + e.down;
   }
 
-  int width = (gridW * Layout::GridPitch) - Layout::TramlineMargin;
-  int height = (gridH * Layout::GridPitch) - Layout::TramlineMargin;
-
-  setSize(width, height);
+  setSize((gridW * Layout::GridPitch) - Layout::TramlineMargin,
+          (gridH * Layout::GridPitch) - Layout::TramlineMargin);
 }
 
 juce::Rectangle<int> NodeBlock::compactBodyRect() const {
@@ -471,7 +531,8 @@ juce::Rectangle<int> NodeBlock::compactBodyRect() const {
   }
   int compactW = (layout.gridWidth * Layout::GridPitch) - Layout::TramlineMargin;
   int compactH = (layout.gridHeight * Layout::GridPitch) - Layout::TramlineMargin;
-  return {Layout::GridPitch, Layout::GridPitch, compactW, compactH};
+  const auto &e = layout.unfoldExtents;
+  return {e.left * Layout::GridPitch, e.up * Layout::GridPitch, compactW, compactH};
 }
 
 void NodeBlock::timerCallback() {
@@ -533,6 +594,9 @@ void NodeBlock::timerCallback() {
   };
 
   syncElements(layout.elements, dynamicComponents);
+  if (isTabExpanded) {
+    syncElements(layout.expandedElements, expandedComponents);
+  }
   if (isExpanded) {
     syncElements(layout.unfoldedElements, unfoldedComponents);
   }
@@ -657,6 +721,56 @@ void NodeBlock::paint(juce::Graphics &g) {
   } else {
     g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
     g.drawRoundedRectangle(bounds.reduced(0.5f), cornerRadius, 1.5f);
+  }
+
+  // Draw tab bars where applicable
+  {
+    auto layout = targetNode->getLayout();
+
+    auto drawTabBar = [&](juce::Rectangle<int> tabRect,
+                          const juce::StringArray &labels, int activeTab) {
+      if (labels.size() <= 1) {
+        return;
+      }
+      int n = labels.size();
+      int tabW = tabRect.getWidth() / n;
+      for (int t = 0; t < n; ++t) {
+        int tx = tabRect.getX() + t * tabW;
+        int tw = (t == n - 1) ? tabRect.getRight() - tx : tabW;
+        juce::Rectangle<int> tRect(tx, tabRect.getY(), tw, tabRect.getHeight());
+        auto tRectF = tRect.reduced(1).toFloat();
+        if (t == activeTab) {
+          g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.25f));
+          g.fillRoundedRectangle(tRectF, 3.0f);
+        }
+        g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.5f));
+        g.drawRoundedRectangle(tRectF, 3.0f, 1.0f);
+        g.setColour(juce::Colours::white.withAlpha(t == activeTab ? 1.0f : 0.6f));
+        g.setFont(juce::Font(juce::FontOptions(10.0f)));
+        g.drawText(labels[t], tRect, juce::Justification::centred);
+      }
+    };
+
+    if (!isTabExpanded && !isExpanded && layout.hasCompactTabs()) {
+      auto compactBody = compactBodyRect();
+      compactBody.removeFromTop(HEADER_HEIGHT);
+      drawTabBar(compactBody.removeFromTop(TAB_HEIGHT),
+                 layout.compactTabLabels, activeCompactTab);
+    }
+
+    if (isTabExpanded && layout.hasExpandedTabs()) {
+      auto area = getLocalBounds();
+      area.removeFromTop(HEADER_HEIGHT);
+      drawTabBar(area.removeFromTop(TAB_HEIGHT),
+                 layout.expandedTabLabels, activeExpandedTab);
+    }
+
+    if (isExpanded && layout.hasUnfoldedTabs()) {
+      auto area = getLocalBounds();
+      area.removeFromTop(HEADER_HEIGHT);
+      drawTabBar(area.removeFromTop(TAB_HEIGHT),
+                 layout.unfoldedTabLabels, activeUnfoldedTab);
+    }
   }
 
   // Helper: pick fill/stroke colours based on port type
@@ -1035,24 +1149,27 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
 }
 
 void NodeBlock::resized() {
-  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
+  auto layout = targetNode->getLayout();
+  bool unfolded = isExpanded && layout.hasUnfoldedLayout();
+  bool tabExpanded = isTabExpanded && layout.hasTabExpanded();
 
-  // Header: top of full panel when unfolded, top of compact body when not.
-  auto headerSource = unfolded ? getLocalBounds() : compactBodyRect();
+  // Header: top of full panel when unfolded or tab-expanded, else compact body.
+  auto headerSource = (unfolded || tabExpanded) ? getLocalBounds() : compactBodyRect();
   auto compactBody = compactBodyRect();
   auto header = headerSource.removeFromTop(HEADER_HEIGHT);
 
   deleteButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
   bypassButton.setBounds(header.removeFromLeft(HEADER_HEIGHT).reduced(3));
-  titleLabel.setBounds(header.withTrimmedLeft(6));
   if (expandButton.isVisible()) {
     expandButton.setBounds(header.removeFromRight(HEADER_HEIGHT).reduced(3));
   }
+  titleLabel.setBounds(header.withTrimmedLeft(6));
 
-  // Compact body after-header rect (used even when unfolded, for compact layout)
+  // Compact body content area (below header)
   compactBody.removeFromTop(HEADER_HEIGHT);
-
-  auto layout = targetNode->getLayout();
+  if (layout.hasCompactTabs()) {
+    compactBody.removeFromTop(TAB_HEIGHT);
+  }
 
   // Places elements within a given body rect, mapping (gridW x gridH) subgrid
   // coordinates to pixel positions.
@@ -1079,20 +1196,41 @@ void NodeBlock::resized() {
         }
       };
 
-  // Compact controls always placed in the compact body (after header).
+  // Compact controls in compact body.
   layoutElementsInRect(layout.elements, dynamicComponents,
                        compactBody.getX() + PORT_MARGIN, compactBody.getY(),
                        compactBody.getWidth() - (PORT_MARGIN * 2),
                        compactBody.getHeight() - 4,
                        layout.gridWidth, layout.gridHeight);
 
-  // Unfolded controls span the full panel, starting below the header.
+  // Tab-expanded controls span the full panel below the header (and tab bar).
+  if (tabExpanded) {
+    auto expandedArea = getLocalBounds();
+    expandedArea.removeFromTop(HEADER_HEIGHT);
+    if (layout.hasExpandedTabs()) {
+      expandedArea.removeFromTop(TAB_HEIGHT);
+    }
+    layoutElementsInRect(layout.expandedElements, expandedComponents,
+                         PORT_MARGIN, expandedArea.getY(),
+                         getWidth() - PORT_MARGIN * 2,
+                         expandedArea.getHeight() - 4,
+                         layout.expandedGridWidth, layout.expandedGridHeight);
+  }
+
+  // Unfolded controls span the full panel below the header (and tab bar).
   if (unfolded) {
+    const auto &e = layout.unfoldExtents;
+    int unfoldGridW = layout.gridWidth + e.left + e.right;
+    int unfoldGridH = layout.gridHeight + e.up + e.down;
+    int ringTop = HEADER_HEIGHT;
+    if (layout.hasUnfoldedTabs()) {
+      ringTop += TAB_HEIGHT;
+    }
     layoutElementsInRect(layout.unfoldedElements, unfoldedComponents,
-                         PORT_MARGIN, HEADER_HEIGHT,
-                         getWidth() - (PORT_MARGIN * 2),
-                         getHeight() - HEADER_HEIGHT - 4,
-                         layout.gridWidth + 2, layout.gridHeight + 2);
+                         PORT_MARGIN, ringTop,
+                         getWidth() - PORT_MARGIN * 2,
+                         getHeight() - ringTop - 4,
+                         unfoldGridW, unfoldGridH);
   }
 
   if (customControls != nullptr) {
@@ -1111,6 +1249,63 @@ void NodeBlock::mouseDown(const juce::MouseEvent &e) {
       onAddToSelection();
     }
     return;
+  }
+
+  // Tab bar click handling
+  {
+    auto layout = targetNode->getLayout();
+    auto pos = e.getPosition();
+
+    auto hitTabBar = [&](juce::Rectangle<int> tabRect,
+                         const juce::StringArray &labels) -> int {
+      if (labels.size() <= 1 || !tabRect.contains(pos)) {
+        return -1;
+      }
+      int n = labels.size();
+      int tabW = tabRect.getWidth() / n;
+      int relX = pos.x - tabRect.getX();
+      int t = juce::jlimit(0, n - 1, relX / (tabW > 0 ? tabW : 1));
+      return t;
+    };
+
+    if (!isTabExpanded && !isExpanded && layout.hasCompactTabs()) {
+      auto compactBody = compactBodyRect();
+      compactBody.removeFromTop(HEADER_HEIGHT);
+      auto tabRect = compactBody.removeFromTop(TAB_HEIGHT);
+      int t = hitTabBar(tabRect, layout.compactTabLabels);
+      if (t >= 0) {
+        activeCompactTab = t;
+        updateTabVisibility();
+        repaint();
+        return;
+      }
+    }
+
+    if (isTabExpanded && layout.hasExpandedTabs()) {
+      auto area = getLocalBounds();
+      area.removeFromTop(HEADER_HEIGHT);
+      auto tabRect = area.removeFromTop(TAB_HEIGHT);
+      int t = hitTabBar(tabRect, layout.expandedTabLabels);
+      if (t >= 0) {
+        activeExpandedTab = t;
+        updateTabVisibility();
+        repaint();
+        return;
+      }
+    }
+
+    if (isExpanded && layout.hasUnfoldedTabs()) {
+      auto area = getLocalBounds();
+      area.removeFromTop(HEADER_HEIGHT);
+      auto tabRect = area.removeFromTop(TAB_HEIGHT);
+      int t = hitTabBar(tabRect, layout.unfoldedTabLabels);
+      if (t >= 0) {
+        activeUnfoldedTab = t;
+        updateTabVisibility();
+        repaint();
+        return;
+      }
+    }
   }
 
   // If this node is already in a multi-selection, defer the selection change.

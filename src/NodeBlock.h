@@ -41,22 +41,35 @@ class NodeBlock : public juce::Component, private juce::Timer {
   static constexpr int PORT_SPACING = 24;
   static constexpr int HEADER_HEIGHT = 28;
   static constexpr int PORT_MARGIN = 14;
+  static constexpr int TAB_HEIGHT = 20;
 
   // Called by GraphCanvas after construction to share the editor's selection state
   void setSelectedMacroPtr(int *ptr) {
     selectedMacroPtr = ptr;
     // Propagate to all macro-aware sliders, buttons, and combos
-    for (auto &info : sliderMacroInfos)
-      if (auto *s = dynamic_cast<CustomMacroSlider *>(info.slider))
+    for (auto &info : sliderMacroInfos) {
+      if (auto *s = dynamic_cast<CustomMacroSlider *>(info.slider)) {
         s->selectedMacroPtr = ptr;
-    for (auto *comp : dynamicComponents)
-      if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
+      }
+    }
+    for (auto *comp : dynamicComponents) {
+      if (auto *b = dynamic_cast<CustomMacroButton *>(comp)) {
         b->selectedMacroPtr = ptr;
-    for (auto *comp : unfoldedComponents)
-      if (auto *b = dynamic_cast<CustomMacroButton *>(comp))
+      }
+    }
+    for (auto *comp : expandedComponents) {
+      if (auto *b = dynamic_cast<CustomMacroButton *>(comp)) {
         b->selectedMacroPtr = ptr;
-    for (auto &info : comboMacroInfos)
+      }
+    }
+    for (auto *comp : unfoldedComponents) {
+      if (auto *b = dynamic_cast<CustomMacroButton *>(comp)) {
+        b->selectedMacroPtr = ptr;
+      }
+    }
+    for (auto &info : comboMacroInfos) {
       info.combo->selectedMacroPtr = ptr;
+    }
   }
 
   std::function<void()> onDelete;
@@ -86,11 +99,17 @@ class NodeBlock : public juce::Component, private juce::Timer {
   juce::TextButton expandButton{">"};
 
   bool isExpanded = false;
+  bool isTabExpanded = false;
+  int activeCompactTab = 0;
+  int activeExpandedTab = 0;
+  int activeUnfoldedTab = 0;
 
   // True when a blocked-unfold flash is in progress.
   int unfoldBlockedFlashCounter = 0;
 
   void toggleExpansion();
+  void toggleTabExpansion();
+  void updateTabVisibility();
   void updateSize();
 
   // Returns the rect (in local coords) occupied by the compact node body.
@@ -107,8 +126,9 @@ class NodeBlock : public juce::Component, private juce::Timer {
   std::unique_ptr<juce::Component> customControls;
 
   // Dynamic UI Elements (Layout-driven)
-  juce::OwnedArray<juce::Component> dynamicComponents;
-  juce::OwnedArray<juce::Component> unfoldedComponents;
+  juce::OwnedArray<juce::Component> dynamicComponents;   // compact elements (all tabs, flat)
+  juce::OwnedArray<juce::Component> expandedComponents;  // tab-expanded elements (all tabs, flat)
+  juce::OwnedArray<juce::Component> unfoldedComponents;  // unfolded elements (all tabs, flat)
 
   // Selected-macro state (pointer into editor's selectedMacro field)
   int *selectedMacroPtr = nullptr;
