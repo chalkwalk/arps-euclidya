@@ -46,7 +46,11 @@ Patch cables come in three colours that indicate what type of data is flowing:
 
 - **Transpose Node `(Macros)`**: Shifts the entire sequence chromatically by +/- N semitones. *(Inputs: 1, Outputs: 1)*
 - **Octave Transpose Node `(Macros)`**: Shifts the sequence by +/- N full octaves. *(Inputs: 1, Outputs: 1)*
-- **Quantizer Node `(Macros)`**: Forces every note in the sequence onto a specific musical scale and key. Scale mode and "rest on drop" behavior are macro-bindable. *(Inputs: 1, Outputs: 1)*
+- **Quantizer Node `(Macros)`**: Constrains every note to a named scale and root key. Two modes are available: **Filter** drops out-of-scale notes (optionally inserting a rest to preserve rhythmic alignment), and **Snap** moves each note to the nearest in-scale step, breaking ties upward. The scale list, snap mode, and rest-on-drop toggle are macro-bindable.
+
+  Expand the node's unfolded panel to access the **Scale Editor**: an interactive step grid showing one cell per step of the active tuning. Cell brightness indicates harmonic consonance relative to the root (brighter = closer to a low-integer harmonic). Click any cell to toggle that step in or out of the scale, then hit **Save as...** to store the result as a named user scale. The compact panel provides a scale dropdown (populated from the built-in library plus your saved scales) and a root note selector.
+
+  The node is **tuning-aware**: when a microtonal tuning is loaded, the step grid automatically resizes to match the tuning's step count, quantization snaps within the new step space, and the scale dropdown switches to show only scales authored for that tuning. Switching tunings updates all Quantizer nodes in the patch live. *(Inputs: 1, Outputs: 1)*
 - **Fold Node `(Macros)`**: Condenses the sequence timeline by folding multiple steps into single chords, either in chunks or via a rolling window. *(Inputs: 1, Outputs: 1)*
 - **Unfold Node `(Macros)`**: Extracts chords into sequential linear arpeggios, with controls for ascending/descending sorting, width limits, and note dropping priorities. *(Inputs: 1, Outputs: 1)*
 

@@ -14,7 +14,7 @@ This is your primary workspace where you build and connect your node networks.
 - **Fluid Navigation**: You can pan smoothly by clicking and dragging on any empty background space. Use `Ctrl + Scroll` (or `Cmd + Scroll` on macOS) to zoom in and out.
 - **Grid-Centric Layout**: To keep your patches organized, nodes automatically snap to a defined grid. When zoomed in, a subtle background grid appears to help you align your modules.
 - **Flight Path Preview**: When dragging nodes or cables, a clear path visibly connects your cursor to the resolved snap destination, providing clear, real-time feedback on routing boundaries and placements.
-- **Unfolding Panels**: Node panels can be unfolded to reveal advanced parameters. These unfolded panels support expansion in all directions (up, down, left, right) depending on the node's layout.
+- **Unfolding Panels**: Node panels can be unfolded to reveal advanced parameters. These unfolded panels support expansion in all directions (up, down, left, right) depending on the node's layout. For example, unfolding the Quantizer reveals an interactive step-grid scale editor.
 - **Tabbing Support**: Inside expanded node panels, tabbing structures allow deep configuration elements to be grouped neatly without taking up excessive screen real estate.
 
 ### Keyboard Shortcuts

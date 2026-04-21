@@ -24,3 +24,5 @@ The foundation of Arps Euclidya rests upon five critical pillars:
    Unlike basic arpeggiators that simply smash chords into single-note lines, Euclidya provides specialized combinatorial nodes. You can extract top or bottom notes, exhaustively span N-note combinations, or intelligently unzip chords into separate polyphonic sequences.
 5. **Euclidean Rhythm and Melody**
    Central to the plugin is its unique approach to rhythm. By employing decoupled Euclidean arrays for *Pattern* (note play vs. skip) and *Rhythm* (clock trigger vs. rest), the engine generates evolving polyrhythms that remain harmonically tethered to your input.
+6. **Microtonal & Tuning-Aware Quantization**
+   Load any Scala/KBM tuning file and every part of the system adapts: pitch-bend output from the MIDI Out node tracks each note's deviation from equal temperament, and the Quantizer node's step grid resizes to the tuning's step count. A built-in harmonic-proximity scorer shades each step by consonance, making it easy to author and save scales in any tuning system directly from the panel.

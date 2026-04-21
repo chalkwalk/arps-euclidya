@@ -85,7 +85,44 @@ Node UI is data-driven. Each node ships a companion `<NodeName>.json` file that 
 
 This separation keeps node logic (`process()`) independent of UI and makes adding controls to a node purely a data change.
 
-### 3.6 Patch Library (`src/PatchLibrary.h`)
+### 3.6 Scale System (`src/Scales/`)
+
+The Scale subsystem provides tuning-agnostic scale authoring and selection for the Quantizer node.
+
+#### Scale Abstraction
+
+A `Scale` (`src/Scales/Scale.h`) is `{ name, tuningName, stepMask }`. `tuningName` is `""` for 12-TET or the Scala file name for microtonal tunings. `stepMask` is a `std::vector<bool>` whose size equals the tuning's step count per octave.
+
+#### ScaleLibrary (`src/Scales/ScaleLibrary.h/cpp`)
+
+A singleton that owns two collections:
+
+- **Factory scales**: 17 built-in 12-TET scales (Lydian, Ionian, Dorian, …, Chromatic) shipped as JSON resources under `resources/scales/12-TET/` and compiled into the binary via `FactoryScaleData`. Non-12-TET tunings ship with no factory scales; users author their own.
+- **User scales**: JSON files stored under `~/.config/ArpsEuclidya/Scales/<tuningName>/`. `saveUserScale()` writes the file and updates the in-memory list; `scanUserScales()` re-reads from disk.
+
+`getScaleNames(tuningName)` returns factory then user names in canonical order. `findScale(name, tuningName)` resolves by name and tuning.
+
+#### HarmonicAnalysis (`src/Scales/HarmonicAnalysis.h/cpp`)
+
+`scoreStep(tuning, stepCount, rootStep, step)` returns a consonance score in `[0, 1]` by computing each step's interval from the root in cents, then finding the minimum distance to the octave-reduced harmonic series `{2, 3, 5, 7, 11, 13}`. Score 1 = coincides with a harmonic; score 0 = 100 cents or more away. For 12-TET this naturally highlights the fifth, major third, minor seventh, etc. The function is pure and works identically for any N-TET or Scala tuning.
+
+#### ScaleEditorComponent (`src/Scales/ScaleEditorComponent.h/cpp`)
+
+A custom JUCE component displayed in the Quantizer's unfolded panel. It renders one cell per tuning step: background brightness is driven by `HarmonicAnalysis::scoreStep`; active steps are filled blue; the hovered cell shows a white outline ring. Clicking a cell toggles it and marks the scale as "Custom". A *Save as...* button opens a modal to name and persist the current mask to the user library. The component polls `stepsPerOctave` and `stepMaskBits` atomically at 20 Hz and repaints only when they change.
+
+#### Quantizer ↔ Tuning Synchronisation
+
+`QuantizerNode` holds a `const TuningTable* activeTuning`. `PluginProcessor::pushTuningToNodes()` distributes the active tuning to every `QuantizerNode` in the graph (and every `MidiOutNode` for pitch-bend output). This is called on tuning change, on patch load (after tuning is restored), and when a new Quantizer is added to the graph. When the tuning changes, `setActiveTuning()` on the node:
+
+1. Tries to keep the currently selected scale name. If the name exists in the new tuning's library it is kept; otherwise the node resets to the first available scale (or clears the name if the list is empty).
+2. Calls `refreshStepMask()`, which derives the fallback step count from `activeTuning->stepsPerOctave` — so a 19-TET node with no user scales defaults to all 19 steps active rather than 12.
+3. Stores the result atomically so `process()` on the audio thread reads a consistent mask without locking.
+
+#### Persistence
+
+`saveNodeState` stores `selectedScaleName` and an inline comma-separated `stepMask` attribute. On load, `loadNodeState` first tries a library lookup by name; if that fails (user deleted the scale or patch came from another machine) it falls back to the inline mask. This keeps patches fully portable across sessions.
+
+### 3.7 Patch Library (`src/PatchLibrary.h`)
 
 Patches are serialized as XML to disk. `GraphEngine` drives `saveNodeState` / `loadNodeState` on each node (including macro bindings via `saveMacroBindings` / `loadMacroBindings`), and the top-level XML records the connection graph, macro polarities, and canvas position for every node. Patches are stored in a user-configurable directory and displayed in a browsable panel with name, description, and tags.
 
@@ -139,7 +176,7 @@ These nodes declare **Notes** ports — they interpret pitch numerically and sho
 
 - **Transpose Node** *(Macros)*: Shifts the entire sequence by a fixed semitone interval.
 - **Octave Transpose Node** *(Macros)*: Shifts by full octaves.
-- **Quantizer Node** *(Macros)*: Constrains all pitches to a specific musical scale and root. Scale mode and rest-on-drop behavior are macro-bindable.
+- **Quantizer Node** *(Macros)*: Constrains all pitches to a named scale and root. Operates in *Filter* mode (drop out-of-scale notes, optionally replacing them with rests) or *Snap* mode (move each note to the nearest in-scale step, tie-breaking upward). Scale selection, snap mode, and rest-on-drop are macro-bindable. The node is tuning-aware: when a microtonal tuning is active its step grid and quantization logic resize to match the tuning's step count automatically. See §3.7 for the Scale subsystem.
 
 ### 4.5 Routing & Logic
 

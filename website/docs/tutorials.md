@@ -40,7 +40,7 @@ Arps Euclidya includes a series of factory patches designed to teach you the mod
 
 - **Path**: `All Notes` -> `Quantizer` -> `Symmetry Nodes (Converge/Diverge/Reverse)` -> `Zip` -> `MIDI Out`.
 - **Concept**: This patch requires no MIDI input. It uses all 12 chromatic notes, quantizes them to a C Aeolian scale, and then uses symmetrical transformations to build complex, 4-note evolving chords.
-- **Action**: Change the scale on the `Quantizer` to instantly morph the entire generative composition.
+- **Action**: Change the scale on the `Quantizer` to instantly morph the entire generative composition. If you load a microtonal tuning, the Quantizer's step grid will resize to match — unfold the node to author a custom scale for that tuning and save it for reuse.
 
 ## Tutorial 5: Multi-Channel Polyrhythms
 
