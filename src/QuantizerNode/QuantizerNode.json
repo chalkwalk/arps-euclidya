@@ -1,117 +1,66 @@
 {
-  "gridWidth": 2,
-  "gridHeight": 3,
-  "elements": [
+  "gridWidth": 3,
+  "gridHeight": 2,
+  "tabs": [
     {
-      "type": "Label",
       "label": "Scale",
-      "gridBounds": [
-        0,
-        0,
-        17,
-        13
+      "elements": [
+        {
+          "type": "Label",
+          "label": "Scale",
+          "gridBounds": [0, 0, 20, 20]
+        },
+        {
+          "type": "ComboBox",
+          "options": [],
+          "gridBounds": [20, 0, 40, 20],
+          "label": "scaleName"
+        },
+        {
+          "type": "Label",
+          "label": "Root",
+          "gridBounds": [0, 20, 20, 20]
+        },
+        {
+          "type": "ComboBox",
+          "options": ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
+          "gridBounds": [20, 20, 40, 20],
+          "label": "rootNote"
+        }
       ]
     },
     {
-      "type": "ComboBox",
-      "options": [
-        "Lydian",
-        "Ionian",
-        "Mixolydian",
-        "Dorian",
-        "Aeolian",
-        "Phrygian",
-        "Locrian",
-        "Major",
-        "Minor",
-        "Harmonic Minor",
-        "Melodic Minor",
-        "Major Pentatonic",
-        "Minor Pentatonic",
-        "Whole Tone",
-        "Diminished"
-      ],
-      "gridBounds": [
-        17,
-        0,
-        23,
-        13
-      ],
-      "label": "tonality"
-    },
-    {
-      "type": "Label",
-      "label": "Root",
-      "gridBounds": [
-        0,
-        13,
-        17,
-        13
+      "label": "Options",
+      "elements": [
+        {
+          "type": "Label",
+          "label": "Snap",
+          "gridBounds": [0, 0, 25, 20]
+        },
+        {
+          "type": "Toggle",
+          "gridBounds": [25, 0, 35, 20],
+          "label": "mode"
+        },
+        {
+          "type": "Label",
+          "label": "Rests",
+          "gridBounds": [0, 20, 25, 20]
+        },
+        {
+          "type": "Toggle",
+          "gridBounds": [25, 20, 35, 20],
+          "label": "restOnDrop"
+        }
       ]
-    },
+    }
+  ],
+  "unfoldExtents": { "right": 4, "down": 1 },
+  "unfoldedElements": [
     {
-      "type": "ComboBox",
-      "options": [
-        "C",
-        "C#",
-        "D",
-        "D#",
-        "E",
-        "F",
-        "F#",
-        "G",
-        "G#",
-        "A",
-        "A#",
-        "B"
-      ],
-      "gridBounds": [
-        17,
-        13,
-        23,
-        13
-      ],
-      "label": "rootNote"
-    },
-    {
-      "type": "Label",
-      "label": "Snap",
-      "gridBounds": [
-        0,
-        27,
-        17,
-        13
-      ]
-    },
-    {
-      "type": "Toggle",
-      "gridBounds": [
-        17,
-        27,
-        23,
-        13
-      ],
-      "label": "mode"
-    },
-    {
-      "type": "Label",
-      "label": "Rests",
-      "gridBounds": [
-        0,
-        40,
-        17,
-        13
-      ]
-    },
-    {
-      "type": "Toggle",
-      "gridBounds": [
-        17,
-        40,
-        23,
-        13
-      ],
-      "label": "restOnDrop"
+      "type": "Custom",
+      "customType": "ScaleEditor",
+      "gridBounds": [0, 0, 140, 60]
     }
   ]
 }

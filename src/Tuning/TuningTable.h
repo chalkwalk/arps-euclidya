@@ -7,6 +7,7 @@
 
 struct TuningTable {
   std::array<float, 128> centsDeviation{};
+  int stepsPerOctave = 12;
   juce::String name;
   juce::File sclFile;
   juce::File kbmFile;

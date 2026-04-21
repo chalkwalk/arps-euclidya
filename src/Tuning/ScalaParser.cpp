@@ -146,6 +146,7 @@ TuningTable ScalaParser::computeTable(const std::vector<double>& scaleCents,
   // scaleCents[0..N-2] are the N-1 scale steps; scaleCents[N-1] is the period.
   // Build an array of scale degree → cents-from-unison (including degree 0 = 0.0).
   int scaleSize = (int)scaleCents.size();  // = N from the SCL file
+  table.stepsPerOctave = scaleSize;
   std::vector<double> degreeCents((size_t)(scaleSize + 1));
   degreeCents[0] = 0.0;
   for (int i = 0; i < scaleSize; ++i) {

@@ -157,7 +157,8 @@ class ArpsEuclidyaProcessor
   // Microtonality: parse sclFile+kbmFile and distribute to all MidiOutNodes.
   // Pass an invalid kbmFile to use the default mapping.
   void setActiveTuning(const juce::File &sclFile,
-                       const juce::File &kbmFile = {});
+                       const juce::File &kbmFile = {},
+                       bool rebuildUI = true);
   void clearActiveTuning();
   [[nodiscard]] juce::String getActiveTuningName() const {
     return activeTuning.isIdentity() ? juce::String() : activeTuning.name;

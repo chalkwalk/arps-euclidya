@@ -56,6 +56,9 @@ target_sources(ArpsEuclidya
         Tuning/ScalaParser.cpp
         Tuning/TuningLibrary.cpp
         Tuning/TuningPanel.cpp
+        Scales/ScaleLibrary.cpp
+        Scales/HarmonicAnalysis.cpp
+        Scales/ScaleEditorComponent.cpp
         QuantizerNode/QuantizerNode.cpp
         ReverseNode/ReverseNode.cpp
         RouteNode/RouteNode.cpp
@@ -117,6 +120,25 @@ juce_add_binary_data(FactoryPatchData NAMESPACE FactoryPatches SOURCES
     ../patches/Factory/Tutorial/Tutorial_5.euclidya
     ../patches/Factory/Tutorial/Tutorial_6.euclidya)
 
+juce_add_binary_data(FactoryScaleData NAMESPACE FactoryScales SOURCES
+    ../resources/scales/12-TET/Lydian.json
+    ../resources/scales/12-TET/Ionian.json
+    ../resources/scales/12-TET/Mixolydian.json
+    ../resources/scales/12-TET/Dorian.json
+    ../resources/scales/12-TET/Aeolian.json
+    ../resources/scales/12-TET/Phrygian.json
+    ../resources/scales/12-TET/Locrian.json
+    ../resources/scales/12-TET/Major.json
+    ../resources/scales/12-TET/Minor.json
+    ../resources/scales/12-TET/HarmonicMinor.json
+    ../resources/scales/12-TET/MelodicMinor.json
+    ../resources/scales/12-TET/MajorPentatonic.json
+    ../resources/scales/12-TET/MinorPentatonic.json
+    ../resources/scales/12-TET/WholeTone.json
+    ../resources/scales/12-TET/Diminished.json
+    ../resources/scales/12-TET/Blues.json
+    ../resources/scales/12-TET/Chromatic.json)
+
 juce_add_binary_data(FactoryTuningData NAMESPACE FactoryTunings SOURCES
     ../patches/FactoryTunings/19-tet.scl
     ../patches/FactoryTunings/22-tet.scl
@@ -139,6 +161,7 @@ target_link_libraries(ArpsEuclidya
         NodeLayoutData
         FactoryPatchData
         FactoryTuningData
+        FactoryScaleData
         juce::juce_audio_utils
         juce::juce_audio_plugin_client
         juce::juce_opengl

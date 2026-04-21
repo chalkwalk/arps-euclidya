@@ -5,6 +5,7 @@
 #include "AppSettings.h"
 #include "MacroParameter.h"
 #include "MidiOutNode/MidiOutNode.h"
+#include "QuantizerNode/QuantizerNode.h"
 #include "PluginEditor.h"
 #include "Tuning/ScalaParser.h"
 
@@ -517,10 +518,14 @@ void ArpsEuclidyaProcessor::pushTuningToNodes() {
   for (auto *node : graphEngine.getMidiOutNodes()) {
     node->setActiveTuning(ptr);
   }
+  for (auto *node : graphEngine.getQuantizerNodes()) {
+    node->setActiveTuning(ptr);
+  }
 }
 
 void ArpsEuclidyaProcessor::setActiveTuning(const juce::File &sclFile,
-                                            const juce::File &kbmFile) {
+                                            const juce::File &kbmFile,
+                                            bool rebuildUI) {
   activeTuning = ScalaParser::parse(sclFile, kbmFile);
 
   // Store relative paths for serialization
@@ -532,6 +537,11 @@ void ArpsEuclidyaProcessor::setActiveTuning(const juce::File &sclFile,
                          : juce::String();
 
   pushTuningToNodes();
+  if (rebuildUI) {
+    if (auto *editor = getEditor()) {
+      editor->rebuildCanvas();
+    }
+  }
 }
 
 void ArpsEuclidyaProcessor::clearActiveTuning() {
@@ -539,6 +549,9 @@ void ArpsEuclidyaProcessor::clearActiveTuning() {
   activeSclRelPath.clear();
   activeKbmRelPath.clear();
   pushTuningToNodes();
+  if (auto *editor = getEditor()) {
+    editor->rebuildCanvas();
+  }
 }
 
 bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
@@ -658,6 +671,9 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     }
   }
 
+  // Restore Tuning first so nodes load with the correct tuning active
+  restoreTuningFromXml(xmlState);
+
   // Restore Graph State
   auto *graphXml = xmlState->getChildByName("Graph");
   if (graphXml != nullptr) {
@@ -678,7 +694,7 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     }
     updateMacroNames();
 
-    // Re-push any active tuning to the freshly loaded nodes
+    // Push tuning to freshly loaded nodes and rebuild UI with correct scale lists
     pushTuningToNodes();
 
     if (auto *editor = getEditor()) {
@@ -701,8 +717,6 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
     currentPatchMetadata = PatchMetadata();
   }
 
-  // Restore Tuning
-  restoreTuningFromXml(xmlState);
 }
 
 void ArpsEuclidyaProcessor::restoreTuningFromXml(juce::XmlElement *xmlState) {
@@ -724,7 +738,7 @@ void ArpsEuclidyaProcessor::restoreTuningFromXml(juce::XmlElement *xmlState) {
   juce::File kbmFile =
       kbmRel.isNotEmpty() ? tuningDir.getChildFile(kbmRel) : juce::File{};
   if (sclFile.existsAsFile()) {
-    setActiveTuning(sclFile, kbmFile);
+    setActiveTuning(sclFile, kbmFile, /*rebuildUI=*/false);
   } else {
     DBG("PluginProcessor: tuning file not found: " + sclFile.getFullPathName());
   }
@@ -849,6 +863,12 @@ void ArpsEuclidyaProcessor::addNode(const std::shared_ptr<GraphNode> &node) {
 
     graphEngine.addNode(node);
     updateMacroNames();
+
+    // Push current tuning to a newly added QuantizerNode
+    if (auto *qn = dynamic_cast<QuantizerNode *>(node.get())) {
+      const TuningTable *ptr = activeTuning.isIdentity() ? nullptr : &activeTuning;
+      qn->setActiveTuning(ptr);
+    }
   });
 }
 

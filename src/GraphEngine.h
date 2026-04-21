@@ -45,6 +45,7 @@ class GraphEngine {
 
   // Helpers to get specific node types
   std::vector<class MidiOutNode *> getMidiOutNodes() const;
+  std::vector<class QuantizerNode *> getQuantizerNodes() const;
 
   juce::Point<int> findClosestFreeSpot(int startX, int startY, int gridW,
                                        int gridH,

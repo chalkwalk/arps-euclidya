@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "MidiOutNode/MidiOutNode.h"
+#include "QuantizerNode/QuantizerNode.h"
 
 void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
   if (macrosPtr != nullptr) {
@@ -31,6 +32,16 @@ std::vector<MidiOutNode *> GraphEngine::getMidiOutNodes() const {
     }
   }
   return outNodes;
+}
+
+std::vector<QuantizerNode *> GraphEngine::getQuantizerNodes() const {
+  std::vector<QuantizerNode *> result;
+  for (const auto &node : nodes) {
+    if (auto *q = dynamic_cast<QuantizerNode *>(node.get())) {
+      result.push_back(q);
+    }
+  }
+  return result;
 }
 
 void GraphEngine::removeNode(GraphNode *node) {
