@@ -30,6 +30,31 @@ static const FactoryPatchEntry kFactoryPatches[] = {
     {"Tutorial_4_euclidya", "Tutorial/Tutorial_4.euclidya"},
     {"Tutorial_5_euclidya", "Tutorial/Tutorial_5.euclidya"},
     {"Tutorial_6_euclidya", "Tutorial/Tutorial_6.euclidya"},
+    {"Gesture_Velocity_Ratchet_euclidya",
+     "Expressive/Gesture_Velocity_Ratchet.euclidya"},
+    {"MPE_Filter_Dialogue_euclidya", "Expressive/MPE_Filter_Dialogue.euclidya"},
+    {"Pad_Pressure_Gate_euclidya", "Expressive/Pad_Pressure_Gate.euclidya"},
+    {"Zip_MPE_Recombine_euclidya", "Expressive/Zip_MPE_Recombine.euclidya"},
+    {"And_Or_Logic_euclidya", "Harmonic/And_Or_Logic.euclidya"},
+    {"Chord_Stack_Quantized_euclidya",
+     "Harmonic/Chord_Stack_Quantized.euclidya"},
+    {"Diverge_Spread_euclidya", "Harmonic/Diverge_Spread.euclidya"},
+    {"Interleave_Counterpoint_euclidya",
+     "Harmonic/Interleave_Counterpoint.euclidya"},
+    {"Sequence_Fold_Return_euclidya", "Melodic/Sequence_Fold_Return.euclidya"},
+    {"Split_Dialogue_euclidya", "Melodic/Split_Dialogue.euclidya"},
+    {"UpDown_vs_Interleave_euclidya", "Melodic/UpDown_vs_Interleave.euclidya"},
+    {"Walk_Evolve_euclidya", "Melodic/Walk_Evolve.euclidya"},
+    {"_19TET_Neutral_Triads_euclidya",
+     "Microtonal/19TET_Neutral_Triads.euclidya"},
+    {"_31TET_Meantone_Sweep_euclidya",
+     "Microtonal/31TET_Meantone_Sweep.euclidya"},
+    {"JI_5Limit_Pad_euclidya", "Microtonal/JI_5Limit_Pad.euclidya"},
+    {"Pythagorean_UpDown_euclidya", "Microtonal/Pythagorean_UpDown.euclidya"},
+    {"Euclid_Basic_euclidya", "Rhythmic/Euclid_Basic.euclidya"},
+    {"Polymeter_Split_euclidya", "Rhythmic/Polymeter_Split.euclidya"},
+    {"Ratchet_Cascade_euclidya", "Rhythmic/Ratchet_Cascade.euclidya"},
+    {"Shuffle_Humanize_euclidya", "Rhythmic/Shuffle_Humanize.euclidya"},
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,6 +76,13 @@ bool PatchLibrary::installFactoryPatches() const {
 
   DBG("PatchLibrary: installing/upgrading factory patches to v" +
       juce::String(kFactoryPatchVersion));
+
+  // Remove stale .euclidya files left by previous versions so old patches
+  // (e.g. Tutorial_*.euclidya at the factory root from pre-1.4) don't persist.
+  for (const auto &entry : juce::RangedDirectoryIterator(
+           factoryDir, true, "*.euclidya", juce::File::findFiles)) {
+    entry.getFile().deleteFile();
+  }
 
   int installed = 0;
   for (const auto &entry : kFactoryPatches) {

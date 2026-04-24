@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Note Large" uuid="d100000000000000000000000000001a" gridX="1"
+            gridY="0" bypassed="0"
+            noteText="Full MPE expression matrix workout. Enable MPE on the Midi In node and connect an MPE controller. Pressure (Z-axis) drives velocity — squeeze harder for louder notes. Timbre / CC74 (Y-axis) drives ratchet depth — slide upward to create note bursts. Pitch bend (X-axis) drives octave jumps. Each dimension works per-note independently. Bind M1 to mpeVelZ, M2 to mpeRatY, M3 to mpeOctX to control how strongly each gesture maps."
+            sizeW="4" sizeH="2"/>
+      <Node type="Midi In" uuid="d100000000000000000000000000002a" gridX="1"
+            gridY="3" bypassed="0" channelFilter="1" macroChannelFilter="-1"
+            mpeEnabled="1"/>
+      <Node type="Sort" uuid="d100000000000000000000000000003a" gridX="3"
+            gridY="3" bypassed="0"/>
+      <Node type="Midi Out" uuid="d100000000000000000000000000004a" gridX="5"
+            gridY="3" bypassed="0" pSteps="16" pBeats="9" pOffset="1"
+            rSteps="13" rBeats="9" rOffset="0" syncMode="0"
+            patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="4" triplet="0" outputChannel="1"
+            mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.8"
+            mpeRatX="0.0" mpeRatY="0.6" mpeRatZ="0.0"
+            mpeGateX="0.0" mpeGateY="0.0" mpeGateZ="0.0"
+            mpeOctX="0.5" mpeOctY="0.0" mpeOctZ="0.0"
+            passExpressions="1" channelMode="0"
+            humTiming="0.0" humVelocity="0.0" humGate="0.0"
+            gatePercent="0.7" flexGate="0"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="d100000000000000000000000000002a" sourcePort="0"
+                  targetUuid="d100000000000000000000000000003a" targetPort="0"/>
+      <Connection sourceUuid="d100000000000000000000000000003a" sourcePort="0"
+                  targetUuid="d100000000000000000000000000004a" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="D1: Gesture Velocity Ratchet" author="ChalkWalkMusic"
+            description="Full MPE matrix: Pressure (Z) drives velocity, Timbre (Y) drives ratchet, Pitch Bend (X) drives octave jumps. Use an MPE controller for per-note expression."
+            tags="expressive mpe pressure timbre ratchet octave gesture" created="2026-04-21T00:00:00" modified="2026-04-21T00:00:00"/>
+</ArpsEuclidyaState>

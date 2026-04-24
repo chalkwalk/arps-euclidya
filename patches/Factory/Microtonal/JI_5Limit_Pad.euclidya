@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Note Large" uuid="e300000000000000000000000000001a" gridX="1"
+            gridY="0" bypassed="0"
+            noteText="No MIDI input needed. All Notes generates the full chromatic set; Quantizer filters to a major pentatonic (C,D,E,G,A) in 5-limit just intonation — pure beatless fifths and thirds. Select (M1) switches between Converge (inside-out ordering) and Diverge (outside-in) for different note-ordering textures. Flex Gate and long gate % give a sustained pad quality. Unfold the Quantizer to author a different JI subset."
+            sizeW="4" sizeH="2"/>
+      <Node type="All Notes" uuid="e300000000000000000000000000002a" gridX="1"
+            gridY="3" bypassed="0" baseOctave="5"/>
+      <Node type="Quantizer" uuid="e300000000000000000000000000003a" gridX="3"
+            gridY="3" bypassed="0" selectedScaleName="JI-Pentatonic"
+            rootNote="0" mode="0" restOnDrop="0"
+            stepMask="1,0,1,0,1,0,0,1,0,1,0,0"/>
+      <Node type="Converge" uuid="e300000000000000000000000000004a" gridX="5"
+            gridY="2" bypassed="0"/>
+      <Node type="Diverge" uuid="e300000000000000000000000000005a" gridX="5"
+            gridY="5" bypassed="0"/>
+      <Node type="Select" uuid="e300000000000000000000000000006a" gridX="7"
+            gridY="3" bypassed="0" selectSource="0"/>
+      <Node type="Midi Out" uuid="e300000000000000000000000000007a" gridX="9"
+            gridY="3" bypassed="0" pSteps="16" pBeats="7" pOffset="-1"
+            rSteps="13" rBeats="9" rOffset="0" syncMode="1"
+            patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="5" triplet="0" outputChannel="1"
+            mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
+            mpeRatX="0.0" mpeRatY="0.0" mpeRatZ="0.0"
+            mpeGateX="0.0" mpeGateY="0.0" mpeGateZ="0.0"
+            mpeOctX="0.0" mpeOctY="0.0" mpeOctZ="0.0"
+            passExpressions="0" channelMode="0"
+            humTiming="0.0" humVelocity="0.0" humGate="0.0"
+            gatePercent="1.1" flexGate="1"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="e300000000000000000000000000002a" sourcePort="0"
+                  targetUuid="e300000000000000000000000000003a" targetPort="0"/>
+      <Connection sourceUuid="e300000000000000000000000000003a" sourcePort="0"
+                  targetUuid="e300000000000000000000000000004a" targetPort="0"/>
+      <Connection sourceUuid="e300000000000000000000000000003a" sourcePort="0"
+                  targetUuid="e300000000000000000000000000005a" targetPort="0"/>
+      <Connection sourceUuid="e300000000000000000000000000004a" sourcePort="0"
+                  targetUuid="e300000000000000000000000000006a" targetPort="0"/>
+      <Connection sourceUuid="e300000000000000000000000000005a" sourcePort="0"
+                  targetUuid="e300000000000000000000000000006a" targetPort="1"/>
+      <Connection sourceUuid="e300000000000000000000000000006a" sourcePort="0"
+                  targetUuid="e300000000000000000000000000007a" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Tuning scl="Factory/ji_5limit.scl" kbm=""/>
+  <Metadata name="E3: JI 5-Limit Pad" author="ChalkWalkMusic"
+            description="Autonomous pad: All Notes into a JI pentatonic filter. Pure beatless intervals. Select toggles between Converge and Diverge ordering. Flex Gate sustains the texture."
+            tags="microtonal ji just-intonation pentatonic pad autonomous converge diverge" created="2026-04-21T00:00:00" modified="2026-04-21T00:00:00"/>
+</ArpsEuclidyaState>

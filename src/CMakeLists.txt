@@ -118,7 +118,27 @@ juce_add_binary_data(FactoryPatchData NAMESPACE FactoryPatches SOURCES
     ../patches/Factory/Tutorial/Tutorial_3.euclidya
     ../patches/Factory/Tutorial/Tutorial_4.euclidya
     ../patches/Factory/Tutorial/Tutorial_5.euclidya
-    ../patches/Factory/Tutorial/Tutorial_6.euclidya)
+    ../patches/Factory/Tutorial/Tutorial_6.euclidya
+    ../patches/Factory/Expressive/Gesture_Velocity_Ratchet.euclidya
+    ../patches/Factory/Expressive/MPE_Filter_Dialogue.euclidya
+    ../patches/Factory/Expressive/Pad_Pressure_Gate.euclidya
+    ../patches/Factory/Expressive/Zip_MPE_Recombine.euclidya
+    ../patches/Factory/Harmonic/And_Or_Logic.euclidya
+    ../patches/Factory/Harmonic/Chord_Stack_Quantized.euclidya
+    ../patches/Factory/Harmonic/Diverge_Spread.euclidya
+    ../patches/Factory/Harmonic/Interleave_Counterpoint.euclidya
+    ../patches/Factory/Melodic/Sequence_Fold_Return.euclidya
+    ../patches/Factory/Melodic/Split_Dialogue.euclidya
+    ../patches/Factory/Melodic/UpDown_vs_Interleave.euclidya
+    ../patches/Factory/Melodic/Walk_Evolve.euclidya
+    ../patches/Factory/Microtonal/19TET_Neutral_Triads.euclidya
+    ../patches/Factory/Microtonal/31TET_Meantone_Sweep.euclidya
+    ../patches/Factory/Microtonal/JI_5Limit_Pad.euclidya
+    ../patches/Factory/Microtonal/Pythagorean_UpDown.euclidya
+    ../patches/Factory/Rhythmic/Euclid_Basic.euclidya
+    ../patches/Factory/Rhythmic/Polymeter_Split.euclidya
+    ../patches/Factory/Rhythmic/Ratchet_Cascade.euclidya
+    ../patches/Factory/Rhythmic/Shuffle_Humanize.euclidya)
 
 juce_add_binary_data(FactoryScaleData NAMESPACE FactoryScales SOURCES
     ../resources/scales/12-TET/Lydian.json

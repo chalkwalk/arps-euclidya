@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Note Large" uuid="b300000000000000000000000000001a" gridX="1"
+            gridY="0" bypassed="0"
+            noteText="Two arpeggiation styles in one patch, switchable in real time. Concatenate joins ascending then descending for a classic up-down sweep. Interleave braids ascending and descending notes — A[0],B[0],A[1],B[1]... — for a more melodically interesting zigzag. Octave Stack adds vertical width. Bind M1 to the Select source to toggle between styles live."
+            sizeW="4" sizeH="2"/>
+      <Node type="Midi In" uuid="b300000000000000000000000000002a" gridX="1"
+            gridY="4" bypassed="0" channelFilter="1" macroChannelFilter="-1"
+            mpeEnabled="0"/>
+      <Node type="Sort" uuid="b300000000000000000000000000003a" gridX="3"
+            gridY="4" bypassed="0"/>
+      <Node type="Reverse" uuid="b300000000000000000000000000004a" gridX="3"
+            gridY="6" bypassed="0"/>
+      <Node type="Concatenate" uuid="b300000000000000000000000000005a" gridX="5"
+            gridY="4" bypassed="0"/>
+      <Node type="Interleave" uuid="b300000000000000000000000000006a" gridX="5"
+            gridY="6" bypassed="0"/>
+      <Node type="Select" uuid="b300000000000000000000000000007a" gridX="7"
+            gridY="5" bypassed="0" selectSource="0"/>
+      <Node type="Octave Stack" uuid="b300000000000000000000000000008a" gridX="9"
+            gridY="5" bypassed="0" octaves="1" macroOctaves="-1"/>
+      <Node type="Midi Out" uuid="b300000000000000000000000000009a" gridX="11"
+            gridY="5" bypassed="0" pSteps="16" pBeats="7" pOffset="0"
+            rSteps="13" rBeats="9" rOffset="1" syncMode="1"
+            patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="4" triplet="0" outputChannel="1"
+            mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
+            mpeRatX="0.0" mpeRatY="0.0" mpeRatZ="0.0"
+            mpeGateX="0.0" mpeGateY="0.0" mpeGateZ="0.0"
+            mpeOctX="0.0" mpeOctY="0.0" mpeOctZ="0.0"
+            passExpressions="0" channelMode="0"
+            humTiming="0.0" humVelocity="0.0" humGate="0.0"
+            gatePercent="0.75" flexGate="0"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="b300000000000000000000000000002a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000003a" targetPort="0"/>
+      <Connection sourceUuid="b300000000000000000000000000003a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000004a" targetPort="0"/>
+      <Connection sourceUuid="b300000000000000000000000000003a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000005a" targetPort="0"/>
+      <Connection sourceUuid="b300000000000000000000000000004a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000005a" targetPort="1"/>
+      <Connection sourceUuid="b300000000000000000000000000003a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000006a" targetPort="0"/>
+      <Connection sourceUuid="b300000000000000000000000000004a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000006a" targetPort="1"/>
+      <Connection sourceUuid="b300000000000000000000000000005a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000007a" targetPort="0"/>
+      <Connection sourceUuid="b300000000000000000000000000006a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000007a" targetPort="1"/>
+      <Connection sourceUuid="b300000000000000000000000000007a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000008a" targetPort="0"/>
+      <Connection sourceUuid="b300000000000000000000000000008a" sourcePort="0"
+                  targetUuid="b300000000000000000000000000009a" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="B3: Up-Down vs Interleave" author="ChalkWalkMusic"
+            description="Toggle between a classic up-down sweep (Concatenate) and a braided zigzag (Interleave) using the Select node. Both use the same ascending/descending inputs."
+            tags="melodic concatenate interleave select arpeggiation pattern" created="2026-04-21T00:00:00" modified="2026-04-21T00:00:00"/>
+</ArpsEuclidyaState>

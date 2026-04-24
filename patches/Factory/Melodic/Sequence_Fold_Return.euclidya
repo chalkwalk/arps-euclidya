@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ArpsEuclidyaState version="2">
+  <APVTS>
+    <Parameters>
+      <PARAM id="macro_1"/>
+      <PARAM id="macro_10"/>
+      <PARAM id="macro_11"/>
+      <PARAM id="macro_12"/>
+      <PARAM id="macro_13"/>
+      <PARAM id="macro_14"/>
+      <PARAM id="macro_15"/>
+      <PARAM id="macro_16"/>
+      <PARAM id="macro_17"/>
+      <PARAM id="macro_18"/>
+      <PARAM id="macro_19"/>
+      <PARAM id="macro_2"/>
+      <PARAM id="macro_20"/>
+      <PARAM id="macro_21"/>
+      <PARAM id="macro_22"/>
+      <PARAM id="macro_23"/>
+      <PARAM id="macro_24"/>
+      <PARAM id="macro_25"/>
+      <PARAM id="macro_26"/>
+      <PARAM id="macro_27"/>
+      <PARAM id="macro_28"/>
+      <PARAM id="macro_29"/>
+      <PARAM id="macro_3"/>
+      <PARAM id="macro_30"/>
+      <PARAM id="macro_31"/>
+      <PARAM id="macro_32"/>
+      <PARAM id="macro_4"/>
+      <PARAM id="macro_5"/>
+      <PARAM id="macro_6"/>
+      <PARAM id="macro_7"/>
+      <PARAM id="macro_8"/>
+      <PARAM id="macro_9"/>
+    </Parameters>
+  </APVTS>
+  <Graph>
+    <Nodes>
+      <Node type="Note Large" uuid="b200000000000000000000000000001a" gridX="1"
+            gridY="0" bypassed="0"
+            noteText="A C major scale drawn in the Sequence node is compressed by Fold (window=4, chunks) into 4-note chords, then re-expanded by Unfold back into a linear arpeggio. The round-trip reorders notes, producing a different pattern from the original. Octave Stack adds width. No MIDI input needed — the Sequence runs autonomously. Bind M1 to Fold nValue (window size) and M2 to Unfold ordering to reshape the output."
+            sizeW="4" sizeH="2"/>
+      <Node type="Sequence" uuid="b200000000000000000000000000002a" gridX="1"
+            gridY="3" bypassed="0" seqLength="8"
+            activeGrid="60,0;62,1;64,2;65,3;67,4;69,5;71,6;72,7;"/>
+      <Node type="Fold" uuid="b200000000000000000000000000003a" gridX="3"
+            gridY="3" bypassed="0" nValue="4" mode="0"/>
+      <Node type="Unfold" uuid="b200000000000000000000000000004a" gridX="5"
+            gridY="3" bypassed="0" ordering="0" fixedWidth="0" noteBias="0"/>
+      <Node type="Octave Stack" uuid="b200000000000000000000000000005a" gridX="7"
+            gridY="3" bypassed="0" octaves="1" macroOctaves="-1"/>
+      <Node type="Midi Out" uuid="b200000000000000000000000000006a" gridX="9"
+            gridY="3" bypassed="0" pSteps="16" pBeats="9" pOffset="0"
+            rSteps="13" rBeats="11" rOffset="1" syncMode="1"
+            patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
+            clockDivisionIndex="4" triplet="0" outputChannel="1"
+            mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
+            mpeRatX="0.0" mpeRatY="0.0" mpeRatZ="0.0"
+            mpeGateX="0.0" mpeGateY="0.0" mpeGateZ="0.0"
+            mpeOctX="0.0" mpeOctY="0.0" mpeOctZ="0.0"
+            passExpressions="0" channelMode="0"
+            humTiming="0.0" humVelocity="0.0" humGate="0.0"
+            gatePercent="0.8" flexGate="0"/>
+    </Nodes>
+    <Connections>
+      <Connection sourceUuid="b200000000000000000000000000002a" sourcePort="0"
+                  targetUuid="b200000000000000000000000000003a" targetPort="0"/>
+      <Connection sourceUuid="b200000000000000000000000000003a" sourcePort="0"
+                  targetUuid="b200000000000000000000000000004a" targetPort="0"/>
+      <Connection sourceUuid="b200000000000000000000000000004a" sourcePort="0"
+                  targetUuid="b200000000000000000000000000005a" targetPort="0"/>
+      <Connection sourceUuid="b200000000000000000000000000005a" sourcePort="0"
+                  targetUuid="b200000000000000000000000000006a" targetPort="0"/>
+    </Connections>
+  </Graph>
+  <Metadata name="B2: Sequence Fold Return" author="ChalkWalkMusic"
+            description="A drawn C major scale is folded into 4-note chords then unfolded back into a linear arpeggio. The round-trip reorders the notes autonomously — no MIDI input needed."
+            tags="melodic sequence fold unfold autonomous generative" created="2026-04-21T00:00:00" modified="2026-04-21T00:00:00"/>
+</ArpsEuclidyaState>
