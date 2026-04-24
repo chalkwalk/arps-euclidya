@@ -291,6 +291,45 @@
                     "type": "Toggle",
                     "label": "passExpressions",
                     "gridBounds": [62, 89, 17, 9]
+                },
+                {
+                    "type": "Label",
+                    "label": "HUM TIMING",
+                    "gridBounds": [1, 81, 17, 3]
+                },
+                {
+                    "type": "RotarySlider",
+                    "label": "humTiming",
+                    "floatMin": 0.0,
+                    "floatMax": 1.0,
+                    "step": 0.01,
+                    "gridBounds": [2, 84, 14, 10]
+                },
+                {
+                    "type": "Label",
+                    "label": "HUM VEL",
+                    "gridBounds": [21, 81, 17, 3]
+                },
+                {
+                    "type": "RotarySlider",
+                    "label": "humVelocity",
+                    "floatMin": 0.0,
+                    "floatMax": 1.0,
+                    "step": 0.01,
+                    "gridBounds": [22, 84, 14, 10]
+                },
+                {
+                    "type": "Label",
+                    "label": "HUM GATE",
+                    "gridBounds": [41, 81, 17, 3]
+                },
+                {
+                    "type": "RotarySlider",
+                    "label": "humGate",
+                    "floatMin": 0.0,
+                    "floatMax": 1.0,
+                    "step": 0.01,
+                    "gridBounds": [42, 84, 14, 10]
                 }
             ]
         },
