@@ -25,12 +25,6 @@ class LayoutParser {
     layout.gridWidth = obj->getProperty("gridWidth");
     layout.gridHeight = obj->getProperty("gridHeight");
 
-    // Tab-expanded dimensions
-    if (obj->hasProperty("expandedGridWidth"))
-      layout.expandedGridWidth = obj->getProperty("expandedGridWidth");
-    if (obj->hasProperty("expandedGridHeight"))
-      layout.expandedGridHeight = obj->getProperty("expandedGridHeight");
-
     // Unfold extents (per-direction; defaults to 1 if absent)
     if (obj->hasProperty("unfoldExtents")) {
       if (auto *ex = obj->getProperty("unfoldExtents").getDynamicObject()) {
@@ -56,12 +50,6 @@ class LayoutParser {
           if (auto *e = v.getDynamicObject())
             layout.elements.push_back(parseElement(e));
       }
-    }
-
-    // ── Expanded elements ───────────────────────────────────────────────────
-    if (obj->hasProperty("expandedTabs")) {
-      parseTabs(obj->getProperty("expandedTabs"), layout.expandedElements,
-                layout.expandedTabLabels, layout.expandedTabBoundaries);
     }
 
     // ── Unfolded elements ───────────────────────────────────────────────────

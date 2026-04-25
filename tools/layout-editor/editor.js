@@ -43,10 +43,9 @@ let nodeFiles = new Map();
 let currentNodeKey = null;
 let currentData = null;
 
-// previewMode: 0 = compact, 1 = tab-expanded, 2 = unfolded
+// previewMode: 0 = compact, 1 = unfolded
 let previewMode = 0;
 let currentCompactTab  = 0;
-let currentExpandedTab = 0;
 let currentUnfoldedTab = 0;
 
 let selectedElementIndex = -1;
@@ -191,13 +190,6 @@ function normaliseData(data) {
   }
   data.tabs.forEach(t => { if (!t.elements) t.elements = []; });
 
-  // Tab-expanded
-  if (!data.expandedTabs) {
-    data.expandedTabs = [{ label: '', elements: data.expandedElements || [] }];
-    delete data.expandedElements;
-  }
-  data.expandedTabs.forEach(t => { if (!t.elements) t.elements = []; });
-
   // Unfolded
   if (!data.unfoldedTabs) {
     const src = data.unfoldedElements || data.extendedElements || [];
@@ -209,7 +201,7 @@ function normaliseData(data) {
 
   // Unfold extents
   if (!data.unfoldExtents) {
-    data.unfoldExtents = { up: 1, down: 1, left: 1, right: 1 };
+    data.unfoldExtents = { up: 0, down: 0, left: 0, right: 0 };
   }
 
   return data;
@@ -232,33 +224,14 @@ function serialiseForSave(data) {
     }));
   }
 
-  // Tab-expanded grid size
-  if (data.expandedGridWidth) {
-    out.expandedGridWidth  = data.expandedGridWidth;
-    out.expandedGridHeight = data.expandedGridHeight || 1;
-  }
-
-  // Tab-expanded elements
-  const hasExpElements = data.expandedTabs && data.expandedTabs.some(t => t.elements.length > 0);
-  if (hasExpElements) {
-    if (data.expandedTabs.length === 1 && !data.expandedTabs[0].label) {
-      out.expandedElements = roundBounds(data.expandedTabs[0].elements);
-    } else {
-      out.expandedTabs = data.expandedTabs.map(t => ({
-        label: t.label,
-        elements: roundBounds(t.elements),
-      }));
-    }
-  }
-
-  // Unfold extents (omit if all 1s)
+  // Unfold extents (omit if all 0s)
   const e = data.unfoldExtents || {};
-  if ((e.up||1)!==1 || (e.down||1)!==1 || (e.left||1)!==1 || (e.right||1)!==1) {
+  if ((e.up||0) || (e.down||0) || (e.left||0) || (e.right||0)) {
     out.unfoldExtents = {
-      up:    e.up    || 1,
-      down:  e.down  || 1,
-      left:  e.left  || 1,
-      right: e.right || 1,
+      up:    e.up    || 0,
+      down:  e.down  || 0,
+      left:  e.left  || 0,
+      right: e.right || 0,
     };
   }
 
@@ -288,31 +261,26 @@ function roundBounds(elements) {
 // ============================================================
 // Mode / Tab Helpers
 // ============================================================
-function isUnfoldedMode()    { return previewMode === 2; }
-function isTabExpandedMode() { return previewMode === 1; }
+function isUnfoldedMode() { return previewMode === 1; }
 
 function getUnfoldExtents() {
-  if (!currentData || !currentData.unfoldExtents) return { up:1, down:1, left:1, right:1 };
+  if (!currentData || !currentData.unfoldExtents) return { up:0, down:0, left:0, right:0 };
   const e = currentData.unfoldExtents;
-  return { up: e.up||1, down: e.down||1, left: e.left||1, right: e.right||1 };
+  return { up: e.up||0, down: e.down||0, left: e.left||0, right: e.right||0 };
 }
 
 function activeTabsArray() {
   if (!currentData) return [];
   if (previewMode === 0) return currentData.tabs || [];
-  if (previewMode === 1) return currentData.expandedTabs || [];
   return currentData.unfoldedTabs || [];
 }
 
 function activeTabIndex() {
-  if (previewMode === 0) return currentCompactTab;
-  if (previewMode === 1) return currentExpandedTab;
-  return currentUnfoldedTab;
+  return previewMode === 0 ? currentCompactTab : currentUnfoldedTab;
 }
 
 function setActiveTabIndex(t) {
   if (previewMode === 0) currentCompactTab  = t;
-  else if (previewMode === 1) currentExpandedTab = t;
   else currentUnfoldedTab = t;
 }
 
@@ -328,12 +296,6 @@ function getNodeGridSize() {
   if (!currentData) return { gw: 1, gh: 1 };
   const bw = currentData.gridWidth  || 1;
   const bh = currentData.gridHeight || 1;
-  if (isTabExpandedMode()) {
-    return {
-      gw: currentData.expandedGridWidth  || bw,
-      gh: currentData.expandedGridHeight || bh,
-    };
-  }
   if (isUnfoldedMode()) {
     const e = getUnfoldExtents();
     return { gw: e.left + bw + e.right, gh: e.up + bh + e.down };
@@ -353,7 +315,7 @@ selNode.addEventListener('change', async (e) => {
     currentData = normaliseData(JSON.parse(await file.text()));
     currentNodeKey = key;
     selectedElementIndex = -1;
-    currentCompactTab = currentExpandedTab = currentUnfoldedTab = 0;
+    currentCompactTab = currentUnfoldedTab = 0;
     undoStack.length = redoStack.length = 0;
     updateUndoButtons();
 
@@ -362,7 +324,6 @@ selNode.addEventListener('change', async (e) => {
     document.getElementById('sel-preview-mode').value = '0';
     previewMode = 0;
 
-    syncExpandedSizeInputs();
     syncUnfoldExtentsInputs();
     updateModeSettingsVisibility();
 
@@ -408,20 +369,6 @@ document.getElementById('node-h').addEventListener('change', (e) => {
   renderAll();
 });
 
-// Tab-expanded size inputs
-document.getElementById('exp-w').addEventListener('change', (e) => {
-  if (!currentData) return;
-  pushUndo();
-  currentData.expandedGridWidth = parseInt(e.target.value) || 1;
-  renderAll();
-});
-document.getElementById('exp-h').addEventListener('change', (e) => {
-  if (!currentData) return;
-  pushUndo();
-  currentData.expandedGridHeight = parseInt(e.target.value) || 1;
-  renderAll();
-});
-
 // Unfold extents inputs
 ['up','down','left','right'].forEach(dir => {
   document.getElementById(`unfold-${dir}`).addEventListener('change', (e) => {
@@ -450,11 +397,6 @@ scaleSlider.addEventListener('input', () => {
   if (currentData) renderAll();
 });
 
-function syncExpandedSizeInputs() {
-  document.getElementById('exp-w').value = currentData.expandedGridWidth  || currentData.gridWidth  || 1;
-  document.getElementById('exp-h').value = currentData.expandedGridHeight || currentData.gridHeight || 1;
-}
-
 function syncUnfoldExtentsInputs() {
   const e = getUnfoldExtents();
   document.getElementById('unfold-up').value    = e.up;
@@ -464,8 +406,7 @@ function syncUnfoldExtentsInputs() {
 }
 
 function updateModeSettingsVisibility() {
-  document.getElementById('expanded-settings').style.display = isTabExpandedMode() ? '' : 'none';
-  document.getElementById('unfold-settings').style.display   = isUnfoldedMode()    ? '' : 'none';
+  document.getElementById('unfold-settings').style.display = isUnfoldedMode() ? '' : 'none';
 }
 
 // ============================================================
@@ -482,7 +423,7 @@ function renderTabSelector() {
 
   const tabs = activeTabsArray();
   const activeIdx = activeTabIndex();
-  const modeLabel = ['Compact', 'Expanded', 'Unfolded'][previewMode];
+  const modeLabel = ['Compact', 'Unfolded'][previewMode];
 
   let html = `<div style="margin-top:8px">
     <div class="prop-row"><label>${modeLabel} Tabs</label>
@@ -629,25 +570,13 @@ function renderAll() {
   previewCanvas.height = nodeH;
 
   const ctx = previewCtx;
-  const unfolded    = isUnfoldedMode();
-  const tabExpanded = isTabExpandedMode();
+  const unfolded = isUnfoldedMode();
 
-  drawNodeBody(ctx, nodeW, nodeH, unfolded, tabExpanded, bw, bh);
+  drawNodeBody(ctx, nodeW, nodeH, unfolded, bw, bh);
 
   const body = bodyRegionForMode(nodeW, nodeH);
   const { sx, sy } = subGridPitch(body.w, body.h, gw, gh);
   drawSubGrid(ctx, body, gw, gh, sx, sy);
-
-  // When unfolded: draw compact elements dimmed in their ghost area
-  if (unfolded) {
-    const ghost = compactGhostBodyRegion();
-    const { sx: gsx, sy: gsy } = subGridPitch(ghost.w, ghost.h, bw, bh);
-    ctx.globalAlpha = 0.35;
-    (currentData.tabs[0]?.elements || []).forEach(el => {
-      drawElement(ctx, el, elementRect(el, ghost, gsx, gsy), false);
-    });
-    ctx.globalAlpha = 1.0;
-  }
 
   const editElems = currentElements();
   editElems.forEach((el, i) => {
@@ -667,32 +596,31 @@ function renderAll() {
 
   const badge = document.getElementById('edit-mode-badge');
   if (badge) {
-    const modeLabel = tabExpanded ? 'Tab-Expanded' : unfolded ? 'Unfolded' : 'Compact';
+    const modeLabel = unfolded ? 'Unfolded' : 'Compact';
     const tabs = activeTabsArray();
     const tabSuffix = tabs.length > 1
       ? ` — ${tabs[activeTabIndex()]?.label || 'Tab '+(activeTabIndex()+1)}`
       : '';
     badge.textContent = `Editing: ${modeLabel}${tabSuffix}`;
-    badge.className = `mode-badge${unfolded?' mode-badge--extended':tabExpanded?' mode-badge--tabexp':''}`;
+    badge.className = `mode-badge${unfolded ? ' mode-badge--extended' : ''}`;
   }
 }
 
 // ============================================================
 // Node Body Draw
 // ============================================================
-function drawNodeBody(ctx, nodeW, nodeH, unfolded, tabExpanded, baseGw, baseGh) {
+function drawNodeBody(ctx, nodeW, nodeH, unfolded, baseGw, baseGh) {
   const R  = 6 * (SCALE / 3);
   const Ru = 8 * (SCALE / 3);
 
   if (unfolded) {
     ctx.fillStyle = COLOR_BG_NODE_UNFOLDED;
     roundRect(ctx, 0, 0, nodeW, nodeH, Ru); ctx.fill();
-    drawCompactBodyHint(ctx, baseGw, baseGh);
     ctx.strokeStyle = COLOR_NEON_DIM;
     ctx.lineWidth = 1.5;
     roundRect(ctx, 0.5, 0.5, nodeW-1, nodeH-1, Ru); ctx.stroke();
   } else {
-    ctx.fillStyle = tabExpanded ? COLOR_BG_NODE_UNFOLDED : COLOR_BG_NODE;
+    ctx.fillStyle = COLOR_BG_NODE;
     roundRect(ctx, 0, 0, nodeW, nodeH, R); ctx.fill();
     ctx.strokeStyle = COLOR_NEON_DIM;
     ctx.lineWidth = 1.5;
@@ -750,9 +678,8 @@ function drawNodeBody(ctx, nodeW, nodeH, unfolded, tabExpanded, baseGw, baseGh) 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('×', btnX + btnSize/2, btnY + btnSize/2);
 
-  // Expand button (shown when has unfolded or tab-expanded content)
-  const hasExpand = (currentData.unfoldedTabs?.some(t => t.elements.length > 0)) ||
-                    currentData.expandedGridWidth;
+  // Expand button (shown when has unfolded content)
+  const hasExpand = currentData.unfoldedTabs?.some(t => t.elements.length > 0);
   if (hasExpand) {
     const gap = 4 * (SCALE / 3);
     const expBtnX = btnX - btnSize - gap;
@@ -761,10 +688,10 @@ function drawNodeBody(ctx, nodeW, nodeH, unfolded, tabExpanded, baseGw, baseGh) 
     ctx.strokeStyle = 'rgba(13, 240, 227, 0.5)';
     ctx.lineWidth = 1;
     roundRect(ctx, expBtnX+0.5, btnY+0.5, btnSize-1, btnSize-1, 3); ctx.stroke();
-    ctx.fillStyle = (unfolded || tabExpanded) ? COLOR_NEON : 'rgba(13, 240, 227, 0.7)';
+    ctx.fillStyle = unfolded ? COLOR_NEON : 'rgba(13, 240, 227, 0.7)';
     ctx.font = `${Math.max(7, 10 * SCALE / 3)}px sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText((unfolded || tabExpanded) ? '<' : '>', expBtnX + btnSize/2, btnY + btnSize/2);
+    ctx.fillText(unfolded ? '<' : '>', expBtnX + btnSize/2, btnY + btnSize/2);
   }
 }
 

@@ -37,7 +37,7 @@ struct UIElement {
 
 // Per-direction unfold extension counts. Defaults to 1 in all directions.
 struct UnfoldExtents {
-  int up = 1, down = 1, left = 1, right = 1;
+  int up = 0, down = 0, left = 0, right = 0;
 };
 
 struct NodeLayout {
@@ -51,14 +51,6 @@ struct NodeLayout {
   juce::StringArray compactTabLabels;   // one entry per tab; size 0 or 1 = no bar
   std::vector<int> compactTabBoundaries; // [t] = first index of tab t in elements
 
-  // ── Tab-expanded state (optional) ───────────────────────────────────────────
-  // Replaces compact view; displaces layout (does NOT overlay neighbours).
-  int expandedGridWidth = 0;   // 0 = no tab-expanded mode
-  int expandedGridHeight = 0;
-  std::vector<UIElement> expandedElements;
-  juce::StringArray expandedTabLabels;
-  std::vector<int> expandedTabBoundaries;
-
   // ── Unfold state (optional) ─────────────────────────────────────────────────
   // Overlays neighbours; asymmetric per-direction extents.
   std::vector<UIElement> unfoldedElements;
@@ -67,18 +59,13 @@ struct NodeLayout {
   std::vector<int> unfoldedTabBoundaries;
 
   // ── Queries ─────────────────────────────────────────────────────────────────
-  [[nodiscard]] bool hasCompactTabs()   const { return compactTabLabels.size() > 1; }
-  [[nodiscard]] bool hasTabExpanded()   const { return expandedGridWidth > 0; }
-  [[nodiscard]] bool hasExpandedTabs()  const { return expandedTabLabels.size() > 1; }
+  [[nodiscard]] bool hasCompactTabs()    const { return compactTabLabels.size() > 1; }
   [[nodiscard]] bool hasUnfoldedLayout() const { return !unfoldedElements.empty(); }
   [[nodiscard]] bool hasUnfoldedTabs()  const { return unfoldedTabLabels.size() > 1; }
 
   // Element range {start, count} for a specific tab in each section.
   [[nodiscard]] std::pair<int, int> compactTabRange(int t) const {
     return tabRange(compactTabBoundaries, (int)elements.size(), t);
-  }
-  [[nodiscard]] std::pair<int, int> expandedTabElementRange(int t) const {
-    return tabRange(expandedTabBoundaries, (int)expandedElements.size(), t);
   }
   [[nodiscard]] std::pair<int, int> unfoldedTabElementRange(int t) const {
     return tabRange(unfoldedTabBoundaries, (int)unfoldedElements.size(), t);

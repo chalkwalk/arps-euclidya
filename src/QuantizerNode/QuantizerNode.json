@@ -55,7 +55,7 @@
       ]
     }
   ],
-  "unfoldExtents": { "right": 4, "down": 1 },
+  "unfoldExtents": { "up": 1, "down": 1, "left": 1, "right": 4 },
   "unfoldedElements": [
     {
       "type": "Custom",

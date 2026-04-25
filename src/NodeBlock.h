@@ -57,11 +57,6 @@ class NodeBlock : public juce::Component, private juce::Timer {
         b->selectedMacroPtr = ptr;
       }
     }
-    for (auto *comp : expandedComponents) {
-      if (auto *b = dynamic_cast<CustomMacroButton *>(comp)) {
-        b->selectedMacroPtr = ptr;
-      }
-    }
     for (auto *comp : unfoldedComponents) {
       if (auto *b = dynamic_cast<CustomMacroButton *>(comp)) {
         b->selectedMacroPtr = ptr;
@@ -100,16 +95,13 @@ class NodeBlock : public juce::Component, private juce::Timer {
   juce::TextButton expandButton{">"};
 
   bool isExpanded = false;
-  bool isTabExpanded = false;
   int activeCompactTab = 0;
-  int activeExpandedTab = 0;
   int activeUnfoldedTab = 0;
 
   // True when a blocked-unfold flash is in progress.
   int unfoldBlockedFlashCounter = 0;
 
   void toggleExpansion();
-  void toggleTabExpansion();
   void updateTabVisibility();
   void updateSize();
 
@@ -128,7 +120,6 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   // Dynamic UI Elements (Layout-driven)
   juce::OwnedArray<juce::Component> dynamicComponents;   // compact elements (all tabs, flat)
-  juce::OwnedArray<juce::Component> expandedComponents;  // tab-expanded elements (all tabs, flat)
   juce::OwnedArray<juce::Component> unfoldedComponents;  // unfolded elements (all tabs, flat)
 
   // Selected-macro state (pointer into editor's selectedMacro field)

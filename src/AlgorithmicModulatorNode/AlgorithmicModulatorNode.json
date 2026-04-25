@@ -1,6 +1,7 @@
 {
   "gridWidth": 3,
   "gridHeight": 2,
+  "unfoldExtents": {"up": 1, "down": 1, "left": 1, "right": 1},
   "elements": [
     {
       "type": "ComboBox",

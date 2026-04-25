@@ -1,8 +1,7 @@
 {
     "gridWidth": 4,
     "gridHeight": 3,
-    "expandedGridWidth": 4,
-    "expandedGridHeight": 5,
+    "unfoldExtents": {"down": 2},
     "elements": [
         {
             "type": "Label",
@@ -115,7 +114,7 @@
             "gridBounds": [60, 43, 20, 10]
         }
     ],
-    "expandedTabs": [
+    "unfoldedTabs": [
         {
             "label": "Rhythm",
             "elements": [
