@@ -1,6 +1,6 @@
 # Node Dictionary
 
-The Arps Euclidya environment offers 32 specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then shift+drag the parameter knob (or shift+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
+The Arps Euclidya environment offers 32 specialized nodes, broken down into functional categories. Nodes marked `(Macros)` expose one or more parameters to the macro system — select a macro in the Macro Panel, then alt+drag the parameter knob (or alt+click a toggle button) to create a binding. Additionally, all nodes feature a **Bypass toggle** in their UI header to easily A/B test processing behavior without altering patch cables.
 
 Patch cables come in three colours that indicate what type of data is flowing:
 

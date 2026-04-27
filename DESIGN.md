@@ -219,7 +219,7 @@ The interface uses a high-contrast "Neon Slate" visual language: deep charcoal b
 The macro system has a rich set of visual indicators that keep the binding state legible at a glance:
 
 - **32 color-coded palette slots** run along the top of the plugin window. Each macro has a unique hue from a fixed 32-color HSL wheel (`src/MacroColours.h`).
-- **Selecting a macro** (click) glows its slot in full color and draws a faint matching ring on every unbound parameter knob on the canvas, signaling that shift+drag will bind it.
+- **Selecting a macro** (click) glows its slot in full color and draws a faint matching ring on every unbound parameter knob on the canvas, signaling that alt+drag will bind it.
 - **Intensity arcs** appear outside bound knobs — arc length encodes binding intensity, concentric rings for multiple bindings, each in its macro's color.
 - **Effective-value indicator**: A white bridge arc and hollow ring on the knob face show the parameter's current effective value (after all macro contributions), moving in real time.
 - **Button indicators**: Bound toggle buttons show a colored border ring (per binding), an intensity bar along the bottom, and a dot when the macro is currently overriding the local state.

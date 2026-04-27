@@ -37,15 +37,15 @@ One of the most important concepts in Arps Euclidya is the **Macro System**. Bec
 
 The plugin exposes exactly **32 global Macro parameters** to your DAW (e.g., Ableton, Bitwig, Reaper). The Macro panel runs along the top of the plugin window. Each macro is assigned a distinct color that tracks through every visual indicator in the system, so you always know at a glance which macro is responsible for which movement.
 
-### Creating a Binding (Shift+Drag)
+### Creating a Binding (Alt+Drag)
 
-The primary binding gesture is **shift+drag on any node knob**:
+The primary binding gesture is **alt+drag on any node knob**:
 
 1. **Select a macro** by clicking its palette slot — it will glow in its color and a faint ring appears on every unbound parameter knob in the graph, indicating they are ready to be claimed.
-2. **Shift+drag** any parameter knob. The binding is created immediately and the drag distance sets its **intensity** — how strongly the macro's value contributes to that parameter. Drag further up or down from where you started to increase or decrease intensity; the colored arc around the knob grows in real time.
+2. **Alt+drag** any parameter knob. The binding is created immediately and the drag distance sets its **intensity** — how strongly the macro's value contributes to that parameter. Drag further up or down from where you started to increase or decrease intensity; the colored arc around the knob grows in real time.
 3. **Release** — the binding is set. Moving the macro knob in your DAW now modulates the parameter by the specified intensity on top of its local (hand-set) value.
 
-> **Shortcut**: If you shift+drag a knob without selecting any macro first, Arps Euclidya automatically selects the next free macro and creates the binding in one gesture.
+> **Shortcut**: If you alt+drag a knob without selecting any macro first, Arps Euclidya automatically selects the next free macro and creates the binding in one gesture.
 
 ### Reading the Visual Feedback
 
@@ -81,7 +81,7 @@ Macros 1–16 default to unipolar, macros 17–32 default to bipolar.
 
 ### Binding Toggle Buttons
 
-Route, Select, Switch, and Quantizer nodes expose toggle buttons that can also be macro-bound. The gesture is a **shift+click** on the button instead of a drag. Each click with the macro selected toggles the binding on or off.
+Route, Select, Switch, and Quantizer nodes expose toggle buttons that can also be macro-bound. The gesture is an **alt+click** on the button instead of a drag. Each click with the macro selected toggles the binding on or off.
 
 ### Hardware CC Mapping & MIDI Learn
 

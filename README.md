@@ -22,7 +22,7 @@ Traditional arpeggiators are often limited to linear patterns and fixed rhythmic
 * **32 Specialized Nodes**: Includes Brownian Walk, Converge/Diverge, Quantizers, Octave Stacks, Chord Combinations, set-logic nodes (And/Or/Xor), and much more.
 * **Interactive Node Graph**: A high-performance interactive graph-based workspace with smooth pan/zoom, snap-to-grid, intuitive drag-and-drop patching, and tabbing support for organized node panels.
 * **Instant Recalculation**: A topological execution engine ensures zero-latency response to parameter changes and MIDI input.
-* **32 Global Macros**: A fully visual macro system with color-coded knobs, shift+drag binding, intensity arcs, dual-value display, and bipolar/unipolar toggling — featuring integrated MIDI learn and CC mapping to expose complex internal patch states to DAW automation and hardware controllers.
+* **32 Global Macros**: A fully visual macro system with color-coded knobs, alt+drag binding, intensity arcs, dual-value display, and bipolar/unipolar toggling — featuring integrated MIDI learn and CC mapping to expose complex internal patch states to DAW automation and hardware controllers.
 * **Native MPE Support**: Comprehensive support for per-note expression (Pitch, Pressure, Timbre) across the modular chain. See the [MPE Setup Guide](https://github.com/chalkwalk/arps-euclidya/wiki/8_MPE_Setup) for DAW configuration.
 * **Microtonal & Tuning-Aware Quantization**: Load Scala/KBM tuning files and the Quantizer node automatically adapts — its step grid resizes to match the tuning's step count, harmonic-proximity shading highlights consonant intervals, and custom scales can be authored and saved per tuning.
 

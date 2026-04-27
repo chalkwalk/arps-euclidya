@@ -29,6 +29,20 @@ Enhance your workflow with these essential shortcuts:
 | `Esc` | Cancel current cable drag or node drag. |
 | `Ctrl + Scroll` | Zoom In/Out. |
 
+### Parameter Knob Gestures
+
+All rotary knobs in node panels support the following mouse gestures:
+
+| Gesture | Action |
+| :--- | :--- |
+| **Drag** | Adjust value at normal speed. |
+| **Double-click** | Reset to default value. |
+| **Shift + drag** | Fine adjustment — approximately ¼ speed, for precise edits. Shift can be pressed or released at any point during a drag to toggle fine mode on or off. |
+| **Ctrl + drag** (Cmd on macOS) | Snap to coarse increments — jumps through ~20 evenly-spaced steps across the range. Ctrl can be pressed or released mid-drag to toggle snap on or off. |
+| **Alt + drag** | Macro binding — sets or adjusts the intensity of a binding to the currently selected macro (see [The Macro System](user-experience.md#the-macro-system-daw-automation)). |
+| **Alt + double-click** | Open MIDI Learn for this parameter. |
+| **Right-click** | Open context menu (remove bindings, MIDI learn). |
+
 ### Context Menus (Right-Click)
 
 Access rapid actions without moving your cursor to the sidebar:
@@ -49,7 +63,7 @@ Located in a collapsible sidebar, this is your toolbox. It contains every node a
 The panel along the top of the plugin window surfaces the 32 global "Macro" knobs. Each macro has a distinct color that propagates throughout the UI.
 
 - **Selecting**: Click a macro slot to select it (it glows in its color). Click it again to deselect. Only one macro can be selected at a time.
-- **Binding**: With a macro selected, shift+drag any node parameter knob to create a binding. The drag amount sets the binding's intensity. See [The Macro System](user-experience.md#the-macro-system-daw-automation) for the full workflow.
+- **Binding**: With a macro selected, alt+drag any node parameter knob to create a binding. The drag amount sets the binding's intensity. See [The Macro System](user-experience.md#the-macro-system-daw-automation) for the full workflow.
 - **Bipolar toggle**: Double-click any macro slot to switch between unipolar and bipolar modulation.
 - **Hover feedback**: Hovering over a macro slot highlights every canvas control that is currently bound to it.
 - **Clearing**: Right-click a macro slot to clear all of its bindings across the entire patch.

@@ -98,6 +98,7 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
             };
           }
         }
+        slider->defaultValue = slider->getValue();
 
         if (element.macroParamRef != nullptr) {
           auto updateSliderVisibility = [slider](const MacroParam *param) {
