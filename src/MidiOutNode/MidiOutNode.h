@@ -278,6 +278,9 @@ class MidiOutNode : public GraphNode {
   MacroParam macroHumGate{"Hum Gate", {}};
   MacroParam macroGatePercent{"Gate %", {}};
 
+  float tempoScale = 1.0f;  // Per-output tempo scale: 0.5..2.0, 1.0 = follow DAW
+  MacroParam macroTempoScale{"Tempo Scale", {}};
+
   // UI proxy variables (NodeBlock UI needs integer pointers)
   int ui_syncMode = 1;
   int ui_patternMode = 0;

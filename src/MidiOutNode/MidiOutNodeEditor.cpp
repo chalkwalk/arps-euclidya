@@ -281,6 +281,72 @@ class MidiOutVisualizer : public juce::Component, private juce::Timer {
   EuclideanVisualizer visualizer;
 };
 
+// ---------------------------------------------------------------------------
+// Tempo Scale Readout
+// Shows the averaged DAW BPM and the effective (scaled) output BPM.
+// ---------------------------------------------------------------------------
+
+class TempoScaleReadout : public juce::Component, private juce::Timer {
+ public:
+  TempoScaleReadout(ClockManager &clock, const float &scaleRef)
+      : clockManager(clock), tempoScaleRef(scaleRef) {
+    startTimerHz(15);
+  }
+  ~TempoScaleReadout() override { stopTimer(); }
+
+  void timerCallback() override {
+    float rawBpm = (float)clockManager.getBPM();
+    bpmHistory.push_back(rawBpm);
+
+    // Window: at least 1 second (15 ticks at 15 Hz) or 1 beat, whichever is
+    // longer.  At 120 BPM a beat is 0.5 s, so 1 s always wins above 60 BPM;
+    // below 60 BPM we extend the window to cover one full beat.
+    int windowSamples = std::max(15, (int)std::ceil(60.0f / rawBpm * 15.0f));
+    constexpr int kMaxHistory = 60;  // 4 s buffer
+    while ((int)bpmHistory.size() > kMaxHistory) {
+      bpmHistory.erase(bpmHistory.begin());
+    }
+    windowSamples = std::min(windowSamples, (int)bpmHistory.size());
+
+    float sum = 0.0f;
+    int startIdx = (int)bpmHistory.size() - windowSamples;
+    for (int i = startIdx; i < (int)bpmHistory.size(); ++i) {
+      sum += bpmHistory[(size_t)i];
+    }
+    float avgBpm = (windowSamples > 0) ? sum / (float)windowSamples : rawBpm;
+    float effectiveBpm = avgBpm * juce::jlimit(0.5f, 2.0f, tempoScaleRef);
+
+    if (std::abs(avgBpm - lastDawBpm) > 0.05f ||
+        std::abs(effectiveBpm - lastEffectiveBpm) > 0.05f) {
+      lastDawBpm = avgBpm;
+      lastEffectiveBpm = effectiveBpm;
+      repaint();
+    }
+  }
+
+  void paint(juce::Graphics &g) override {
+    auto b = getLocalBounds();
+    g.setFont(9.0f);
+    int halfH = b.getHeight() / 2;
+
+    g.setColour(juce::Colours::grey);
+    g.drawText("DAW: " + juce::String(lastDawBpm, 1) + " BPM",
+               b.withHeight(halfH), juce::Justification::centred);
+
+    g.setColour(juce::Colours::lightgrey);
+    g.drawText(juce::String::fromUTF8("\xe2\x86\x92 ") +
+                   juce::String(lastEffectiveBpm, 1) + " BPM",
+               b.withTrimmedTop(halfH), juce::Justification::centred);
+  }
+
+ private:
+  ClockManager &clockManager;
+  const float &tempoScaleRef;
+  std::vector<float> bpmHistory;
+  float lastDawBpm = 120.0f;
+  float lastEffectiveBpm = 120.0f;
+};
+
 // --- getLayout: load from JSON and bind all runtime pointers ---
 NodeLayout MidiOutNode::getLayout() const {
   auto layout = LayoutParser::parseFromJSON(BinaryData::MidiOutNode_json,
@@ -389,6 +455,9 @@ NodeLayout MidiOutNode::getLayout() const {
         el.macroParamRef = &self->macroGatePercent;
       } else if (el.label == "flexGate") {
         el.valueRef = &self->ui_flexGate;
+      } else if (el.label == "tempoScale") {
+        el.floatValueRef = &self->tempoScale;
+        el.macroParamRef = &self->macroTempoScale;
       }
     }
   };
@@ -407,6 +476,9 @@ std::unique_ptr<juce::Component> MidiOutNode::createCustomComponent(
   }
   if (name == "CCRegistry") {
     return std::make_unique<CCRegistryPanel>(*this);
+  }
+  if (name == "TempoScaleReadout") {
+    return std::make_unique<TempoScaleReadout>(clockManager, tempoScale);
   }
   return nullptr;
 }

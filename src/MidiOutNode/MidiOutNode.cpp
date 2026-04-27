@@ -30,6 +30,7 @@ MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
   addMacroParam(&macroHumVelocity);
   addMacroParam(&macroHumGate);
   addMacroParam(&macroGatePercent);
+  addMacroParam(&macroTempoScale);
 }
 
 namespace {
@@ -131,6 +132,7 @@ void MidiOutNode::clampParameters() {
   triplet = (ui_triplet != 0);
   passExpressions = (ui_passExpressions != 0);
   flexGate = (ui_flexGate != 0);
+  tempoScale = juce::jlimit(0.5f, 2.0f, tempoScale);
 
   ui_pBeatsMin = 1;
   ui_pBeatsMax = pSteps;
@@ -333,6 +335,11 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   double division = DIVISIONS[divIdx];
   if (triplet) {
     division *= (2.0 / 3.0);
+  }
+  {
+    float scale = juce::jlimit(0.5f, 2.0f,
+        resolveMacroFloat(macroTempoScale, tempoScale, 0.5f, 2.0f));
+    division /= static_cast<double>(scale);
   }
 
   // CC ticks independently of notes in transport-driven modes.
@@ -1190,6 +1197,7 @@ void MidiOutNode::saveNodeState(juce::XmlElement *xml) {
     xml->setAttribute("humGate", humGate);
     xml->setAttribute("gatePercent", gatePercent);
     xml->setAttribute("flexGate", flexGate ? 1 : 0);
+    xml->setAttribute("tempoScale", tempoScale);
     saveMacroBindings(xml);
   }
 }
@@ -1250,6 +1258,7 @@ void MidiOutNode::loadNodeState(juce::XmlElement *xml) {
         static_cast<float>(xml->getDoubleAttribute("gatePercent", 1.0));
     ui_flexGate = xml->getIntAttribute("flexGate", 0);
     flexGate = (ui_flexGate != 0);
+    tempoScale = static_cast<float>(xml->getDoubleAttribute("tempoScale", 1.0));
 
     // Legacy single-macro migration
     struct LegacyMapping {

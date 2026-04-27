@@ -1,48 +1,82 @@
 {
     "gridWidth": 4,
     "gridHeight": 3,
-    "unfoldExtents": {"down": 2},
     "elements": [
         {
             "type": "Label",
             "label": "PATTERN",
             "colorHex": "ffff00ff",
-            "gridBounds": [0, 0, 27, 4]
+            "gridBounds": [
+                0,
+                0,
+                27,
+                4
+            ]
         },
         {
             "type": "Label",
             "label": "RHYTHM",
             "colorHex": "ff00ffff",
-            "gridBounds": [53, 0, 27, 4]
+            "gridBounds": [
+                53,
+                0,
+                27,
+                4
+            ]
         },
         {
             "type": "Label",
             "label": "P STEPS",
-            "gridBounds": [9, 4, 13, 2]
+            "gridBounds": [
+                9,
+                4,
+                13,
+                2
+            ]
         },
         {
             "type": "RotarySlider",
             "label": "pSteps",
             "minValue": 1,
             "maxValue": 32,
-            "gridBounds": [7, 7, 17, 10]
+            "gridBounds": [
+                7,
+                7,
+                17,
+                10
+            ]
         },
         {
             "type": "Label",
             "label": "P BEATS",
-            "gridBounds": [5, 17, 13, 2]
+            "gridBounds": [
+                5,
+                17,
+                13,
+                2
+            ]
         },
         {
             "type": "RotarySlider",
             "label": "pBeats",
             "minValue": 1,
             "maxValue": 32,
-            "gridBounds": [3, 20, 17, 10]
+            "gridBounds": [
+                3,
+                20,
+                17,
+                10
+            ]
         },
         {
             "type": "Label",
             "label": "P OFFSET",
-            "gridBounds": [9, 30, 13, 2]
+            "gridBounds": [
+                9,
+                30,
+                13,
+                2
+            ]
         },
         {
             "type": "RotarySlider",
@@ -50,42 +84,77 @@
             "minValue": -16,
             "maxValue": 16,
             "bipolar": true,
-            "gridBounds": [6, 33, 17, 10]
+            "gridBounds": [
+                6,
+                33,
+                17,
+                10
+            ]
         },
         {
             "type": "Custom",
             "customType": "Visualizer",
             "label": "Visualizer",
-            "gridBounds": [18, 2, 44, 41]
+            "gridBounds": [
+                18,
+                2,
+                44,
+                41
+            ]
         },
         {
             "type": "Label",
             "label": "R STEPS",
-            "gridBounds": [58, 4, 13, 2]
+            "gridBounds": [
+                58,
+                4,
+                13,
+                2
+            ]
         },
         {
             "type": "RotarySlider",
             "label": "rSteps",
             "minValue": 1,
             "maxValue": 32,
-            "gridBounds": [56, 7, 17, 10]
+            "gridBounds": [
+                56,
+                7,
+                17,
+                10
+            ]
         },
         {
             "type": "Label",
             "label": "R BEATS",
-            "gridBounds": [62, 17, 13, 2]
+            "gridBounds": [
+                62,
+                17,
+                13,
+                2
+            ]
         },
         {
             "type": "RotarySlider",
             "label": "rBeats",
             "minValue": 1,
             "maxValue": 32,
-            "gridBounds": [60, 20, 17, 10]
+            "gridBounds": [
+                60,
+                20,
+                17,
+                10
+            ]
         },
         {
             "type": "Label",
             "label": "R OFFSET",
-            "gridBounds": [58, 30, 13, 2]
+            "gridBounds": [
+                58,
+                30,
+                13,
+                2
+            ]
         },
         {
             "type": "RotarySlider",
@@ -93,27 +162,70 @@
             "minValue": -16,
             "maxValue": 16,
             "bipolar": true,
-            "gridBounds": [56, 33, 17, 10]
+            "gridBounds": [
+                56,
+                33,
+                17,
+                10
+            ]
         },
         {
             "type": "ComboBox",
             "label": "clockDivisionIndex",
-            "options": ["4/1", "2/1", "1/1", "1/2", "1/4", "1/8", "1/16", "1/32"],
-            "gridBounds": [18, 43, 20, 10]
+            "options": [
+                "4/1",
+                "2/1",
+                "1/1",
+                "1/2",
+                "1/4",
+                "1/8",
+                "1/16",
+                "1/32"
+            ],
+            "gridBounds": [
+                18,
+                43,
+                20,
+                10
+            ]
         },
         {
             "type": "ComboBox",
             "label": "syncMode",
-            "options": ["Gestural", "Synchronized", "Deterministic", "Forgiving"],
-            "gridBounds": [38, 43, 22, 10]
+            "options": [
+                "Gestural",
+                "Synchronized",
+                "Deterministic",
+                "Forgiving"
+            ],
+            "gridBounds": [
+                38,
+                43,
+                22,
+                10
+            ]
         },
         {
             "type": "ComboBox",
             "label": "patternMode",
-            "options": ["Gated", "Clocked"],
-            "gridBounds": [60, 43, 20, 10]
+            "options": [
+                "Gated",
+                "Clocked"
+            ],
+            "gridBounds": [
+                60,
+                43,
+                20,
+                10
+            ]
         }
     ],
+    "unfoldExtents": {
+        "up": 0,
+        "down": 2,
+        "left": 0,
+        "right": 0
+    },
     "unfoldedTabs": [
         {
             "label": "Rhythm",
@@ -122,42 +234,77 @@
                     "type": "Label",
                     "label": "PATTERN",
                     "colorHex": "ffff00ff",
-                    "gridBounds": [0, 0, 27, 4]
+                    "gridBounds": [
+                        0,
+                        0,
+                        27,
+                        4
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "RHYTHM",
                     "colorHex": "ff00ffff",
-                    "gridBounds": [53, 0, 27, 4]
+                    "gridBounds": [
+                        53,
+                        0,
+                        27,
+                        4
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "P STEPS",
-                    "gridBounds": [9, 4, 13, 2]
+                    "gridBounds": [
+                        9,
+                        4,
+                        13,
+                        2
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "pSteps",
                     "minValue": 1,
                     "maxValue": 32,
-                    "gridBounds": [7, 7, 17, 10]
+                    "gridBounds": [
+                        7,
+                        7,
+                        17,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "P BEATS",
-                    "gridBounds": [5, 17, 13, 2]
+                    "gridBounds": [
+                        5,
+                        17,
+                        13,
+                        2
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "pBeats",
                     "minValue": 1,
                     "maxValue": 32,
-                    "gridBounds": [3, 20, 17, 10]
+                    "gridBounds": [
+                        3,
+                        20,
+                        17,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "P OFFSET",
-                    "gridBounds": [9, 30, 13, 2]
+                    "gridBounds": [
+                        9,
+                        30,
+                        13,
+                        2
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -165,42 +312,77 @@
                     "minValue": -16,
                     "maxValue": 16,
                     "bipolar": true,
-                    "gridBounds": [6, 33, 17, 10]
+                    "gridBounds": [
+                        6,
+                        33,
+                        17,
+                        10
+                    ]
                 },
                 {
                     "type": "Custom",
                     "customType": "Visualizer",
                     "label": "Visualizer",
-                    "gridBounds": [18, 2, 44, 41]
+                    "gridBounds": [
+                        18,
+                        2,
+                        44,
+                        41
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "R STEPS",
-                    "gridBounds": [58, 4, 13, 2]
+                    "gridBounds": [
+                        58,
+                        4,
+                        13,
+                        2
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "rSteps",
                     "minValue": 1,
                     "maxValue": 32,
-                    "gridBounds": [56, 7, 17, 10]
+                    "gridBounds": [
+                        56,
+                        7,
+                        17,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "R BEATS",
-                    "gridBounds": [62, 17, 13, 2]
+                    "gridBounds": [
+                        62,
+                        17,
+                        13,
+                        2
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "rBeats",
                     "minValue": 1,
                     "maxValue": 32,
-                    "gridBounds": [60, 20, 17, 10]
+                    "gridBounds": [
+                        60,
+                        20,
+                        17,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "R OFFSET",
-                    "gridBounds": [58, 30, 13, 2]
+                    "gridBounds": [
+                        58,
+                        30,
+                        13,
+                        2
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -208,30 +390,72 @@
                     "minValue": -16,
                     "maxValue": 16,
                     "bipolar": true,
-                    "gridBounds": [56, 33, 17, 10]
+                    "gridBounds": [
+                        56,
+                        33,
+                        17,
+                        10
+                    ]
                 },
                 {
                     "type": "ComboBox",
                     "label": "clockDivisionIndex",
-                    "options": ["4/1", "2/1", "1/1", "1/2", "1/4", "1/8", "1/16", "1/32"],
-                    "gridBounds": [18, 43, 20, 10]
+                    "options": [
+                        "4/1",
+                        "2/1",
+                        "1/1",
+                        "1/2",
+                        "1/4",
+                        "1/8",
+                        "1/16",
+                        "1/32"
+                    ],
+                    "gridBounds": [
+                        18,
+                        43,
+                        20,
+                        10
+                    ]
                 },
                 {
                     "type": "ComboBox",
                     "label": "syncMode",
-                    "options": ["Gestural", "Synchronized", "Deterministic", "Forgiving"],
-                    "gridBounds": [38, 43, 22, 10]
+                    "options": [
+                        "Gestural",
+                        "Synchronized",
+                        "Deterministic",
+                        "Forgiving"
+                    ],
+                    "gridBounds": [
+                        38,
+                        43,
+                        22,
+                        10
+                    ]
                 },
                 {
                     "type": "ComboBox",
                     "label": "patternMode",
-                    "options": ["Gated", "Clocked"],
-                    "gridBounds": [60, 43, 20, 10]
+                    "options": [
+                        "Gated",
+                        "Clocked"
+                    ],
+                    "gridBounds": [
+                        60,
+                        43,
+                        20,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "Gate %",
-                    "gridBounds": [1, 56, 16, 3]
+                    "gridBounds": [
+                        1,
+                        52,
+                        16,
+                        3
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -239,96 +463,227 @@
                     "floatMin": 0.01,
                     "floatMax": 1.5,
                     "step": 0.01,
-                    "gridBounds": [2, 59, 14, 10]
+                    "gridBounds": [
+                        2,
+                        55,
+                        14,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "Flex Gate",
-                    "gridBounds": [21, 56, 17, 3]
+                    "gridBounds": [
+                        21,
+                        56,
+                        17,
+                        3
+                    ]
                 },
                 {
                     "type": "Toggle",
                     "label": "flexGate",
-                    "gridBounds": [22, 59, 15, 10]
+                    "gridBounds": [
+                        22,
+                        59,
+                        15,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "Channel",
-                    "gridBounds": [40, 56, 19, 3]
+                    "gridBounds": [
+                        40,
+                        56,
+                        19,
+                        3
+                    ]
                 },
                 {
                     "type": "ComboBox",
                     "label": "outputChannel",
                     "options": [
-                        "Ch 1", "Ch 2", "Ch 3", "Ch 4", "Ch 5", "Ch 6", "Ch 7", "Ch 8",
-                        "Ch 9", "Ch 10", "Ch 11", "Ch 12", "Ch 13", "Ch 14", "Ch 15", "Ch 16"
+                        "Ch 1",
+                        "Ch 2",
+                        "Ch 3",
+                        "Ch 4",
+                        "Ch 5",
+                        "Ch 6",
+                        "Ch 7",
+                        "Ch 8",
+                        "Ch 9",
+                        "Ch 10",
+                        "Ch 11",
+                        "Ch 12",
+                        "Ch 13",
+                        "Ch 14",
+                        "Ch 15",
+                        "Ch 16"
                     ],
-                    "gridBounds": [40, 59, 19, 9]
+                    "gridBounds": [
+                        40,
+                        59,
+                        19,
+                        9
+                    ]
                 },
                 {
                     "type": "ComboBox",
                     "label": "channelMode",
-                    "options": ["Fixed", "Round Robin"],
-                    "gridBounds": [40, 69, 19, 9]
+                    "options": [
+                        "Fixed",
+                        "Round Robin"
+                    ],
+                    "gridBounds": [
+                        40,
+                        69,
+                        19,
+                        9
+                    ]
                 },
                 {
                     "type": "Toggle",
                     "label": "triplet",
-                    "gridBounds": [62, 59, 17, 9]
+                    "gridBounds": [
+                        62,
+                        59,
+                        17,
+                        9
+                    ]
                 },
                 {
                     "type": "Toggle",
                     "label": "patternResetOnRelease",
-                    "gridBounds": [62, 69, 17, 9]
+                    "gridBounds": [
+                        62,
+                        69,
+                        17,
+                        9
+                    ]
                 },
                 {
                     "type": "Toggle",
                     "label": "rhythmResetOnRelease",
-                    "gridBounds": [62, 79, 17, 9]
+                    "gridBounds": [
+                        62,
+                        79,
+                        17,
+                        9
+                    ]
                 },
                 {
                     "type": "Toggle",
                     "label": "passExpressions",
-                    "gridBounds": [62, 89, 17, 9]
+                    "gridBounds": [
+                        62,
+                        89,
+                        17,
+                        9
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "HUM TIMING",
-                    "gridBounds": [1, 81, 17, 3]
+                    "gridBounds": [
+                        1,
+                        81,
+                        17,
+                        3
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "humTiming",
-                    "floatMin": 0.0,
-                    "floatMax": 1.0,
+                    "floatMin": 0,
+                    "floatMax": 1,
                     "step": 0.01,
-                    "gridBounds": [2, 84, 14, 10]
+                    "gridBounds": [
+                        2,
+                        84,
+                        14,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "HUM VEL",
-                    "gridBounds": [21, 81, 17, 3]
+                    "gridBounds": [
+                        21,
+                        81,
+                        17,
+                        3
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "humVelocity",
-                    "floatMin": 0.0,
-                    "floatMax": 1.0,
+                    "floatMin": 0,
+                    "floatMax": 1,
                     "step": 0.01,
-                    "gridBounds": [22, 84, 14, 10]
+                    "gridBounds": [
+                        22,
+                        84,
+                        14,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "HUM GATE",
-                    "gridBounds": [41, 81, 17, 3]
+                    "gridBounds": [
+                        41,
+                        81,
+                        17,
+                        3
+                    ]
                 },
                 {
                     "type": "RotarySlider",
                     "label": "humGate",
-                    "floatMin": 0.0,
-                    "floatMax": 1.0,
+                    "floatMin": 0,
+                    "floatMax": 1,
                     "step": 0.01,
-                    "gridBounds": [42, 84, 14, 10]
+                    "gridBounds": [
+                        42,
+                        84,
+                        14,
+                        10
+                    ]
+                },
+                {
+                    "type": "Label",
+                    "label": "TEMPO %",
+                    "gridBounds": [
+                        0,
+                        67,
+                        19,
+                        3
+                    ]
+                },
+                {
+                    "type": "RotarySlider",
+                    "label": "tempoScale",
+                    "floatMin": 0.5,
+                    "floatMax": 2,
+                    "step": 0.01,
+                    "gridBounds": [
+                        2,
+                        70,
+                        14,
+                        10
+                    ]
+                },
+                {
+                    "type": "Custom",
+                    "customType": "TempoScaleReadout",
+                    "label": "TempoScaleReadout",
+                    "gridBounds": [
+                        18,
+                        73,
+                        22,
+                        5
+                    ]
                 }
             ]
         },
@@ -338,22 +693,42 @@
                 {
                     "type": "Label",
                     "label": "X (Bend)",
-                    "gridBounds": [16, 1, 14, 4]
+                    "gridBounds": [
+                        16,
+                        1,
+                        14,
+                        4
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "Y (Timbre)",
-                    "gridBounds": [36, 1, 14, 4]
+                    "gridBounds": [
+                        36,
+                        1,
+                        14,
+                        4
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "Z (Press)",
-                    "gridBounds": [56, 1, 14, 4]
+                    "gridBounds": [
+                        56,
+                        1,
+                        14,
+                        4
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "VEL",
-                    "gridBounds": [2, 9, 12, 4]
+                    "gridBounds": [
+                        2,
+                        9,
+                        12,
+                        4
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -362,7 +737,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [16, 6, 12, 10]
+                    "gridBounds": [
+                        16,
+                        6,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -371,7 +751,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [36, 6, 12, 10]
+                    "gridBounds": [
+                        36,
+                        6,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -380,12 +765,22 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [56, 6, 12, 10]
+                    "gridBounds": [
+                        56,
+                        6,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "RAT",
-                    "gridBounds": [2, 25, 12, 4]
+                    "gridBounds": [
+                        2,
+                        25,
+                        12,
+                        4
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -394,7 +789,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [16, 22, 12, 10]
+                    "gridBounds": [
+                        16,
+                        22,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -403,7 +803,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [36, 22, 12, 10]
+                    "gridBounds": [
+                        36,
+                        22,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -412,12 +817,22 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [56, 22, 12, 10]
+                    "gridBounds": [
+                        56,
+                        22,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "GATE",
-                    "gridBounds": [2, 41, 12, 4]
+                    "gridBounds": [
+                        2,
+                        41,
+                        12,
+                        4
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -426,7 +841,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [16, 38, 12, 10]
+                    "gridBounds": [
+                        16,
+                        38,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -435,7 +855,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [36, 38, 12, 10]
+                    "gridBounds": [
+                        36,
+                        38,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -444,12 +869,22 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [56, 38, 12, 10]
+                    "gridBounds": [
+                        56,
+                        38,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "Label",
                     "label": "OCT",
-                    "gridBounds": [2, 57, 12, 4]
+                    "gridBounds": [
+                        2,
+                        57,
+                        12,
+                        4
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -458,7 +893,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [16, 54, 12, 10]
+                    "gridBounds": [
+                        16,
+                        54,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -467,7 +907,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [36, 54, 12, 10]
+                    "gridBounds": [
+                        36,
+                        54,
+                        12,
+                        10
+                    ]
                 },
                 {
                     "type": "RotarySlider",
@@ -476,7 +921,12 @@
                     "floatMax": 1,
                     "step": 0.01,
                     "bipolar": true,
-                    "gridBounds": [56, 54, 12, 10]
+                    "gridBounds": [
+                        56,
+                        54,
+                        12,
+                        10
+                    ]
                 }
             ]
         },
@@ -487,7 +937,12 @@
                     "type": "Custom",
                     "customType": "CCRegistry",
                     "label": "CCRegistry",
-                    "gridBounds": [0, 0, 80, 100]
+                    "gridBounds": [
+                        0,
+                        0,
+                        80,
+                        100
+                    ]
                 }
             ]
         }
