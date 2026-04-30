@@ -54,7 +54,7 @@
             steps="8" beats="5" offset="0" customValues=""/>
       <Node type="Midi Out" uuid="a300000000000000000000000000005a" gridX="5"
             gridY="4" bypassed="0" pSteps="16" pBeats="9" pOffset="1"
-            rSteps="13" rBeats="9" rOffset="0" syncMode="1"
+            rSteps="13" rBeats="9" rOffset="0" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"

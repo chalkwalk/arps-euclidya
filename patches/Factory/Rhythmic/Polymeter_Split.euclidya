@@ -46,13 +46,15 @@
       <Node type="Midi In" uuid="a200000000000000000000000000002a" gridX="1"
             gridY="3" bypassed="0" channelFilter="1" macroChannelFilter="-1"
             mpeEnabled="0"/>
-      <Node type="Chord Split" uuid="a200000000000000000000000000003a" gridX="3"
+      <Node type="ChordN" uuid="a200000000000000000000000000007a" gridX="3"
+            gridY="3" bypassed="0" nValue="16"/>
+      <Node type="Chord Split" uuid="a200000000000000000000000000003a" gridX="5"
             gridY="3" bypassed="0" splitMode="0"/>
       <Node type="Octave Transpose" uuid="a200000000000000000000000000004a"
-            gridX="5" gridY="2" bypassed="0" octaves="1" macroOctaves="-1"/>
-      <Node type="Midi Out" uuid="a200000000000000000000000000005a" gridX="7"
+            gridX="7" gridY="2" bypassed="0" octaves="1" macroOctaves="-1"/>
+      <Node type="Midi Out" uuid="a200000000000000000000000000005a" gridX="9"
             gridY="2" bypassed="0" pSteps="5" pBeats="3" pOffset="0"
-            rSteps="12" rBeats="7" rOffset="0" syncMode="1"
+            rSteps="12" rBeats="7" rOffset="0" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
@@ -62,9 +64,9 @@
             passExpressions="0" channelMode="0"
             humTiming="0.0" humVelocity="0.0" humGate="0.0"
             gatePercent="0.75" flexGate="0"/>
-      <Node type="Midi Out" uuid="a200000000000000000000000000006a" gridX="7"
+      <Node type="Midi Out" uuid="a200000000000000000000000000006a" gridX="9"
             gridY="5" bypassed="0" pSteps="9" pBeats="5" pOffset="1"
-            rSteps="11" rBeats="7" rOffset="-1" syncMode="1"
+            rSteps="11" rBeats="7" rOffset="-1" syncMode="0"
             patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="5" triplet="0" outputChannel="2"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
@@ -77,6 +79,8 @@
     </Nodes>
     <Connections>
       <Connection sourceUuid="a200000000000000000000000000002a" sourcePort="0"
+                  targetUuid="a200000000000000000000000000007a" targetPort="0"/>
+      <Connection sourceUuid="a200000000000000000000000000007a" sourcePort="0"
                   targetUuid="a200000000000000000000000000003a" targetPort="0"/>
       <Connection sourceUuid="a200000000000000000000000000003a" sourcePort="0"
                   targetUuid="a200000000000000000000000000004a" targetPort="0"/>

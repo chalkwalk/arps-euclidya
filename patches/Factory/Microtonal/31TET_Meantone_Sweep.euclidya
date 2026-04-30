@@ -54,7 +54,7 @@
             stepMask="1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0"/>
       <Node type="Midi Out" uuid="e200000000000000000000000000005a" gridX="7"
             gridY="3" bypassed="0" pSteps="16" pBeats="9" pOffset="0"
-            rSteps="16" rBeats="12" rOffset="1" syncMode="1"
+            rSteps="16" rBeats="12" rOffset="1" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"

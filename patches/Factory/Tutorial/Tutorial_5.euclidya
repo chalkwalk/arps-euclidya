@@ -42,7 +42,7 @@
       <Node type="Midi Out" uuid="eb946e5e9b1f4134b06c31afc5c17768" gridX="9"
             gridY="2" bypassed="0" pSteps="13" pBeats="8" pOffset="-2" rSteps="16"
             rBeats="15" rOffset="1" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
-            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="2"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
             patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1" pressureToVelocity="0.0"
             timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
@@ -63,7 +63,7 @@
       <Node type="Midi Out" uuid="f939318d431643d7913878b53d7d3749" gridX="9"
             gridY="5" bypassed="0" pSteps="16" pBeats="11" pOffset="0" rSteps="11"
             rBeats="8" rOffset="-1" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
-            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="2"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="5" triplet="0" outputChannel="1" pressureToVelocity="0.0"
             timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>
@@ -74,7 +74,7 @@
       <Node type="Midi Out" uuid="10a157ac52fe42c7aad8f3196d6cc420" gridX="9"
             gridY="8" bypassed="0" pSteps="9" pBeats="8" pOffset="0" rSteps="11"
             rBeats="9" rOffset="0" macroPSteps="-1" macroPBeats="-1" macroPOffset="-1"
-            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="2"
+            macroRSteps="-1" macroRBeats="-1" macroROffset="-1" syncMode="0"
             patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="6" triplet="0" outputChannel="1" pressureToVelocity="0.0"
             timbreToVelocity="0.0" macroPressureToVelocity="-1" macroTimbreToVelocity="-1"/>

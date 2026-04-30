@@ -54,7 +54,7 @@
             gridY="3" bypassed="0" octaves="1" macroOctaves="-1"/>
       <Node type="Midi Out" uuid="b200000000000000000000000000006a" gridX="9"
             gridY="3" bypassed="0" pSteps="16" pBeats="9" pOffset="0"
-            rSteps="13" rBeats="11" rOffset="1" syncMode="1"
+            rSteps="13" rBeats="11" rOffset="1" syncMode="0"
             patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"

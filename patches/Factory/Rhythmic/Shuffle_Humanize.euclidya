@@ -52,7 +52,7 @@
             gridY="3" bypassed="0" walkLength="16" walkSkewInt="20"/>
       <Node type="Midi Out" uuid="a400000000000000000000000000005a" gridX="7"
             gridY="3" bypassed="0" pSteps="8" pBeats="5" pOffset="0"
-            rSteps="11" rBeats="8" rOffset="0" syncMode="1"
+            rSteps="11" rBeats="8" rOffset="0" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="5" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"

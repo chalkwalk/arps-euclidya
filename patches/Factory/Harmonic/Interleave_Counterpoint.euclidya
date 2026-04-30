@@ -59,7 +59,7 @@
             mode="1" restOnDrop="1" stepMask="1,0,1,1,0,1,0,1,1,0,1,0"/>
       <Node type="Midi Out" uuid="c400000000000000000000000000008a" gridX="11"
             gridY="4" bypassed="0" pSteps="16" pBeats="9" pOffset="0"
-            rSteps="16" rBeats="12" rOffset="1" syncMode="1"
+            rSteps="16" rBeats="12" rOffset="1" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="5" triplet="1" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"

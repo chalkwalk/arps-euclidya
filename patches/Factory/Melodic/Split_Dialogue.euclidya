@@ -54,7 +54,7 @@
             gridX="7" gridY="5" bypassed="0" octaves="-1" macroOctaves="-1"/>
       <Node type="Midi Out" uuid="b400000000000000000000000000006a" gridX="9"
             gridY="2" bypassed="0" pSteps="5" pBeats="3" pOffset="0"
-            rSteps="11" rBeats="7" rOffset="0" syncMode="1"
+            rSteps="11" rBeats="7" rOffset="0" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
@@ -66,7 +66,7 @@
             gatePercent="0.75" flexGate="0"/>
       <Node type="Midi Out" uuid="b400000000000000000000000000007a" gridX="9"
             gridY="6" bypassed="0" pSteps="7" pBeats="5" pOffset="0"
-            rSteps="11" rBeats="8" rOffset="2" syncMode="1"
+            rSteps="11" rBeats="8" rOffset="2" syncMode="0"
             patternMode="0" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="2"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"

@@ -50,7 +50,7 @@
             gridY="3" bypassed="0"/>
       <Node type="Midi Out" uuid="a100000000000000000000000000004a" gridX="5"
             gridY="3" bypassed="0" pSteps="7" pBeats="5" pOffset="-2"
-            rSteps="16" rBeats="10" rOffset="1" syncMode="1"
+            rSteps="16" rBeats="10" rOffset="1" syncMode="0"
             patternMode="1" patternResetOnRelease="1" rhythmResetOnRelease="1"
             clockDivisionIndex="4" triplet="0" outputChannel="1"
             mpeVelX="0.0" mpeVelY="0.0" mpeVelZ="0.0"
