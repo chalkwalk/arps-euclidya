@@ -350,6 +350,58 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       (syncMode == SyncMode::Synchronized ||
        syncMode == SyncMode::Deterministic);
 
+  // PPQ tolerance for "landed on a division" tests. Sized to half a block so
+  // that loop wraps, locator jumps and transport starts whose PPQ lands within
+  // the current block are recognised even when the host quantises slightly off
+  // the boundary.
+  const double samplesPerPpqVal = clockManager.getSamplesPerPpq();
+  const double ppqPerBlock =
+      (samplesPerPpqVal > 0.0) ? (double)numSamples / samplesPerPpqVal : 0.0;
+  const double onsetTolerance = std::max(0.001, ppqPerBlock * 0.5);
+  auto onDivision = [&](double ppq) {
+    double phase = std::fmod(ppq, division);
+    if (phase < 0.0) phase += division;
+    return phase < onsetTolerance || (division - phase) < onsetTolerance;
+  };
+
+  // --- Backward PPQ jump (loop wrap, manual locator) ---
+  // The standard tick detector compares floor(currentPpq/div) against
+  // floor(lastTickPpq/div) and so cannot see ticks until currentPpq grows back
+  // past the stale lastTickPpq. Detect any backward motion explicitly and let
+  // each mode react.
+  const double jumpEpsilon = 1e-6;
+  const bool backwardJump =
+      (lastTickPpq >= 0.0) && (currentPpq + jumpEpsilon < lastTickPpq);
+  if (backwardJump) {
+    lastTickPpq = currentPpq;
+    lastActualTickPpq = -1.0;
+    // Loop wraps frequently land mid-block, so currentPpq sits a little past
+    // the boundary and an onDivision() check would miss it. Treat the wrap
+    // itself as a boundary crossing and fire if there is anything to consume.
+    const bool hasCCInput =
+        (inputSequences.count(1) > 0 && !inputSequences.at(1).empty());
+    const bool fireOnWrap =
+        isPlaying && (holdingNotes || (ccTicksWithTransport && hasCCInput));
+    switch (syncMode) {
+      case SyncMode::Gestural:
+        // Phase stays keydown-relative; transport jumps don't perturb it.
+        break;
+      case SyncMode::Synchronized:
+        anchorPpq = std::floor(currentPpq / division) * division;
+        if (fireOnWrap) forceTick = true;
+        break;
+      case SyncMode::Deterministic:
+        // Indices are derived absolutely from currentPpq, so no anchor reset.
+        if (fireOnWrap) forceTick = true;
+        break;
+      case SyncMode::Forgiving:
+        forgivingSlipFraction = 0.0;
+        anchorPpq = std::floor(currentPpq / division) * division;
+        if (fireOnWrap) forceTick = true;
+        break;
+    }
+  }
+
   // --- Reset/Sync State Tracking ---
   if (wasHoldingNotes && !holdingNotes) {
     if (patternResetOnRelease) {
@@ -386,7 +438,15 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
       // Snap anchor to the nearest past boundary
       anchorPpq = std::floor(currentPpq / division) * division;
       double lateness = currentPpq - anchorPpq;
-      double graceThreshold = division / 8.0;
+
+      // Late-only forgiveness window: ~80 ms of human timing tolerance,
+      // expressed in absolute time so it doesn't scale with clock division.
+      // Clamped to division/2 so it never reaches back past the midpoint
+      // toward the previous beat at very fast tempos / short divisions.
+      const double bpm = clockManager.getBPM();
+      const double graceMs = 80.0;
+      const double graceFromMs = (graceMs / 1000.0) * (bpm / 60.0);
+      const double graceThreshold = std::min(graceFromMs, division * 0.5);
 
       if (lateness < graceThreshold) {
         // Close enough to the beat — fire immediately and schedule phase slip
@@ -410,7 +470,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     bool hasCCInput =
         (inputSequences.count(1) > 0 && !inputSequences.at(1).empty());
     if ((holdingNotes || (ccTicksWithTransport && hasCCInput)) &&
-        std::fmod(currentPpq, division) < 0.001) {
+        onDivision(currentPpq)) {
       forceTick = true;
     }
   }
@@ -489,6 +549,9 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
   if (!isPlaying && prevWasPlaying) {
     // Discard any humanize-deferred note-ons — they should not fire after stop.
     pendingNoteOns.clear();
+    // Don't carry Forgiving phase-slip across a stop: a fresh restart should
+    // start fresh, not resume a partially-converged shortened division.
+    forgivingSlipFraction = 0.0;
     // Cap all pending note-offs to within one clock division so notes
     // drain naturally rather than cutting off hard. flushPlayingNotes
     // handles the actual note-offs and channel-allocator cleanup.
@@ -556,18 +619,14 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
             long long nR = (cycles * (long long)aRB) +
                            (long long)countOnes(rPat, partial);
             if (patternMode == PatternMode::Clocked) {
-              if (nR > 0) {
-                long long k = nR - 1;
-                long long pCyc = k / (long long)aPB;
-                int pNoteIdx = (int)(k % (long long)aPB);
-                long long pos = (pCyc * (long long)aPS) +
-                                (long long)findIndexOfNote(pat, pNoteIdx);
-                patternIndex = (int)(pos % (long long)aPS);
-                ccIndex = (int)(pos % (long long)ccLenT);
-              } else {
-                patternIndex = 0;
-                ccIndex = 0;
-              }
+              // See note in note path: nR is already the 0-indexed beat.
+              long long k = nR;
+              long long pCyc = k / (long long)aPB;
+              int pNoteIdx = (int)(k % (long long)aPB);
+              long long pos = (pCyc * (long long)aPS) +
+                              (long long)findIndexOfNote(pat, pNoteIdx);
+              patternIndex = (int)(pos % (long long)aPS);
+              ccIndex = (int)(pos % (long long)ccLenT);
             } else {
               patternIndex = (int)(nR % (long long)aPS);
               ccIndex = (int)(nR % (long long)ccLenT);
@@ -681,22 +740,19 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
                      (long long)countOnes(rhythmPattern, partialSteps);
 
       if (patternMode == PatternMode::Clocked) {
-        if (nR > 0) {
-          // Pos(nR, Pattern)
-          long long k = nR - 1;
-          long long pCycles = k / (long long)actualPBeats;
-          int pNoteIdx = (int)(k % (long long)actualPBeats);
-          long long pos = (pCycles * (long long)actualPSteps) +
-                          (long long)findIndexOfNote(pattern, pNoteIdx);
+        // nR is the 0-indexed position of the current rhythm beat among all
+        // beats fired so far (countOnes counts beats strictly before this
+        // step, which for a step where rPat[i]=true is exactly that index).
+        // So nR is itself the 0-indexed pattern beat to fire — no -1 offset.
+        long long k = nR;
+        long long pCycles = k / (long long)actualPBeats;
+        int pNoteIdx = (int)(k % (long long)actualPBeats);
+        long long pos = (pCycles * (long long)actualPSteps) +
+                        (long long)findIndexOfNote(pattern, pNoteIdx);
 
-          patternIndex = (int)(pos % (long long)actualPSteps);
-          sequenceIndex = (int)(pos % (long long)sequence.size());
-          if (ccLen > 0) ccIndex = (int)(pos % (long long)ccLen);
-        } else {
-          patternIndex = 0;
-          sequenceIndex = 0;
-          ccIndex = 0;
-        }
+        patternIndex = (int)(pos % (long long)actualPSteps);
+        sequenceIndex = (int)(pos % (long long)sequence.size());
+        if (ccLen > 0) ccIndex = (int)(pos % (long long)ccLen);
       } else {
         // Gated: Rhythm counts map directly to Indices
         patternIndex = (int)(nR % (long long)actualPSteps);
