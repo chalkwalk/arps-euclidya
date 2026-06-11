@@ -24,7 +24,11 @@ class TimelineRuler : public juce::Component {
   double pixelsPerBar = 48.0;  // zoom; clamped to [8, 400]
   double viewStartPpq = 0.0;   // scroll; >= 0
   bool draggingPlayhead = false;
-  // (Commit 4 adds loop-drag state here.)
+
+  // Loop-drag state
+  enum class LoopDragMode { None, Create, ResizeStart, ResizeEnd };
+  LoopDragMode loopDragMode = LoopDragMode::None;
+  double loopDragAnchorPpq = 0.0;  // fixed end during a resize drag
 
   static constexpr double kPpqPerBar = 4.0;
 

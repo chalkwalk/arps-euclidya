@@ -58,6 +58,19 @@ TransportBar::TransportBar(ClockManager &clockManager)
   bpmLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   bpmLabel.setColour(juce::Label::textColourId, juce::Colour(0xffdddddd));
 
+  // Loop toggle button
+  addAndMakeVisible(loopButton);
+  loopButton.setButtonText("Loop");
+  loopButton.setClickingTogglesState(true);
+  loopButton.setToggleState(clock.isLoopEnabled(), juce::dontSendNotification);
+  loopButton.onClick = [this]() {
+    clock.setLoopEnabled(loopButton.getToggleState());
+  };
+  loopButton.setColour(juce::TextButton::buttonColourId,
+                       juce::Colour(0xff333333));
+  loopButton.setColour(juce::TextButton::buttonOnColourId,
+                       juce::Colour(0xffaadd00).withAlpha(0.6f));
+
   // Bar.beat.tick position readout
   addAndMakeVisible(positionLabel);
   positionLabel.setText(formatBarBeatTick(0.0), juce::dontSendNotification);
@@ -94,6 +107,12 @@ void TransportBar::timerCallback() {
     positionLabel.setText(pos, juce::dontSendNotification);
   }
 
+  // Sync Loop button
+  bool loopOn = clock.isLoopEnabled();
+  if (loopButton.getToggleState() != loopOn) {
+    loopButton.setToggleState(loopOn, juce::dontSendNotification);
+  }
+
   ruler.tick();
 }
 
@@ -119,6 +138,9 @@ void TransportBar::resized() {
   bounds.removeFromLeft(10);  // Spacing
 
   positionLabel.setBounds(bounds.removeFromLeft(90));
+
+  bounds.removeFromLeft(6);  // Spacing
+  loopButton.setBounds(bounds.removeFromLeft(40).reduced(2));
 
   bounds.removeFromLeft(6);  // Spacing
   ruler.setBounds(bounds.reduced(0, 4));

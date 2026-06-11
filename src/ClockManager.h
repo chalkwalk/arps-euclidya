@@ -54,6 +54,21 @@ class ClockManager {
     // playing block (MidiOutNode handles the resulting PPQ jump).
   }
 
+  // Loop region (internal transport only)
+  void setLoopEnabled(bool b) { loopEnabled.store(b); }
+  bool isLoopEnabled() const { return loopEnabled.load(); }
+  void setLoopRange(double startPpq, double endPpq) {
+    // Enforce end > start; caller should pass bar-snapped values.
+    if (endPpq <= startPpq)
+      return;
+    loopStartPpq.store(startPpq);
+    loopEndPpq.store(endPpq);
+    loopRangeDefined.store(true);
+  }
+  double getLoopStartPpq() const { return loopStartPpq.load(); }
+  double getLoopEndPpq() const { return loopEndPpq.load(); }
+  bool hasLoopRange() const { return loopRangeDefined.load(); }
+
  private:
   double currentBPM = 120.0;
   bool tickFlag = false;
@@ -73,4 +88,10 @@ class ClockManager {
 
   // Store previous PPQ position to detect crossings (for global isTick)
   double lastPpqPosition = -1.0;
+
+  // Loop region state (internal transport)
+  std::atomic<bool> loopEnabled{false};
+  std::atomic<bool> loopRangeDefined{false};
+  std::atomic<double> loopStartPpq{0.0};
+  std::atomic<double> loopEndPpq{0.0};
 };

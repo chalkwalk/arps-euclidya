@@ -230,3 +230,75 @@ TEST_CASE(
   cm.update(&host, kBlockSize, kSampleRate);
   CHECK(cm.getCumulativePpq() > ppq0);
 }
+
+// ---------------------------------------------------------------------------
+// Loop region wrap behaviour
+// ---------------------------------------------------------------------------
+TEST_CASE("Loop: wrap occurs at loopEnd and lands at loopStart + remainder",
+          "[clock][loop]") {
+  ClockManager cm;
+  cm.setUseInternalTransport(true);
+  cm.setBPM(120.0);
+  cm.setLoopRange(4.0, 8.0);  // bars 2-3 (4 PPQ long)
+  cm.setLoopEnabled(true);
+  cm.seekTransport(4.0);
+  cm.setPlaying(true);
+
+  // Drive blocks until we cross the end (8.0 PPQ)
+  double lastPpq = 4.0;
+  bool wrapped = false;
+  for (int i = 0; i < 500 && !wrapped; ++i) {
+    cm.update(nullptr, kBlockSize, kSampleRate);
+    const double ppq = cm.getTransportPpq();
+    if (ppq < lastPpq) {
+      wrapped = true;
+      CHECK(ppq >= 4.0);  // must land at loopStart or just after
+      CHECK(ppq < 8.0);   // must not overshoot the range
+    }
+    lastPpq = ppq;
+  }
+  CHECK(wrapped);
+}
+
+TEST_CASE("Loop disabled: no wrap occurs", "[clock][loop]") {
+  ClockManager cm;
+  cm.setUseInternalTransport(true);
+  cm.setBPM(120.0);
+  cm.setLoopRange(0.0, 4.0);
+  cm.setLoopEnabled(false);
+  cm.setPlaying(true);
+  runBlocks(cm, 500);
+  // Should be well past 4.0 PPQ with no wrap
+  CHECK(cm.getTransportPpq() > 4.0);
+}
+
+TEST_CASE("Loop: seek past loopEnd while looping does NOT snap back",
+          "[clock][loop]") {
+  ClockManager cm;
+  cm.setUseInternalTransport(true);
+  cm.setBPM(120.0);
+  cm.setLoopRange(0.0, 4.0);
+  cm.setLoopEnabled(true);
+  cm.setPlaying(true);
+  cm.seekTransport(10.0);  // jump way past end
+  cm.update(nullptr, kBlockSize, kSampleRate);
+  // First block after seek: no wrap expected because prev < loopEnd was false
+  CHECK(cm.getTransportPpq() > 4.0);
+}
+
+TEST_CASE("Loop: range shorter than one block does not hang or produce NaN",
+          "[clock][loop]") {
+  ClockManager cm;
+  cm.setUseInternalTransport(true);
+  cm.setBPM(240.0);  // fast BPM, large beatsElapsed
+  cm.setLoopRange(0.0, 0.01);
+  cm.setLoopEnabled(true);
+  cm.setPlaying(true);
+  // Just check it doesn't crash or produce NaN/inf
+  for (int i = 0; i < 20; ++i) {
+    cm.update(nullptr, kBlockSize, kSampleRate);
+    const double ppq = cm.getTransportPpq();
+    CHECK(ppq >= 0.0);
+    CHECK(ppq < 1000.0);
+  }
+}

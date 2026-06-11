@@ -459,6 +459,9 @@ void ArpsEuclidyaProcessor::writeStateToXml(juce::XmlElement &root,
   if (juce::PluginHostType::getPluginLoadedAs() ==
       juce::AudioProcessor::wrapperType_Standalone) {
     root.setAttribute("standaloneBPM", clockManager.getBPM());
+    root.setAttribute("standaloneLoopEnabled", clockManager.isLoopEnabled());
+    root.setAttribute("standaloneLoopStart", clockManager.getLoopStartPpq());
+    root.setAttribute("standaloneLoopEnd", clockManager.getLoopEndPpq());
   }
 
   // APVTS macro values
@@ -597,6 +600,15 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
       juce::PluginHostType::getPluginLoadedAs() ==
           juce::AudioProcessor::wrapperType_Standalone) {
     clockManager.setBPM(xmlState->getDoubleAttribute("standaloneBPM"));
+    const bool loopEnabled =
+        xmlState->getBoolAttribute("standaloneLoopEnabled", false);
+    const double loopStart =
+        xmlState->getDoubleAttribute("standaloneLoopStart", 0.0);
+    const double loopEnd =
+        xmlState->getDoubleAttribute("standaloneLoopEnd", 16.0);
+    if (loopEnd > loopStart)
+      clockManager.setLoopRange(loopStart, loopEnd);
+    clockManager.setLoopEnabled(loopEnabled);
   }
 
   // Restore APVTS Macros

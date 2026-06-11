@@ -19,6 +19,7 @@ class TransportBar : public juce::Component, private juce::Timer {
 
   juce::TextButton playStopButton;
   juce::TextButton resetButton;
+  juce::TextButton loopButton;
   juce::Slider bpmSlider;
   juce::Label bpmLabel;
   juce::Label positionLabel;

@@ -67,7 +67,17 @@ void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
     if (standaloneRunning.load()) {
       const double prev = transportPpq.load();
       double next = prev + beatsElapsed;
-      // (Commit 4 inserts the loop-wrap here.)
+      // Loop wrap: if enabled with a valid range and the block crosses the end,
+      // wrap back to loopStart + remainder.  Handle a range shorter than one
+      // block with fmod to avoid infinite looping.
+      if (loopEnabled.load() && loopRangeDefined.load()) {
+        const double loopStart = loopStartPpq.load();
+        const double loopEnd = loopEndPpq.load();
+        if (loopEnd > loopStart && prev < loopEnd && next >= loopEnd) {
+          const double loopLen = loopEnd - loopStart;
+          next = loopStart + std::fmod(next - loopEnd, loopLen);
+        }
+      }
       transportPpq.store(next);
       cumulativePpq = next;  // mirror, exactly like the host-playing branch
       // Same 1/8th-note floor-crossing tick test as the host branch.
