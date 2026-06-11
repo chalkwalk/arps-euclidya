@@ -67,14 +67,19 @@ void CableRenderer::refresh(
   }
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static) — reads
+// cachedCables member
 bool CableRenderer::hasLargeSequence() const {
   for (const auto &c : cachedCables) {
-    if (c.isLarge)
+    if (c.isLarge) {
       return true;
+    }
   }
   return false;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static) — keep as
+// member for consistent call syntax
 void CableRenderer::drawCable(juce::Graphics &g, const juce::Path &path,
                               bool highlighted, bool warning, bool isForeground,
                               GraphNode::PortType portType,
@@ -110,8 +115,9 @@ void CableRenderer::drawCable(juce::Graphics &g, const juce::Path &path,
 
   g.setColour(baseColor);
   float strokeThickness = (isForeground || highlighted) ? 3.0f : 2.0f;
-  if (highlighted)
+  if (highlighted) {
     strokeThickness = 3.5f;
+  }
   g.strokePath(path, juce::PathStrokeType(strokeThickness));
 
   if (isForeground || highlighted) {

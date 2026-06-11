@@ -13,20 +13,22 @@ juce::Point<int> CanvasCamera::getViewportGridCenter(
           (int)std::round(cy / Layout::GridPitchFloat)};
 }
 
-bool CanvasCamera::applyWheelZoom(float wheelAmount,
-                                  juce::Point<float> mousePos) {
+bool CanvasCamera::applyWheelZoom(
+    float wheelAmount,  // NOLINT(bugprone-easily-swappable-parameters)
+    juce::Point<float> mousePos) {
   float zoomDelta = wheelAmount > 0.0f ? 1.1f : 0.9f;
   float newZoom = juce::jlimit(MIN_ZOOM, MAX_ZOOM, zoomFactor * zoomDelta);
 
-  if (std::abs(newZoom - zoomFactor) <= 0.0001f)
+  if (std::abs(newZoom - zoomFactor) <= 0.0001f) {
     return false;
+  }
 
   float worldX = (mousePos.x - panX) / zoomFactor;
   float worldY = (mousePos.y - panY) / zoomFactor;
 
   zoomFactor = newZoom;
-  panX = mousePos.x - worldX * zoomFactor;
-  panY = mousePos.y - worldY * zoomFactor;
+  panX = mousePos.x - (worldX * zoomFactor);
+  panY = mousePos.y - (worldY * zoomFactor);
   return true;
 }
 
@@ -48,9 +50,9 @@ void CanvasCamera::zoomToFit(juce::Rectangle<float> viewport,
 }
 
 void CanvasCamera::setPanFromScrollX(double newRangeStart) {
-  panX = (float)(-(double)newRangeStart * (double)zoomFactor);
+  panX = (float)(-newRangeStart * (double)zoomFactor);
 }
 
 void CanvasCamera::setPanFromScrollY(double newRangeStart) {
-  panY = (float)(-(double)newRangeStart * (double)zoomFactor);
+  panY = (float)(-newRangeStart * (double)zoomFactor);
 }
