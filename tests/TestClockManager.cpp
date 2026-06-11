@@ -286,6 +286,29 @@ TEST_CASE("Loop: seek past loopEnd while looping does NOT snap back",
   CHECK(cm.getTransportPpq() > 4.0);
 }
 
+TEST_CASE("Loop: negative start is clamped to zero", "[clock][loop]") {
+  ClockManager cm;
+  cm.setLoopRange(-4.0, 16.0);
+  CHECK(cm.hasLoopRange());
+  CHECK_THAT(cm.getLoopStartPpq(), Catch::Matchers::WithinAbs(0.0, 1e-9));
+  CHECK_THAT(cm.getLoopEndPpq(), Catch::Matchers::WithinAbs(16.0, 1e-9));
+}
+
+TEST_CASE("Loop: wrap with a clamped start never goes negative",
+          "[clock][loop]") {
+  ClockManager cm;
+  cm.setUseInternalTransport(true);
+  cm.setBPM(120.0);
+  cm.setLoopRange(-4.0, 16.0);  // start clamps to 0.0
+  cm.setLoopEnabled(true);
+  cm.seekTransport(15.5);
+  cm.setPlaying(true);
+  for (int i = 0; i < 500; ++i) {
+    cm.update(nullptr, kBlockSize, kSampleRate);
+    CHECK(cm.getTransportPpq() >= 0.0);
+  }
+}
+
 TEST_CASE("Loop: range shorter than one block does not hang or produce NaN",
           "[clock][loop]") {
   ClockManager cm;

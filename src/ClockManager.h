@@ -58,6 +58,11 @@ class ClockManager {
   void setLoopEnabled(bool b) { loopEnabled.store(b); }
   bool isLoopEnabled() const { return loopEnabled.load(); }
   void setLoopRange(double startPpq, double endPpq) {
+    // Clamp to a non-negative start. A negative loop start — from dragging the
+    // marker off the left edge, or a stale saved value — would make the wrap
+    // (loopStart + fmod(...)) land in negative PPQ, sending the transport off
+    // the left of the timeline for a bar before climbing back to zero.
+    startPpq = std::max(0.0, startPpq);
     // Enforce end > start; caller should pass bar-snapped values.
     if (endPpq <= startPpq)
       return;
