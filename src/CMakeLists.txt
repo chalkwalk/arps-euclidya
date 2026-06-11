@@ -3,6 +3,56 @@ if(APPLE)
     list(APPEND plugin_formats AU)
 endif()
 
+# Sources shared between the plugin and the test binary.
+# GUI-free: every node, the graph engine, and core utilities.
+set(ARPS_CORE_SOURCES
+    AllNotesNode/AllNotesNode.cpp
+    AlgorithmicModulatorNode/AlgorithmicModulatorNode.cpp
+    AndNode/AndNode.cpp
+    OrNode/OrNode.cpp
+    XorNode/XorNode.cpp
+    ChordNNode/ChordNNode.cpp
+    ChordSplitNode/ChordSplitNode.cpp
+    ClockManager.cpp
+    ConcatenateNode/ConcatenateNode.cpp
+    ConvergeNode/ConvergeNode.cpp
+    DiagnosticNode/DiagnosticNode.cpp
+    DivergeNode/DivergeNode.cpp
+    EuclideanMath.cpp
+    FoldNode/FoldNode.cpp
+    GraphEngine.cpp
+    GraphNode.cpp
+    NoteExpressionManager.cpp
+    MidiInNode/MidiInNode.cpp
+    MidiOutNode/MidiOutNode.cpp
+    MidiOutNode/MidiOutNodeEditor.cpp
+    MultiplyNode/MultiplyNode.cpp
+    OctaveStackNode/OctaveStackNode.cpp
+    OctaveTransposeNode/OctaveTransposeNode.cpp
+    InterleaveNode/InterleaveNode.cpp
+    MpeFilterNode/MpeFilterNode.cpp
+    VelocityFilterNode/VelocityFilterNode.cpp
+    QuantizerNode/QuantizerNode.cpp
+    ReverseNode/ReverseNode.cpp
+    RouteNode/RouteNode.cpp
+    SelectNode/SelectNode.cpp
+    SequenceNode/SequenceNode.cpp
+    SortNode/SortNode.cpp
+    SplitNode/SplitNode.cpp
+    SwitchNode/SwitchNode.cpp
+    TextNoteNode/TextNoteNode.cpp
+    TransposeNode/TransposeNode.cpp
+    Tuning/ScalaParser.cpp
+    Scales/ScaleLibrary.cpp
+    Scales/HarmonicAnalysis.cpp
+    Scales/ScaleEditorComponent.cpp
+    UnfoldNode/UnfoldNode.cpp
+    UnzipNode/UnzipNode.cpp
+    WalkNode/WalkNode.cpp
+    ZipNode/ZipNode.cpp)
+list(TRANSFORM ARPS_CORE_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+set(ARPS_CORE_SOURCES ${ARPS_CORE_SOURCES} PARENT_SCOPE)
+
 juce_add_plugin(ArpsEuclidya
     COMPANY_NAME "ChalkWalkMusic"
     IS_SYNTH TRUE
@@ -22,63 +72,22 @@ juce_generate_juce_header(ArpsEuclidya)
 
 target_sources(ArpsEuclidya
     PRIVATE
-        AllNotesNode/AllNotesNode.cpp
-        AndNode/AndNode.cpp
-        OrNode/OrNode.cpp
-        XorNode/XorNode.cpp
+        ${ARPS_CORE_SOURCES}
+        AlgorithmicModulatorNode/AlgorithmicModulatorNodeEditor.cpp
         AppSettings.cpp
         ArpsLookAndFeel.cpp
-        ChordNNode/ChordNNode.cpp
-        ChordSplitNode/ChordSplitNode.cpp
-        ClockManager.cpp
-        ConcatenateNode/ConcatenateNode.cpp
-        ConvergeNode/ConvergeNode.cpp
-        DiagnosticNode/DiagnosticNode.cpp
-        DivergeNode/DivergeNode.cpp
-        EuclideanMath.cpp
-        FoldNode/FoldNode.cpp
         GraphCanvas.cpp
-        GraphEngine.cpp
-        GraphNode.cpp
-        NoteExpressionManager.cpp
-        MidiInNode/MidiInNode.cpp
-        MidiOutNode/MidiOutNode.cpp
-        MidiOutNode/MidiOutNodeEditor.cpp
         ModuleLibraryPanel.cpp
-        MultiplyNode/MultiplyNode.cpp
         NodeBlock.cpp
-        OctaveStackNode/OctaveStackNode.cpp
-        OctaveTransposeNode/OctaveTransposeNode.cpp
         PatchLibrary.cpp
         PatchBrowserPanel.cpp
         PluginEditor.cpp
         PluginProcessor.cpp
-        Tuning/ScalaParser.cpp
+        SequenceNode/SequenceNodeEditor.cpp
+        SettingsPanel.cpp
+        TransportBar.cpp
         Tuning/TuningLibrary.cpp
         Tuning/TuningPanel.cpp
-        Scales/ScaleLibrary.cpp
-        Scales/HarmonicAnalysis.cpp
-        Scales/ScaleEditorComponent.cpp
-        QuantizerNode/QuantizerNode.cpp
-        ReverseNode/ReverseNode.cpp
-        RouteNode/RouteNode.cpp
-        SelectNode/SelectNode.cpp
-        SequenceNode/SequenceNode.cpp
-        AlgorithmicModulatorNode/AlgorithmicModulatorNode.cpp
-        SettingsPanel.cpp
-        SortNode/SortNode.cpp
-        InterleaveNode/InterleaveNode.cpp
-        MpeFilterNode/MpeFilterNode.cpp
-        VelocityFilterNode/VelocityFilterNode.cpp
-        SplitNode/SplitNode.cpp
-        SwitchNode/SwitchNode.cpp
-        TextNoteNode/TextNoteNode.cpp
-        TransportBar.cpp
-        TransposeNode/TransposeNode.cpp
-        UnfoldNode/UnfoldNode.cpp
-        UnzipNode/UnzipNode.cpp
-        WalkNode/WalkNode.cpp
-        ZipNode/ZipNode.cpp
     PUBLIC
         NodeEditorPanel.cpp)
 

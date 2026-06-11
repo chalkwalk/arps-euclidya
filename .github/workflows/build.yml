@@ -33,18 +33,21 @@ jobs:
 
     - name: Configure CMake (Linux)
       if: runner.os == 'Linux'
-      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_AR=llvm-ar -DCMAKE_RANLIB=llvm-ranlib
+      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_AR=llvm-ar -DCMAKE_RANLIB=llvm-ranlib -DARPS_BUILD_TESTS=ON
 
     - name: Configure CMake (macOS)
       if: runner.os == 'macOS'
-      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+      run: cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DARPS_BUILD_TESTS=ON
 
     - name: Configure CMake (Windows)
       if: runner.os == 'Windows'
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DJUCE_BUILD_EXAMPLES=OFF -DJUCE_BUILD_EXTRAS=OFF -DARPS_BUILD_TESTS=ON
 
     - name: Build
       run: cmake --build build --config Release -j 4
+
+    - name: Test
+      run: ctest --test-dir build -C Release --output-on-failure
 
     - name: Upload Artifacts (Linux)
       if: runner.os == 'Linux'

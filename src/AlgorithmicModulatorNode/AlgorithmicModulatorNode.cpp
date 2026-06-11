@@ -4,102 +4,23 @@
 #include <cmath>
 
 #include "../EuclideanMath.h"
-#include "../GraphCanvas.h"
 #include "../LayoutParser.h"
 #include "BinaryData.h"
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Custom step-value editor for the Custom algorithm
-// ──────────────────────────────────────────────────────────────────────────────
-
-class ModulatorStepEditor : public juce::Component, public juce::Timer {
- public:
-  ModulatorStepEditor(AlgorithmicModulatorNode &node,
-                      juce::AudioProcessorValueTreeState & /*apvts*/)
-      : modNode(node) {
-    startTimerHz(15);
-    setSize(200, 80);
-  }
-
-  void paint(juce::Graphics &g) override {
-    auto b = getLocalBounds();
-
-    g.setColour(juce::Colour(0xff1a1a1a));
-    g.fillRect(b);
-
-    if (modNode.algorithm != AlgorithmicModulatorNode::Custom) {
-      g.setColour(juce::Colours::darkgrey);
-      g.setFont(10.0f);
-      g.drawText("(Select Custom algorithm)", b, juce::Justification::centred);
-      return;
-    }
-
-    int len = std::max(1, (int)modNode.customValues.size());
-    float cellW = (float)b.getWidth() / (float)len;
-    float bh = (float)b.getHeight();
-
-    for (int i = 0; i < len; ++i) {
-      float v = (i < (int)modNode.customValues.size())
-                    ? std::clamp(modNode.customValues[(size_t)i], 0.0f, 1.0f)
-                    : 0.5f;
-      float barH = v * bh;
-      auto barRect = juce::Rectangle<float>(b.getX() + (float)i * cellW,
-                                            b.getY() + bh - barH,
-                                            cellW - 1.0f, barH);
-
-      g.setColour(juce::Colour(0xffaa44ff).withAlpha(0.55f + 0.45f * v));
-      g.fillRect(barRect);
-
-      // Step boundary
-      g.setColour(juce::Colour(0xff333333));
-      g.drawVerticalLine(b.getX() + (int)((float)(i + 1) * cellW), (float)b.getY(),
-                         (float)b.getBottom());
-    }
-
-    // Horizontal mid-line
-    g.setColour(juce::Colour(0xff444444));
-    g.drawHorizontalLine(b.getCentreY(), (float)b.getX(), (float)b.getRight());
-  }
-
-  void mouseDown(const juce::MouseEvent &e) override { handleDrag(e); }
-  void mouseDrag(const juce::MouseEvent &e) override { handleDrag(e); }
-
- private:
-  void handleDrag(const juce::MouseEvent &e) {
-    if (modNode.algorithm != AlgorithmicModulatorNode::Custom) return;
-
-    auto b = getLocalBounds();
-    int len = std::max(1, (int)modNode.customValues.size());
-    float cellW = (float)b.getWidth() / (float)len;
-    int col = (int)((float)(e.x - b.getX()) / cellW);
-
-    if (col < 0 || col >= len) return;
-
-    float v = 1.0f - std::clamp(
-                         (float)(e.y - b.getY()) / (float)b.getHeight(),
-                         0.0f, 1.0f);
-
-    auto *canvas = findParentComponentOfClass<GraphCanvas>();
-    if (canvas != nullptr) {
-      canvas->performMutation([this, col, v]() {
-        modNode.customValues[(size_t)col] = v;
-        if (modNode.onNodeDirtied) modNode.onNodeDirtied();
-      });
-    } else {
-      modNode.customValues[(size_t)col] = v;
-      if (modNode.onNodeDirtied) modNode.onNodeDirtied();
-    }
-    repaint();
-  }
-
-  void timerCallback() override { repaint(); }
-
-  AlgorithmicModulatorNode &modNode;
-};
-
-// ──────────────────────────────────────────────────────────────────────────────
 // AlgorithmicModulatorNode implementation
 // ──────────────────────────────────────────────────────────────────────────────
+
+// In test builds the editor file is not compiled; the real implementation is
+// in AlgorithmicModulatorNodeEditor.cpp (plugin build only).
+#ifdef ARPS_BUILD_TESTS
+std::unique_ptr<juce::Component>
+AlgorithmicModulatorNode::createCustomComponent(
+    const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
+  juce::ignoreUnused(name, apvts);
+  return nullptr;
+}
+#endif
 
 AlgorithmicModulatorNode::AlgorithmicModulatorNode() {
   addMacroParam(&macroAlgorithm);
@@ -118,9 +39,9 @@ void AlgorithmicModulatorNode::ensureCustomValues() {
 }
 
 NodeLayout AlgorithmicModulatorNode::getLayout() const {
-  auto layout =
-      LayoutParser::parseFromJSON(BinaryData::AlgorithmicModulatorNode_json,
-                                  BinaryData::AlgorithmicModulatorNode_jsonSize);
+  auto layout = LayoutParser::parseFromJSON(
+      BinaryData::AlgorithmicModulatorNode_json,
+      BinaryData::AlgorithmicModulatorNode_jsonSize);
 
   for (auto &el : layout.elements) {
     if (el.label == "algorithm") {
@@ -181,17 +102,8 @@ NodeLayout AlgorithmicModulatorNode::getLayout() const {
   return layout;
 }
 
-std::unique_ptr<juce::Component>
-AlgorithmicModulatorNode::createCustomComponent(
-    const juce::String &name, juce::AudioProcessorValueTreeState *apvts) {
-  if (name == "ModulatorStepEditor" && apvts != nullptr) {
-    return std::make_unique<ModulatorStepEditor>(*this, *apvts);
-  }
-  return nullptr;
-}
-
 void AlgorithmicModulatorNode::process() {
-  int actualAlgo   = resolveMacroInt(macroAlgorithm, algorithm, 0, (int)Custom);
+  int actualAlgo = resolveMacroInt(macroAlgorithm, algorithm, 0, (int)Custom);
   int actualLength = resolveMacroInt(macroLength, length, 1, 64);
   int actualCC = resolveMacroInt(macroCCNumber, ccNumber, 0, 127);
   float actualMin = resolveMacroFloat(macroRangeMin, rangeMin, 0.0f, 1.0f);
@@ -233,7 +145,8 @@ void AlgorithmicModulatorNode::process() {
       switch (actualAlgo) {
         case Sine:
           normalValue =
-              0.5f * (1.0f + std::sin(2.0f * pi * (float)i / (float)actualLength));
+              0.5f *
+              (1.0f + std::sin(2.0f * pi * (float)i / (float)actualLength));
           break;
         case RampUp:
           normalValue =
@@ -278,13 +191,15 @@ void AlgorithmicModulatorNode::process() {
   auto connIt = connections.find(0);
   if (connIt != connections.end()) {
     for (const auto &conn : connIt->second) {
-      conn.targetNode->setInputSequence(conn.targetInputPort, outputSequences[0]);
+      conn.targetNode->setInputSequence(conn.targetInputPort,
+                                        outputSequences[0]);
     }
   }
 }
 
 void AlgorithmicModulatorNode::saveNodeState(juce::XmlElement *xml) {
-  if (!xml) return;
+  if (!xml)
+    return;
 
   xml->setAttribute("algorithm", algorithm);
   xml->setAttribute("ccNumber", ccNumber);
@@ -298,7 +213,8 @@ void AlgorithmicModulatorNode::saveNodeState(juce::XmlElement *xml) {
   // Serialise customValues as comma-separated floats
   juce::String cvStr;
   for (size_t i = 0; i < customValues.size(); ++i) {
-    if (i > 0) cvStr += ",";
+    if (i > 0)
+      cvStr += ",";
     cvStr += juce::String(customValues[i], 4);
   }
   xml->setAttribute("customValues", cvStr);
@@ -307,7 +223,8 @@ void AlgorithmicModulatorNode::saveNodeState(juce::XmlElement *xml) {
 }
 
 void AlgorithmicModulatorNode::loadNodeState(juce::XmlElement *xml) {
-  if (!xml) return;
+  if (!xml)
+    return;
 
   algorithm = xml->getIntAttribute("algorithm", 0);
   ccNumber = xml->getIntAttribute("ccNumber", 1);
