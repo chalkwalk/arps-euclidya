@@ -89,6 +89,7 @@ target_sources(ArpsEuclidya
         PluginProcessor.cpp
         SequenceNode/SequenceNodeEditor.cpp
         SettingsPanel.cpp
+        TimelineRuler.cpp
         TransportBar.cpp
         Tuning/TuningLibrary.cpp
         Tuning/TuningPanel.cpp

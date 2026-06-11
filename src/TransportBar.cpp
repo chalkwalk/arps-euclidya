@@ -16,7 +16,8 @@ static juce::String formatBarBeatTick(double ppq) {
          juce::String(tick).paddedLeft('0', 3);
 }
 
-TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
+TransportBar::TransportBar(ClockManager &clockManager)
+    : clock(clockManager), ruler(clockManager) {
   // Play/Stop toggle
   addAndMakeVisible(playStopButton);
   playStopButton.setClickingTogglesState(true);
@@ -64,13 +65,7 @@ TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
   positionLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   positionLabel.setColour(juce::Label::textColourId, juce::Colour(0xffdddddd));
 
-  addAndMakeVisible(standaloneLabel);
-  standaloneLabel.setText("STANDALONE TRANSPORT", juce::dontSendNotification);
-  standaloneLabel.setJustificationType(juce::Justification::centredRight);
-  standaloneLabel.setFont(
-      juce::Font(juce::FontOptions(10.0f, juce::Font::bold)));
-  standaloneLabel.setColour(juce::Label::textColourId,
-                            juce::Colour(0xff777777));
+  addAndMakeVisible(ruler);
 
   startTimerHz(30);
 }
@@ -98,6 +93,8 @@ void TransportBar::timerCallback() {
     lastPositionText = pos;
     positionLabel.setText(pos, juce::dontSendNotification);
   }
+
+  ruler.tick();
 }
 
 void TransportBar::paint(juce::Graphics &g) {
@@ -123,5 +120,6 @@ void TransportBar::resized() {
 
   positionLabel.setBounds(bounds.removeFromLeft(90));
 
-  standaloneLabel.setBounds(bounds);
+  bounds.removeFromLeft(6);  // Spacing
+  ruler.setBounds(bounds.reduced(0, 4));
 }
