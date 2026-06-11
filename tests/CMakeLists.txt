@@ -22,7 +22,9 @@ target_sources(ArpsTests PRIVATE
     TestMacroResolution.cpp
     TestNodeProcess.cpp
     TestGraphEngineTopology.cpp
-    TestPortTypes.cpp)
+    TestPortTypes.cpp
+    TestScalaParser.cpp
+    TestGraphStateRoundTrip.cpp)
 
 target_include_directories(ArpsTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
