@@ -157,8 +157,7 @@ class ArpsEuclidyaProcessor
   // Microtonality: parse sclFile+kbmFile and distribute to all MidiOutNodes.
   // Pass an invalid kbmFile to use the default mapping.
   void setActiveTuning(const juce::File &sclFile,
-                       const juce::File &kbmFile = {},
-                       bool rebuildUI = true);
+                       const juce::File &kbmFile = {}, bool rebuildUI = true);
   void clearActiveTuning();
   [[nodiscard]] juce::String getActiveTuningName() const {
     return activeTuning.isIdentity() ? juce::String() : activeTuning.name;
@@ -196,6 +195,13 @@ class ArpsEuclidyaProcessor
 
   void pushTuningToNodes();
   void restoreTuningFromXml(juce::XmlElement *xmlState);
+
+  struct StateWriteOptions {
+    bool updateMetadataTimestamps = true;
+    juce::String defaultPatchName;
+  };
+  void writeStateToXml(juce::XmlElement &root, const StateWriteOptions &opts);
+  uint32_t computeBipolarMask() const;
 
   TuningTable activeTuning;
   juce::String activeSclRelPath;

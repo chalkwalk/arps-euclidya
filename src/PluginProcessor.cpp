@@ -5,8 +5,8 @@
 #include "AppSettings.h"
 #include "MacroParameter.h"
 #include "MidiOutNode/MidiOutNode.h"
-#include "QuantizerNode/QuantizerNode.h"
 #include "PluginEditor.h"
+#include "QuantizerNode/QuantizerNode.h"
 #include "Tuning/ScalaParser.h"
 
 namespace FactoryPatches {
@@ -183,7 +183,8 @@ void ArpsEuclidyaProcessor::enterMidiLearn(int macroIndex) {
 }
 
 void ArpsEuclidyaProcessor::clearLearnedCC(int macroIndex) {
-  if (macroIndex < 0 || macroIndex >= 32 || macroParams[(size_t)macroIndex] == nullptr) {
+  if (macroIndex < 0 || macroIndex >= 32 ||
+      macroParams[(size_t)macroIndex] == nullptr) {
     return;
   }
   macroParams[(size_t)macroIndex]->clearLearnedCC();
@@ -191,7 +192,8 @@ void ArpsEuclidyaProcessor::clearLearnedCC(int macroIndex) {
 }
 
 bool ArpsEuclidyaProcessor::macroHasLearnedCC(int macroIndex) const {
-  if (macroIndex < 0 || macroIndex >= 32 || macroParams[(size_t)macroIndex] == nullptr) {
+  if (macroIndex < 0 || macroIndex >= 32 ||
+      macroParams[(size_t)macroIndex] == nullptr) {
     return false;
   }
   return macroParams[(size_t)macroIndex]->hasLearnedCC();
@@ -216,7 +218,8 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     midiMessages.swapWith(filteredMessages);
   }
 
-  // MIDI learn + CC-to-macro intercept: captures learn and drives learned macros.
+  // MIDI learn + CC-to-macro intercept: captures learn and drives learned
+  // macros.
   interceptMacroCC(midiMessages);
 
   const int numSamples = buffer.getNumSamples();
@@ -350,9 +353,9 @@ void ArpsEuclidyaProcessor::processBlock(juce::AudioBuffer<float> &buffer,
       }
       void addCC(int channel, int ccNumber, int value,
                  int sampleOffset) override {
-        buffer.addEvent(juce::MidiMessage::controllerEvent(channel + 1,
-                                                           ccNumber, value),
-                        sampleOffset);
+        buffer.addEvent(
+            juce::MidiMessage::controllerEvent(channel + 1, ccNumber, value),
+            sampleOffset);
       }
 
      private:
@@ -435,59 +438,57 @@ juce::AudioProcessorEditor *ArpsEuclidyaProcessor::createEditor() {
   return new ArpsEuclidyaEditor(*this);
 }
 
-//==============================================================================
-void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
-  juce::XmlElement xmlRoot("ArpsEuclidyaState");
-
-  if (juce::PluginHostType::getPluginLoadedAs() ==
-      juce::AudioProcessor::wrapperType_Standalone) {
-    xmlRoot.setAttribute("standaloneBPM", clockManager.getBPM());
-  }
-
-  // Save APVTS Macros
-  auto state = apvts.copyState();
-  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
-  if (apvtsXml != nullptr) {
-    auto *wrapper = xmlRoot.createNewChildElement("APVTS");
-    wrapper->addChildElement(apvtsXml.release());
-  }
-
-  // Save macro bipolar flags as a 32-bit bitmask
-  uint32_t bipolarMask = 0;
+uint32_t ArpsEuclidyaProcessor::computeBipolarMask() const {
+  uint32_t mask = 0;
   for (int i = 0; i < 32; ++i) {
     if (macroParams[(size_t)i] != nullptr &&
         macroParams[(size_t)i]->isBipolar())
-      bipolarMask |= (1u << i);
+      mask |= (1u << (unsigned)i);
   }
-  xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
+  return mask;
+}
 
-  // Save learned CC sources
-  saveMacroLearnedCC(xmlRoot);
+void ArpsEuclidyaProcessor::writeStateToXml(juce::XmlElement &root,
+                                            const StateWriteOptions &opts) {
+  root.setAttribute("version", CURRENT_PATCH_VERSION);
 
-  // Save Graph State
-  auto *graphXml = xmlRoot.createNewChildElement("Graph");
+  if (juce::PluginHostType::getPluginLoadedAs() ==
+      juce::AudioProcessor::wrapperType_Standalone) {
+    root.setAttribute("standaloneBPM", clockManager.getBPM());
+  }
+
+  // APVTS macro values
+  auto state = apvts.copyState();
+  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
+  if (apvtsXml != nullptr) {
+    auto *wrapper = root.createNewChildElement("APVTS");
+    wrapper->addChildElement(apvtsXml.release());
+  }
+
+  root.setAttribute("macroBipolarMask", (int)computeBipolarMask());
+  saveMacroLearnedCC(root);
+
+  auto *graphXml = root.createNewChildElement("Graph");
   {
     const juce::ScopedLock sl(graphLock);
     graphEngine.saveState(graphXml);
   }
 
-  // Save Tuning
-  {
-    auto *tuningXml = xmlRoot.createNewChildElement("Tuning");
-    tuningXml->setAttribute("scl", activeSclRelPath);
-    tuningXml->setAttribute("kbm", activeKbmRelPath);
-  }
+  auto *tuningXml = root.createNewChildElement("Tuning");
+  tuningXml->setAttribute("scl", activeSclRelPath);
+  tuningXml->setAttribute("kbm", activeKbmRelPath);
 
-  // Save Metadata
-  auto *metaXml = xmlRoot.createNewChildElement("Metadata");
-  if (currentPatchMetadata.author.isEmpty()) {
+  if (!opts.defaultPatchName.isEmpty() && currentPatchMetadata.name.isEmpty())
+    currentPatchMetadata.name = opts.defaultPatchName;
+  if (currentPatchMetadata.author.isEmpty())
     currentPatchMetadata.author = AppSettings::getInstance().getDefaultAuthor();
-  }
-  if (currentPatchMetadata.created.isEmpty()) {
+  if (currentPatchMetadata.created.isEmpty())
     currentPatchMetadata.created = juce::Time::getCurrentTime().toISO8601(true);
-  }
-  currentPatchMetadata.modified = juce::Time::getCurrentTime().toISO8601(true);
+  if (opts.updateMetadataTimestamps)
+    currentPatchMetadata.modified =
+        juce::Time::getCurrentTime().toISO8601(true);
 
+  auto *metaXml = root.createNewChildElement("Metadata");
   metaXml->setAttribute("name", currentPatchMetadata.name);
   metaXml->setAttribute("author", currentPatchMetadata.author);
   metaXml->setAttribute("description", currentPatchMetadata.description);
@@ -495,7 +496,12 @@ void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
   metaXml->setAttribute("category", currentPatchMetadata.category);
   metaXml->setAttribute("created", currentPatchMetadata.created);
   metaXml->setAttribute("modified", currentPatchMetadata.modified);
+}
 
+//==============================================================================
+void ArpsEuclidyaProcessor::getStateInformation(juce::MemoryBlock &destData) {
+  juce::XmlElement xmlRoot("ArpsEuclidyaState");
+  writeStateToXml(xmlRoot, {});
   copyXmlToBinary(xmlRoot, destData);
 }
 
@@ -556,68 +562,9 @@ void ArpsEuclidyaProcessor::clearActiveTuning() {
 
 bool ArpsEuclidyaProcessor::savePatch(const juce::File &file) {
   juce::XmlElement xmlRoot("ArpsEuclidyaState");
-  xmlRoot.setAttribute("version", CURRENT_PATCH_VERSION);
-
-  if (juce::PluginHostType::getPluginLoadedAs() ==
-      juce::AudioProcessor::wrapperType_Standalone) {
-    xmlRoot.setAttribute("standaloneBPM", clockManager.getBPM());
-  }
-
-  // Save APVTS Macros
-  auto state = apvts.copyState();
-  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
-  if (apvtsXml != nullptr) {
-    auto *wrapper = xmlRoot.createNewChildElement("APVTS");
-    wrapper->addChildElement(apvtsXml.release());
-  }
-
-  // Save macro bipolar flags as a 32-bit bitmask
-  uint32_t bipolarMask = 0;
-  for (int i = 0; i < 32; ++i) {
-    if (macroParams[(size_t)i] != nullptr &&
-        macroParams[(size_t)i]->isBipolar())
-      bipolarMask |= (1u << i);
-  }
-  xmlRoot.setAttribute("macroBipolarMask", (int)bipolarMask);
-
-  // Save learned CC sources
-  saveMacroLearnedCC(xmlRoot);
-
-  // Save Graph State
-  auto *graphXml = xmlRoot.createNewChildElement("Graph");
-  {
-    const juce::ScopedLock sl(graphLock);
-    graphEngine.saveState(graphXml);
-  }
-
-  // Save Tuning
-  {
-    auto *tuningXml = xmlRoot.createNewChildElement("Tuning");
-    tuningXml->setAttribute("scl", activeSclRelPath);
-    tuningXml->setAttribute("kbm", activeKbmRelPath);
-  }
-
-  // Save Metadata
-  auto *metaXml = xmlRoot.createNewChildElement("Metadata");
-  if (currentPatchMetadata.author.isEmpty()) {
-    currentPatchMetadata.author = AppSettings::getInstance().getDefaultAuthor();
-  }
-  if (currentPatchMetadata.created.isEmpty()) {
-    currentPatchMetadata.created = juce::Time::getCurrentTime().toISO8601(true);
-  }
-  if (currentPatchMetadata.name.isEmpty()) {
-    currentPatchMetadata.name = file.getFileNameWithoutExtension();
-  }
-  currentPatchMetadata.modified = juce::Time::getCurrentTime().toISO8601(true);
-
-  metaXml->setAttribute("name", currentPatchMetadata.name);
-  metaXml->setAttribute("author", currentPatchMetadata.author);
-  metaXml->setAttribute("description", currentPatchMetadata.description);
-  metaXml->setAttribute("tags", currentPatchMetadata.tags);
-  metaXml->setAttribute("category", currentPatchMetadata.category);
-  metaXml->setAttribute("created", currentPatchMetadata.created);
-  metaXml->setAttribute("modified", currentPatchMetadata.modified);
-
+  StateWriteOptions opts;
+  opts.defaultPatchName = file.getFileNameWithoutExtension();
+  writeStateToXml(xmlRoot, opts);
   return xmlRoot.writeTo(file);
 }
 
@@ -682,19 +629,15 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
                           macros);
 
     // Propagate current bipolar flags to all loaded nodes
-    uint32_t bipolarMask = 0;
-    for (int i = 0; i < 32; ++i) {
-      if (macroParams[(size_t)i] != nullptr &&
-          macroParams[(size_t)i]->isBipolar())
-        bipolarMask |= (1u << i);
-    }
+    uint32_t bipolarMask = computeBipolarMask();
     for (const auto &node : graphEngine.getNodes()) {
       node->macroBipolarMask.store(bipolarMask, std::memory_order_relaxed);
       node->onMappingChanged = [this]() { updateMacroNames(); };
     }
     updateMacroNames();
 
-    // Push tuning to freshly loaded nodes and rebuild UI with correct scale lists
+    // Push tuning to freshly loaded nodes and rebuild UI with correct scale
+    // lists
     pushTuningToNodes();
 
     if (auto *editor = getEditor()) {
@@ -716,7 +659,6 @@ void ArpsEuclidyaProcessor::loadFromXml(juce::XmlElement *xmlState) {
   } else {
     currentPatchMetadata = PatchMetadata();
   }
-
 }
 
 void ArpsEuclidyaProcessor::restoreTuningFromXml(juce::XmlElement *xmlState) {
@@ -810,40 +752,9 @@ void ArpsEuclidyaProcessor::performGraphMutation(
 
 std::unique_ptr<juce::XmlElement> ArpsEuclidyaProcessor::captureState() {
   auto xmlRoot = std::make_unique<juce::XmlElement>("ArpsEuclidyaState");
-  xmlRoot->setAttribute("version", CURRENT_PATCH_VERSION);
-
-  if (juce::PluginHostType::getPluginLoadedAs() ==
-      juce::AudioProcessor::wrapperType_Standalone) {
-    xmlRoot->setAttribute("standaloneBPM", clockManager.getBPM());
-  }
-
-  // Save APVTS Macros
-  auto state = apvts.copyState();
-  std::unique_ptr<juce::XmlElement> apvtsXml(state.createXml());
-  if (apvtsXml != nullptr) {
-    auto *wrapper = xmlRoot->createNewChildElement("APVTS");
-    wrapper->addChildElement(apvtsXml.release());
-  }
-
-  // Save learned CC sources
-  saveMacroLearnedCC(*xmlRoot);
-
-  // Save Graph State
-  auto *graphXml = xmlRoot->createNewChildElement("Graph");
-  {
-    const juce::ScopedLock sl(graphLock);
-    graphEngine.saveState(graphXml);
-  }
-
-  // Save Metadata
-  auto *metaXml = xmlRoot->createNewChildElement("Metadata");
-  metaXml->setAttribute("name", currentPatchMetadata.name);
-  metaXml->setAttribute("author", currentPatchMetadata.author);
-  metaXml->setAttribute("description", currentPatchMetadata.description);
-  metaXml->setAttribute("tags", currentPatchMetadata.tags);
-  metaXml->setAttribute("created", currentPatchMetadata.created);
-  metaXml->setAttribute("modified", currentPatchMetadata.modified);
-
+  StateWriteOptions opts;
+  opts.updateMetadataTimestamps = false;
+  writeStateToXml(*xmlRoot, opts);
   return xmlRoot;
 }
 
@@ -852,21 +763,16 @@ void ArpsEuclidyaProcessor::addNode(const std::shared_ptr<GraphNode> &node) {
     const juce::ScopedLock sl(graphLock);
     node->onMappingChanged = [this]() { updateMacroNames(); };
 
-    // Propagate the current bipolar bitmask to the new node
-    uint32_t mask = 0;
-    for (int i = 0; i < 32; ++i) {
-      if (macroParams[(size_t)i] != nullptr &&
-          macroParams[(size_t)i]->isBipolar())
-        mask |= (1u << i);
-    }
-    node->macroBipolarMask.store(mask, std::memory_order_relaxed);
+    node->macroBipolarMask.store(computeBipolarMask(),
+                                 std::memory_order_relaxed);
 
     graphEngine.addNode(node);
     updateMacroNames();
 
     // Push current tuning to a newly added QuantizerNode
     if (auto *qn = dynamic_cast<QuantizerNode *>(node.get())) {
-      const TuningTable *ptr = activeTuning.isIdentity() ? nullptr : &activeTuning;
+      const TuningTable *ptr =
+          activeTuning.isIdentity() ? nullptr : &activeTuning;
       qn->setActiveTuning(ptr);
     }
   });
@@ -1059,18 +965,19 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
   // For MIDI the MidiBuffer handles ordering (pitch bend before NoteOn).
   // For CLAP, hosts match expressions to notes by note_id — the NoteOn must
   // be processed before the expression so the host knows the note exists.
-  std::stable_sort(
-      outboundClapEvents.begin(), outboundClapEvents.end(),
-      [](const OutboundClapEvent &a, const OutboundClapEvent &b) {
-        if (a.sampleOffset != b.sampleOffset)
-          return a.sampleOffset < b.sampleOffset;
-        auto priority = [](const OutboundClapEvent &e) -> int {
-          if (e.type == OutboundClapEvent::Type::NoteOff) return 0;
-          if (e.type == OutboundClapEvent::Type::NoteOn) return 1;
-          return 2;  // NoteExpression, CC
-        };
-        return priority(a) < priority(b);
-      });
+  std::stable_sort(outboundClapEvents.begin(), outboundClapEvents.end(),
+                   [](const OutboundClapEvent &a, const OutboundClapEvent &b) {
+                     if (a.sampleOffset != b.sampleOffset)
+                       return a.sampleOffset < b.sampleOffset;
+                     auto priority = [](const OutboundClapEvent &e) -> int {
+                       if (e.type == OutboundClapEvent::Type::NoteOff)
+                         return 0;
+                       if (e.type == OutboundClapEvent::Type::NoteOn)
+                         return 1;
+                       return 2;  // NoteExpression, CC
+                     };
+                     return priority(a) < priority(b);
+                   });
 
   for (const auto &evt : outboundClapEvents) {
     if (evt.type == OutboundClapEvent::Type::NoteOn) {
@@ -1144,8 +1051,7 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
       clapEvt.header.flags = 0;
       clapEvt.port_index = 0;
       // 3-byte MIDI CC: status byte, CC number, value
-      clapEvt.data[0] =
-          static_cast<uint8_t>(0xB0 | (evt.channel & 0x0F));
+      clapEvt.data[0] = static_cast<uint8_t>(0xB0 | (evt.channel & 0x0F));
       clapEvt.data[1] = static_cast<uint8_t>(evt.noteNumber & 0x7F);
       clapEvt.data[2] = static_cast<uint8_t>((int)evt.value & 0x7F);
       out_events->try_push(out_events, &clapEvt.header);
@@ -1172,19 +1078,20 @@ void ArpsEuclidyaProcessor::addOutboundEventsToQueue(
   }
 }
 
-bool ArpsEuclidyaProcessor::interceptMacroCCMessage(const juce::MidiMessage &msg) {
+bool ArpsEuclidyaProcessor::interceptMacroCCMessage(
+    const juce::MidiMessage &msg) {
   if (!msg.isController()) {
     return false;
   }
 
   const int ccNum = msg.getControllerNumber();
-  const int ccCh  = msg.getChannel();
+  const int ccCh = msg.getChannel();
   const int learnIdx = learnMacroIndex.load();
   bool consumed = false;
 
   // MIDI learn: capture this CC to the armed macro.
   if (learnIdx >= 0 && macroParams[(size_t)learnIdx] != nullptr) {
-    macroParams[(size_t)learnIdx]->learnedCC      = ccNum;
+    macroParams[(size_t)learnIdx]->learnedCC = ccNum;
     macroParams[(size_t)learnIdx]->learnedChannel = ccCh;
     learnMacroIndex.store(-1);
     macrosDirty.store(true);
@@ -1217,18 +1124,20 @@ void ArpsEuclidyaProcessor::interceptMacroCC(juce::MidiBuffer &midiMessages) {
   midiMessages.swapWith(passthrough);
 }
 
-void ArpsEuclidyaProcessor::saveMacroLearnedCC(juce::XmlElement &xmlRoot) const {
+void ArpsEuclidyaProcessor::saveMacroLearnedCC(
+    juce::XmlElement &xmlRoot) const {
   auto *el = xmlRoot.createNewChildElement("MacroLearnedCC");
   for (int i = 0; i < 32; ++i) {
     const auto *mp = macroParams[(size_t)i];
     if (mp != nullptr && mp->hasLearnedCC()) {
-      el->setAttribute("cc"  + juce::String(i), mp->learnedCC);
-      el->setAttribute("ch"  + juce::String(i), mp->learnedChannel);
+      el->setAttribute("cc" + juce::String(i), mp->learnedCC);
+      el->setAttribute("ch" + juce::String(i), mp->learnedChannel);
     }
   }
 }
 
-void ArpsEuclidyaProcessor::loadMacroLearnedCC(const juce::XmlElement &xmlRoot) {
+void ArpsEuclidyaProcessor::loadMacroLearnedCC(
+    const juce::XmlElement &xmlRoot) {
   // Clear all first so a patch with no MacroLearnedCC element starts clean.
   for (int i = 0; i < 32; ++i) {
     if (macroParams[(size_t)i] != nullptr) {
@@ -1245,7 +1154,7 @@ void ArpsEuclidyaProcessor::loadMacroLearnedCC(const juce::XmlElement &xmlRoot) 
       const int cc = el->getIntAttribute(ccKey, -1);
       const int ch = el->getIntAttribute("ch" + juce::String(i), 1);
       if (macroParams[(size_t)i] != nullptr && cc >= 0) {
-        macroParams[(size_t)i]->learnedCC      = cc;
+        macroParams[(size_t)i]->learnedCC = cc;
         macroParams[(size_t)i]->learnedChannel = ch;
       }
     }
