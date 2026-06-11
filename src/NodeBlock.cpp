@@ -381,8 +381,8 @@ NodeBlock::NodeBlock(const std::shared_ptr<GraphNode> &node,
               onRequestMidiLearn(mp);
             }
           };
-          comboMacroInfos.push_back({combo, element.macroParamRef,
-                                     element.valueRef});
+          comboMacroInfos.push_back(
+              {combo, element.macroParamRef, element.valueRef});
         }
         comp = combo;
       } else if (element.type == UIElementType::Custom) {
@@ -462,7 +462,8 @@ void NodeBlock::toggleExpansion() {
 void NodeBlock::updateTabVisibility() {
   auto layout = targetNode->getLayout();
 
-  // Compact elements: shown only when folded — unfolded view fully replaces compact
+  // Compact elements: shown only when folded — unfolded view fully replaces
+  // compact
   if (!isExpanded) {
     auto [start, count] = layout.compactTabRange(activeCompactTab);
     for (int i = 0; i < dynamicComponents.size(); ++i) {
@@ -507,10 +508,13 @@ juce::Rectangle<int> NodeBlock::compactBodyRect() const {
   if (!isExpanded || !layout.hasUnfoldedLayout()) {
     return getLocalBounds();
   }
-  int compactW = (layout.gridWidth * Layout::GridPitch) - Layout::TramlineMargin;
-  int compactH = (layout.gridHeight * Layout::GridPitch) - Layout::TramlineMargin;
+  int compactW =
+      (layout.gridWidth * Layout::GridPitch) - Layout::TramlineMargin;
+  int compactH =
+      (layout.gridHeight * Layout::GridPitch) - Layout::TramlineMargin;
   const auto &e = layout.unfoldExtents;
-  return {e.left * Layout::GridPitch, e.up * Layout::GridPitch, compactW, compactH};
+  return {e.left * Layout::GridPitch, e.up * Layout::GridPitch, compactW,
+          compactH};
 }
 
 void NodeBlock::timerCallback() {
@@ -585,14 +589,16 @@ void NodeBlock::timerCallback() {
     }
   }
 
-  // Update combo boxes that have active macro bindings to show the effective value
+  // Update combo boxes that have active macro bindings to show the effective
+  // value
   for (const auto &info : comboMacroInfos) {
     if (info.macroParamRef == nullptr || info.macroParamRef->bindings.empty())
       continue;
     if (info.valueRef == nullptr || info.combo->isMouseButtonDown())
       continue;
     int numItems = info.combo->getNumItems();
-    if (numItems <= 0) continue;
+    if (numItems <= 0)
+      continue;
     int effective = targetNode->resolveMacroInt(
         *info.macroParamRef, *info.valueRef, 0, numItems - 1);
     int effectiveId = effective + 1;
@@ -605,7 +611,8 @@ void NodeBlock::timerCallback() {
   int currentSelected = selectedMacroPtr ? *selectedMacroPtr : -1;
   bool hasActiveBindings = false;
   for (const auto &info : sliderMacroInfos) {
-    if (info.macroParamRef != nullptr && !info.macroParamRef->bindings.empty()) {
+    if (info.macroParamRef != nullptr &&
+        !info.macroParamRef->bindings.empty()) {
       hasActiveBindings = true;
       break;
     }
@@ -650,10 +657,10 @@ void NodeBlock::paint(juce::Graphics &g) {
     g.setColour(juce::Colours::white.withAlpha(0.1f));
     g.saveState();
     g.reduceClipRegion(bounds.toNearestInt());
-    for (float x = bounds.getX() - bounds.getHeight();
-         x < bounds.getRight(); x += 12.0f) {
-      g.drawLine(x, bounds.getBottom(), x + bounds.getHeight(),
-                 bounds.getY(), 2.0f);
+    for (float x = bounds.getX() - bounds.getHeight(); x < bounds.getRight();
+         x += 12.0f) {
+      g.drawLine(x, bounds.getBottom(), x + bounds.getHeight(), bounds.getY(),
+                 2.0f);
     }
     g.restoreState();
   }
@@ -674,10 +681,12 @@ void NodeBlock::paint(juce::Graphics &g) {
     auto boundsI = bounds.toNearestInt();
     if (zone == GraphCanvas::ProximityZone::Left) {
       g.fillRoundedRectangle(
-          boundsI.removeFromLeft(boundsI.getWidth() / 4).toFloat(), cornerRadius);
+          boundsI.removeFromLeft(boundsI.getWidth() / 4).toFloat(),
+          cornerRadius);
     } else if (zone == GraphCanvas::ProximityZone::Right) {
       g.fillRoundedRectangle(
-          boundsI.removeFromRight(boundsI.getWidth() / 4).toFloat(), cornerRadius);
+          boundsI.removeFromRight(boundsI.getWidth() / 4).toFloat(),
+          cornerRadius);
     }
   } else {
     g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.3f));
@@ -706,7 +715,8 @@ void NodeBlock::paint(juce::Graphics &g) {
         }
         g.setColour(juce::Colour(0xff0df0e3).withAlpha(0.5f));
         g.drawRoundedRectangle(tRectF, 3.0f, 1.0f);
-        g.setColour(juce::Colours::white.withAlpha(t == activeTab ? 1.0f : 0.6f));
+        g.setColour(
+            juce::Colours::white.withAlpha(t == activeTab ? 1.0f : 0.6f));
         g.setFont(juce::Font(juce::FontOptions(10.0f)));
         g.drawText(labels[t], tRect, juce::Justification::centred);
       }
@@ -715,21 +725,21 @@ void NodeBlock::paint(juce::Graphics &g) {
     if (!isExpanded && layout.hasCompactTabs()) {
       auto compactBody = compactBodyRect();
       compactBody.removeFromTop(HEADER_HEIGHT);
-      drawTabBar(compactBody.removeFromTop(TAB_HEIGHT),
-                 layout.compactTabLabels, activeCompactTab);
+      drawTabBar(compactBody.removeFromTop(TAB_HEIGHT), layout.compactTabLabels,
+                 activeCompactTab);
     }
 
     if (isExpanded && layout.hasUnfoldedTabs()) {
       auto area = getLocalBounds();
       area.removeFromTop(HEADER_HEIGHT);
-      drawTabBar(area.removeFromTop(TAB_HEIGHT),
-                 layout.unfoldedTabLabels, activeUnfoldedTab);
+      drawTabBar(area.removeFromTop(TAB_HEIGHT), layout.unfoldedTabLabels,
+                 activeUnfoldedTab);
     }
   }
 
   // Helper: pick fill/stroke colours based on port type
-  auto portColors = [](GraphNode::PortType pt)
-      -> std::pair<juce::Colour, juce::Colour> {
+  auto portColors =
+      [](GraphNode::PortType pt) -> std::pair<juce::Colour, juce::Colour> {
     if (pt == GraphNode::PortType::CC)
       return {juce::Colour(0xffaa44ff), juce::Colour(0xff7722cc)};
     if (pt == GraphNode::PortType::Agnostic)
@@ -815,7 +825,8 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
         continue;
       }
 
-      float arcRadius = firstArcRadius + (static_cast<float>(ringIndex) * arcGap);
+      float arcRadius =
+          firstArcRadius + (static_cast<float>(ringIndex) * arcGap);
       ++ringIndex;
 
       auto colour = getMacroColour(binding.macroIndex);
@@ -850,9 +861,9 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       arc.addCentredArc(cx, cy, arcRadius, arcRadius, 0.0f, arcStart, arcEnd,
                         true);
       g.setColour(colour.withAlpha(0.7f));
-      g.strokePath(arc, juce::PathStrokeType(arcStroke,
-                                             juce::PathStrokeType::curved,
-                                             juce::PathStrokeType::rounded));
+      g.strokePath(arc,
+                   juce::PathStrokeType(arcStroke, juce::PathStrokeType::curved,
+                                        juce::PathStrokeType::rounded));
     }
 
     // Effective value indicator: arc from set value to effective value + ring
@@ -864,10 +875,9 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       float effectiveVal = targetNode->resolveMacroFloat(
           *info.macroParamRef, setVal, minVal, maxVal);
 
-      float setPos =
-          range > 0.0f
-              ? juce::jlimit(0.0f, 1.0f, (setVal - minVal) / range)
-              : 0.0f;
+      float setPos = range > 0.0f
+                         ? juce::jlimit(0.0f, 1.0f, (setVal - minVal) / range)
+                         : 0.0f;
       float effectivePos =
           range > 0.0f
               ? juce::jlimit(0.0f, 1.0f, (effectiveVal - minVal) / range)
@@ -930,7 +940,7 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       float totalIntensity = 0.0f;
       for (const auto &b : info.macroParamRef->bindings) {
         totalIntensity += b.intensity;
-}
+      }
       float absI = juce::jlimit(0.0f, 2.0f, std::abs(totalIntensity));
       if (absI > 0.01f) {
         float pad = 4.0f;
@@ -938,9 +948,8 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
         float barW = (absI / 2.0f) * maxW;
         float barX = bounds.getX() + pad;
         float barY = bounds.getBottom() - 3.5f;
-        auto barColour = (totalIntensity >= 0.0f)
-                             ? primaryColour
-                             : primaryColour.darker(0.4f);
+        auto barColour = (totalIntensity >= 0.0f) ? primaryColour
+                                                  : primaryColour.darker(0.4f);
         g.setColour(barColour.withAlpha(0.85f));
         g.fillRoundedRectangle(barX, barY, barW, 2.0f, 1.0f);
       }
@@ -992,13 +1001,13 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
   // Palette hover: bright white ring around controls bound to the hovered macro
   if (highlightedMacroIndex != -1) {
     for (const auto &info : sliderMacroInfos) {
-      if (info.macroParamRef == nullptr) continue;
-      bool bound =
-          std::any_of(info.macroParamRef->bindings.begin(),
-                      info.macroParamRef->bindings.end(),
-                      [this](const MacroBinding &b) {
-                        return b.macroIndex == highlightedMacroIndex;
-                      });
+      if (info.macroParamRef == nullptr)
+        continue;
+      bool bound = std::any_of(info.macroParamRef->bindings.begin(),
+                               info.macroParamRef->bindings.end(),
+                               [this](const MacroBinding &b) {
+                                 return b.macroIndex == highlightedMacroIndex;
+                               });
       if (bound) {
         auto bounds = info.slider->getBounds().toFloat();
         float r =
@@ -1009,13 +1018,13 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       }
     }
     for (const auto &info : buttonMacroInfos) {
-      if (info.macroParamRef == nullptr) continue;
-      bool bound =
-          std::any_of(info.macroParamRef->bindings.begin(),
-                      info.macroParamRef->bindings.end(),
-                      [this](const MacroBinding &b) {
-                        return b.macroIndex == highlightedMacroIndex;
-                      });
+      if (info.macroParamRef == nullptr)
+        continue;
+      bool bound = std::any_of(info.macroParamRef->bindings.begin(),
+                               info.macroParamRef->bindings.end(),
+                               [this](const MacroBinding &b) {
+                                 return b.macroIndex == highlightedMacroIndex;
+                               });
       if (bound) {
         auto bounds = info.button->getBoundsInParent().toFloat();
         g.setColour(juce::Colours::white);
@@ -1023,13 +1032,13 @@ void NodeBlock::paintOverChildren(juce::Graphics &g) {
       }
     }
     for (const auto &info : comboMacroInfos) {
-      if (info.macroParamRef == nullptr) continue;
-      bool bound =
-          std::any_of(info.macroParamRef->bindings.begin(),
-                      info.macroParamRef->bindings.end(),
-                      [this](const MacroBinding &b) {
-                        return b.macroIndex == highlightedMacroIndex;
-                      });
+      if (info.macroParamRef == nullptr)
+        continue;
+      bool bound = std::any_of(info.macroParamRef->bindings.begin(),
+                               info.macroParamRef->bindings.end(),
+                               [this](const MacroBinding &b) {
+                                 return b.macroIndex == highlightedMacroIndex;
+                               });
       if (bound) {
         auto bounds = info.combo->getBoundsInParent().toFloat();
         g.setColour(juce::Colours::white);
@@ -1128,9 +1137,8 @@ void NodeBlock::resized() {
   // coordinates to pixel positions.
   auto layoutElementsInRect =
       [](const std::vector<UIElement> &elements,
-         const juce::OwnedArray<juce::Component> &components,
-         int startX, int startY, int bodyWidth, int bodyHeight,
-         int gridW, int gridH) {
+         const juce::OwnedArray<juce::Component> &components, int startX,
+         int startY, int bodyWidth, int bodyHeight, int gridW, int gridH) {
         constexpr int SUBS_PER_UNIT = 20;
         int gridCols = gridW * SUBS_PER_UNIT;
         int gridRows = gridH * SUBS_PER_UNIT;
@@ -1150,11 +1158,10 @@ void NodeBlock::resized() {
       };
 
   // Compact controls in compact body.
-  layoutElementsInRect(layout.elements, dynamicComponents,
-                       compactBody.getX() + PORT_MARGIN, compactBody.getY(),
-                       compactBody.getWidth() - (PORT_MARGIN * 2),
-                       compactBody.getHeight() - 4,
-                       layout.gridWidth, layout.gridHeight);
+  layoutElementsInRect(
+      layout.elements, dynamicComponents, compactBody.getX() + PORT_MARGIN,
+      compactBody.getY(), compactBody.getWidth() - (PORT_MARGIN * 2),
+      compactBody.getHeight() - 4, layout.gridWidth, layout.gridHeight);
 
   // Unfolded controls span the full panel below the header (and tab bar).
   if (unfolded) {
@@ -1166,10 +1173,8 @@ void NodeBlock::resized() {
       ringTop += TAB_HEIGHT;
     }
     layoutElementsInRect(layout.unfoldedElements, unfoldedComponents,
-                         PORT_MARGIN, ringTop,
-                         getWidth() - PORT_MARGIN * 2,
-                         getHeight() - ringTop - 4,
-                         unfoldGridW, unfoldGridH);
+                         PORT_MARGIN, ringTop, getWidth() - PORT_MARGIN * 2,
+                         getHeight() - ringTop - 4, unfoldGridW, unfoldGridH);
   }
 
   if (customControls != nullptr) {
@@ -1372,7 +1377,8 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
 
     if (newGridX != parentCanvas.getGhostX() ||
         newGridY != parentCanvas.getGhostY()) {
-      parentCanvas.setGhostTarget(newGridX, newGridY, targetNode->getGridWidth(),
+      parentCanvas.setGhostTarget(newGridX, newGridY,
+                                  targetNode->getGridWidth(),
                                   targetNode->getGridHeight(), ghostIgnoreNode);
     }
 
@@ -1384,10 +1390,12 @@ void NodeBlock::mouseDrag(const juce::MouseEvent &e) {
       targetNode->nodeX = dragStartWorldX;
       targetNode->nodeY = dragStartWorldY;
     } else {
-      targetNode->nodeX = (static_cast<float>(dragStartGridX) * Layout::GridPitchFloat) +
-                          Layout::TramlineOffset + static_cast<float>(deltaX);
-      targetNode->nodeY = (static_cast<float>(dragStartGridY) * Layout::GridPitchFloat) +
-                          Layout::TramlineOffset + static_cast<float>(deltaY);
+      targetNode->nodeX =
+          (static_cast<float>(dragStartGridX) * Layout::GridPitchFloat) +
+          Layout::TramlineOffset + static_cast<float>(deltaX);
+      targetNode->nodeY =
+          (static_cast<float>(dragStartGridY) * Layout::GridPitchFloat) +
+          Layout::TramlineOffset + static_cast<float>(deltaY);
     }
 
     if (onPositionChanged) {
@@ -1455,18 +1463,12 @@ void NodeBlock::mouseUp(const juce::MouseEvent &e) {
         parentCanvas.performMutation([this, finalGridX, finalGridY]() {
           targetNode->gridX = finalGridX;
           targetNode->gridY = finalGridY;
-          targetNode->nodeX = (float)(targetNode->gridX * Layout::GridPitch) +
-                              Layout::TramlineOffset;
-          targetNode->nodeY = (float)(targetNode->gridY * Layout::GridPitch) +
-                              Layout::TramlineOffset;
+          targetNode->syncWorldFromGrid();
         });
       } else {
         targetNode->gridX = finalGridX;
         targetNode->gridY = finalGridY;
-        targetNode->nodeX = (float)(targetNode->gridX * Layout::GridPitch) +
-                            Layout::TramlineOffset;
-        targetNode->nodeY = (float)(targetNode->gridY * Layout::GridPitch) +
-                            Layout::TramlineOffset;
+        targetNode->syncWorldFromGrid();
       }
     } else {
       // Revert to original position if the snap doesn't result in a grid change

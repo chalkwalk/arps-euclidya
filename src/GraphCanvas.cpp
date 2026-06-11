@@ -55,9 +55,6 @@ void GraphCanvas::rebuild() {
   for (const auto &node : nodes) {
     auto *block = new NodeBlock(node, apvts, *this);
     block->setSelectedMacroPtr(selectedMacroPtr);
-    // The bounds are set via updateTransforms later
-    // block->setTopLeftPosition((int)node->nodeX, (int)node->nodeY);
-
     block->onDelete = [this, nodePtr = node.get()]() {
       const juce::ScopedLock sl2(graphLock);
       if (performMutation) {
@@ -157,8 +154,8 @@ void GraphCanvas::updateTransforms() {
     if (std::isnan(ny) || std::isinf(ny))
       ny = 0.0f;
 
-    // When a block is unfolded, its component origin shifts by the unfold extents
-    // above/left the logical position.
+    // When a block is unfolded, its component origin shifts by the unfold
+    // extents above/left the logical position.
     int offsetX = 0;
     int offsetY = 0;
     if (block->isUnfolded()) {
@@ -166,8 +163,8 @@ void GraphCanvas::updateTransforms() {
       offsetX = -(e.left * Layout::GridPitch);
       offsetY = -(e.up * Layout::GridPitch);
     }
-    block->setBounds((int)nx + offsetX, (int)ny + offsetY,
-                     block->getWidth(), block->getHeight());
+    block->setBounds((int)nx + offsetX, (int)ny + offsetY, block->getWidth(),
+                     block->getHeight());
   }
   updateScrollBars();
 }
@@ -191,10 +188,7 @@ void GraphCanvas::addNodeAtDefaultPosition(
   node->gridX = nearest.x;
   node->gridY = nearest.y;
 
-  node->nodeX =
-      (float)(node->gridX * Layout::GridPitch) + Layout::TramlineOffset;
-  node->nodeY =
-      (float)(node->gridY * Layout::GridPitch) + Layout::TramlineOffset;
+  node->syncWorldFromGrid();
 
   graphEngine.addNode(node);
 
@@ -480,7 +474,8 @@ void GraphCanvas::refreshCableCache() {
         cable.path.cubicTo(startF.x + dx, startF.y, endF.x - dx, endF.y, endF.x,
                            endF.y);
 
-        cable.portType = graphEngine.getEffectiveOutputPortType(node.get(), outPort);
+        cable.portType =
+            graphEngine.getEffectiveOutputPortType(node.get(), outPort);
         const auto &outSeq = node->getOutputSequence(outPort);
         cable.stepCount = (int)outSeq.size();
         cable.activeStepCount = 0;
@@ -490,10 +485,9 @@ void GraphCanvas::refreshCableCache() {
           }
         }
         cable.isLarge = (cable.stepCount > 10000);
-        cable.isSelected =
-            !selectedNodes.empty() &&
-            (selectedNodes.count(node.get()) > 0 ||
-             selectedNodes.count(conn.targetNode) > 0);
+        cable.isSelected = !selectedNodes.empty() &&
+                           (selectedNodes.count(node.get()) > 0 ||
+                            selectedNodes.count(conn.targetNode) > 0);
 
         cachedCables.push_back(std::move(cable));
       }
@@ -652,7 +646,8 @@ void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
 
   if (isBoxSelecting) {
     isBoxSelecting = false;
-    float distSq = boxSelectStartScreen.getDistanceSquaredFrom(boxSelectCurrentScreen);
+    float distSq =
+        boxSelectStartScreen.getDistanceSquaredFrom(boxSelectCurrentScreen);
     if (distSq < 16.0f) {
       // Negligible drag — treat as background click, clear selection
       clearSelection();
@@ -1000,7 +995,8 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
 
     if (!selectedNodes.empty()) {
       // Capture a copy so the lambda can use it safely
-      std::vector<GraphNode *> toRemove(selectedNodes.begin(), selectedNodes.end());
+      std::vector<GraphNode *> toRemove(selectedNodes.begin(),
+                                        selectedNodes.end());
       selectedNodes.clear();
       const juce::ScopedLock sl(graphLock);
       if (performMutation) {
@@ -1308,10 +1304,7 @@ void GraphCanvas::addNodeAtPosition(const std::shared_ptr<GraphNode> &node,
   node->gridX = dropGridX;
   node->gridY = dropGridY;
 
-  node->nodeX =
-      (float)(node->gridX * Layout::GridPitch) + Layout::TramlineOffset;
-  node->nodeY =
-      (float)(node->gridY * Layout::GridPitch) + Layout::TramlineOffset;
+  node->syncWorldFromGrid();
 
   graphEngine.addNode(node);
 
@@ -1487,19 +1480,19 @@ void GraphCanvas::setGroupGhostTarget(int bboxGridX, int bboxGridY) {
   ghostTargetH = groupDragBBoxH;
 
   const juce::ScopedLock sl(graphLock);
-  ghostIsValid = !graphEngine.isAreaOccupied(bboxGridX, bboxGridY,
-                                              groupDragBBoxW, groupDragBBoxH,
-                                              selectedNodes);
+  ghostIsValid = !graphEngine.isAreaOccupied(
+      bboxGridX, bboxGridY, groupDragBBoxW, groupDragBBoxH, selectedNodes);
   if (ghostIsValid) {
     ghostResolvedX = bboxGridX;
     ghostResolvedY = bboxGridY;
     hasGhostResolved = true;
   } else if (posChanged || !hasGhostResolved) {
     // Find nearest free spot for the bounding box, ignoring all selected nodes
-    GraphNode *firstSelected = selectedNodes.empty() ? nullptr : *selectedNodes.begin();
+    GraphNode *firstSelected =
+        selectedNodes.empty() ? nullptr : *selectedNodes.begin();
     auto resolved = graphEngine.findClosestFreeSpot(
-        bboxGridX, bboxGridY, groupDragBBoxW, groupDragBBoxH,
-        firstSelected, getViewportGridCenter());
+        bboxGridX, bboxGridY, groupDragBBoxW, groupDragBBoxH, firstSelected,
+        getViewportGridCenter());
     ghostResolvedX = resolved.x;
     ghostResolvedY = resolved.y;
     hasGhostResolved = true;
@@ -1562,10 +1555,12 @@ void GraphCanvas::updateGroupDrag(const juce::MouseEvent &e) {
       d.node->nodeX = d.startWorldX;
       d.node->nodeY = d.startWorldY;
     } else {
-      d.node->nodeX = (static_cast<float>(d.startGridX) * Layout::GridPitchFloat) +
-                      Layout::TramlineOffset + static_cast<float>(deltaX);
-      d.node->nodeY = (static_cast<float>(d.startGridY) * Layout::GridPitchFloat) +
-                      Layout::TramlineOffset + static_cast<float>(deltaY);
+      d.node->nodeX =
+          (static_cast<float>(d.startGridX) * Layout::GridPitchFloat) +
+          Layout::TramlineOffset + static_cast<float>(deltaX);
+      d.node->nodeY =
+          (static_cast<float>(d.startGridY) * Layout::GridPitchFloat) +
+          Layout::TramlineOffset + static_cast<float>(deltaY);
     }
   }
 
@@ -1617,20 +1612,14 @@ void GraphCanvas::commitGroupDrag(bool isClone) {
         for (auto &d : groupDragNodes) {
           d.node->gridX = d.startGridX + finalDeltaX;
           d.node->gridY = d.startGridY + finalDeltaY;
-          d.node->nodeX = (float)(d.node->gridX * Layout::GridPitch) +
-                          Layout::TramlineOffset;
-          d.node->nodeY = (float)(d.node->gridY * Layout::GridPitch) +
-                          Layout::TramlineOffset;
+          d.node->syncWorldFromGrid();
         }
       });
     } else {
       for (auto &d : groupDragNodes) {
         d.node->gridX = d.startGridX + finalDeltaX;
         d.node->gridY = d.startGridY + finalDeltaY;
-        d.node->nodeX = (float)(d.node->gridX * Layout::GridPitch) +
-                        Layout::TramlineOffset;
-        d.node->nodeY = (float)(d.node->gridY * Layout::GridPitch) +
-                        Layout::TramlineOffset;
+        d.node->syncWorldFromGrid();
       }
     }
     updateTransforms();

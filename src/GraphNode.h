@@ -72,13 +72,19 @@ class GraphNode {
   int gridX = 0;
   int gridY = 0;
 
-  // Ephemeral unfold state — set by NodeBlock, read by GraphEngine feasibility check.
+  // Ephemeral unfold state — set by NodeBlock, read by GraphEngine feasibility
+  // check.
   bool isUnfoldedRuntime = false;
 
-  // Legacy float coordinates (kept temporarily for runtime dragging during
-  // Phase 1-3 transition)
+  // UI world-position cache; authoritative only mid-drag, otherwise derived
+  // from gridX/gridY.
   float nodeX = 0.0f;
   float nodeY = 0.0f;
+
+  void syncWorldFromGrid() {
+    nodeX = (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
+    nodeY = (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
+  }
 
   virtual void saveNodeState(juce::XmlElement *xml) { juce::ignoreUnused(xml); }
   virtual void loadNodeState(juce::XmlElement *xml) { juce::ignoreUnused(xml); }
@@ -104,9 +110,7 @@ class GraphNode {
         gridY = (int)std::round(y / Layout::GridPitchFloat);
       }
 
-      // Keep float sync for Phase 1-3 transitional logic
-      nodeX = (float)(gridX * Layout::GridPitch) + Layout::TramlineOffset;
-      nodeY = (float)(gridY * Layout::GridPitch) + Layout::TramlineOffset;
+      syncWorldFromGrid();
       bypassed = xml->getBoolAttribute("bypassed", false);
     }
   }
@@ -210,32 +214,7 @@ class GraphNode {
   // the user toggles a macro's polarity.
   std::atomic<uint32_t> macroBipolarMask{0};
 
-  // Scale macro [0,1] → [0, maxVal] as int, or return localVal if unmapped.
-  int resolveMacroInt(int macroIdx, int localVal, int maxVal) const {
-    if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
-      return (int)std::round(macros[(size_t)macroIdx]->load() * (float)maxVal);
-    }
-    return localVal;
-  }
-
-  // Return macro [0,1] directly as float, or return localVal if unmapped.
-  float resolveMacroFloat(int macroIdx, float localVal) const {
-    if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
-      return macros[(size_t)macroIdx]->load();
-    }
-    return localVal;
-  }
-
-  // Bipolar: (macro - 0.5) × maxVal, centered at zero. Or return localVal.
-  int resolveMacroOffset(int macroIdx, int localVal, int maxVal) const {
-    if (macroIdx != -1 && macros[(size_t)macroIdx] != nullptr) {
-      return (int)std::round((macros[(size_t)macroIdx]->load() - 0.5f) *
-                             (float)maxVal);
-    }
-    return localVal;
-  }
-
-  // --- Additive Resolvers (Phase C) ---
+  // --- Macro Resolvers ---
 
   int resolveMacroInt(const MacroParam &param, int localVal, int minVal,
                       int maxVal) const {
@@ -249,8 +228,9 @@ class GraphNode {
           macros[(size_t)binding.macroIndex] != nullptr) {
         float macroVal = macros[(size_t)binding.macroIndex]->load();
         bool isBipolar = (bipolarMask >> (unsigned)binding.macroIndex) & 1u;
-        effective += isBipolar ? (macroVal - 0.5f) * 2.0f * binding.intensity * range
-                               : macroVal * binding.intensity * range;
+        effective += isBipolar
+                         ? (macroVal - 0.5f) * 2.0f * binding.intensity * range
+                         : macroVal * binding.intensity * range;
       }
     }
     return std::clamp((int)std::round(effective), minVal, maxVal);
@@ -268,8 +248,9 @@ class GraphNode {
           macros[(size_t)binding.macroIndex] != nullptr) {
         float macroVal = macros[(size_t)binding.macroIndex]->load();
         bool isBipolar = (bipolarMask >> (unsigned)binding.macroIndex) & 1u;
-        effective += isBipolar ? (macroVal - 0.5f) * 2.0f * binding.intensity * range
-                               : macroVal * binding.intensity * range;
+        effective += isBipolar
+                         ? (macroVal - 0.5f) * 2.0f * binding.intensity * range
+                         : macroVal * binding.intensity * range;
       }
     }
     return std::clamp(effective, minVal, maxVal);

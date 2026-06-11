@@ -43,7 +43,8 @@ class NodeBlock : public juce::Component, private juce::Timer {
   static constexpr int PORT_MARGIN = 14;
   static constexpr int TAB_HEIGHT = 20;
 
-  // Called by GraphCanvas after construction to share the editor's selection state
+  // Called by GraphCanvas after construction to share the editor's selection
+  // state
   void setSelectedMacroPtr(int *ptr) {
     selectedMacroPtr = ptr;
     // Propagate to all macro-aware sliders, buttons, and combos
@@ -69,8 +70,10 @@ class NodeBlock : public juce::Component, private juce::Timer {
 
   std::function<void()> onDelete;
   std::function<void()> onPositionChanged;
-  std::function<void(std::vector<int>)> onHoverMacros;      // forwarded from canvas → editor
-  std::function<void(MacroParam *)> onRequestMidiLearn;     // forwarded from canvas → editor
+  std::function<void(std::vector<int>)>
+      onHoverMacros;  // forwarded from canvas → editor
+  std::function<void(MacroParam *)>
+      onRequestMidiLearn;  // forwarded from canvas → editor
 
   // Callbacks for cable dragging (forwarded to canvas)
   std::function<void(NodeBlock *block, int portIndex, bool isOutput,
@@ -114,13 +117,14 @@ class NodeBlock : public juce::Component, private juce::Timer {
   [[nodiscard]] bool isUnfolded() const { return isExpanded; }
 
  private:
-
   // Fallback for nodes not yet migrated to NodeLayout
   std::unique_ptr<juce::Component> customControls;
 
   // Dynamic UI Elements (Layout-driven)
-  juce::OwnedArray<juce::Component> dynamicComponents;   // compact elements (all tabs, flat)
-  juce::OwnedArray<juce::Component> unfoldedComponents;  // unfolded elements (all tabs, flat)
+  juce::OwnedArray<juce::Component>
+      dynamicComponents;  // compact elements (all tabs, flat)
+  juce::OwnedArray<juce::Component>
+      unfoldedComponents;  // unfolded elements (all tabs, flat)
 
   // Selected-macro state (pointer into editor's selectedMacro field)
   int *selectedMacroPtr = nullptr;
@@ -136,7 +140,6 @@ class NodeBlock : public juce::Component, private juce::Timer {
   }
 
  private:
-
   // Tracks sliders that have a macroParamRef, for overlay rendering
   struct SliderMacroInfo {
     juce::Slider *slider;
@@ -172,7 +175,6 @@ class NodeBlock : public juce::Component, private juce::Timer {
   // without clearing the selection first.
   bool wasInGroupSelection = false;
 
-  juce::ComponentDragger dragger;
   bool isDraggingNode = false;
   bool isDraggingCable = false;
 
