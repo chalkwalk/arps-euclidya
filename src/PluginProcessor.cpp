@@ -53,6 +53,10 @@ ArpsEuclidyaProcessor::ArpsEuclidyaProcessor()
       AppSettings::getInstance().getIgnoreMpeMasterPressure());
   noteExpressionManager.setLegacyMode(
       !AppSettings::getInstance().getMpeEnabled());
+
+  clockManager.setUseInternalTransport(
+      juce::PluginHostType::getPluginLoadedAs() ==
+      juce::AudioProcessor::wrapperType_Standalone);
 }
 
 ArpsEuclidyaProcessor::~ArpsEuclidyaProcessor() {

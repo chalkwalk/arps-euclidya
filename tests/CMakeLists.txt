@@ -25,7 +25,9 @@ target_sources(ArpsTests PRIVATE
     TestPortTypes.cpp
     TestScalaParser.cpp
     TestGraphStateRoundTrip.cpp
-    TestNodeRegistry.cpp)
+    TestNodeRegistry.cpp
+    TestClockManager.cpp
+    TestMidiOutTransport.cpp)
 
 target_include_directories(ArpsTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
