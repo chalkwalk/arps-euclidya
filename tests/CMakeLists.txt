@@ -18,7 +18,11 @@ target_sources(ArpsTests PRIVATE
     ${ARPS_CORE_SOURCES}
     TestMain.cpp
     TestMpeCondition.cpp
-    TestEuclideanMath.cpp)
+    TestEuclideanMath.cpp
+    TestMacroResolution.cpp
+    TestNodeProcess.cpp
+    TestGraphEngineTopology.cpp
+    TestPortTypes.cpp)
 
 target_include_directories(ArpsTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
