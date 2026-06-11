@@ -47,6 +47,16 @@ class GraphEngine {
   std::vector<class MidiOutNode *> getMidiOutNodes() const;
   std::vector<class QuantizerNode *> getQuantizerNodes() const;
 
+  template <typename T>
+  std::vector<T *> getNodesOfType() const {
+    std::vector<T *> result;
+    for (const auto &node : nodes) {
+      if (auto *p = dynamic_cast<T *>(node.get()))
+        result.push_back(p);
+    }
+    return result;
+  }
+
   juce::Point<int> findClosestFreeSpot(int startX, int startY, int gridW,
                                        int gridH,
                                        GraphNode *ignoreNode = nullptr,
@@ -87,6 +97,8 @@ class GraphEngine {
  private:
   std::vector<std::shared_ptr<GraphNode>> nodes;
   std::array<std::atomic<float> *, 32> *macrosPtr = nullptr;
+
+  void wireNodeCallbacks(const std::shared_ptr<GraphNode> &node);
 
   // Compute a topological ordering of nodes based on connections
   std::vector<GraphNode *> topologicalSort() const;

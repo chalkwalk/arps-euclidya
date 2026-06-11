@@ -9,10 +9,14 @@
 #include "MidiOutNode/MidiOutNode.h"
 #include "QuantizerNode/QuantizerNode.h"
 
-void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
-  if (macrosPtr != nullptr) {
-    node->macros = *macrosPtr;
-  }
+namespace {
+bool gridRectsOverlap(int x1, int y1, int w1, int h1, int x2, int y2, int w2,
+                      int h2) {
+  return (x1 < x2 + w2) && (x1 + w1 > x2) && (y1 < y2 + h2) && (y1 + h1 > y2);
+}
+}  // namespace
+
+void GraphEngine::wireNodeCallbacks(const std::shared_ptr<GraphNode> &node) {
   if (onGraphDirtied) {
     auto callback = onGraphDirtied;
     GraphNode *rawPtr = node.get();
@@ -21,27 +25,22 @@ void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
       callback();
     };
   }
+}
+
+void GraphEngine::addNode(const std::shared_ptr<GraphNode> &node) {
+  if (macrosPtr != nullptr) {
+    node->macros = *macrosPtr;
+  }
+  wireNodeCallbacks(node);
   nodes.push_back(node);
 }
 
 std::vector<MidiOutNode *> GraphEngine::getMidiOutNodes() const {
-  std::vector<MidiOutNode *> outNodes;
-  for (const auto &node : nodes) {
-    if (auto *out = dynamic_cast<MidiOutNode *>(node.get())) {
-      outNodes.push_back(out);
-    }
-  }
-  return outNodes;
+  return getNodesOfType<MidiOutNode>();
 }
 
 std::vector<QuantizerNode *> GraphEngine::getQuantizerNodes() const {
-  std::vector<QuantizerNode *> result;
-  for (const auto &node : nodes) {
-    if (auto *q = dynamic_cast<QuantizerNode *>(node.get())) {
-      result.push_back(q);
-    }
-  }
-  return result;
+  return getNodesOfType<QuantizerNode>();
 }
 
 void GraphEngine::removeNode(GraphNode *node) {
@@ -80,35 +79,23 @@ bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
       continue;
     }
 
-    int curX = node->gridX;
-    int curY = node->gridY;
-    int curW = node->getGridWidth();
-    int curH = node->getGridHeight();
-
-    // Standard AABB intersection test (exclusive of edges)
-    bool overlapX = (gridX < curX + curW) && (gridX + gridW > curX);
-    bool overlapY = (gridY < curY + curH) && (gridY + gridH > curY);
-
-    if (overlapX && overlapY) {
+    if (gridRectsOverlap(gridX, gridY, gridW, gridH, node->gridX, node->gridY,
+                         node->getGridWidth(), node->getGridHeight())) {
       return true;
     }
   }
   return false;
 }
 
-bool GraphEngine::isAreaOccupied(int gridX, int gridY, int gridW, int gridH,
-                                  const std::unordered_set<GraphNode *> &ignoreSet) const {
+bool GraphEngine::isAreaOccupied(
+    int gridX, int gridY, int gridW, int gridH,
+    const std::unordered_set<GraphNode *> &ignoreSet) const {
   for (const auto &node : nodes) {
     if (ignoreSet.count(node.get()) > 0) {
       continue;
     }
-    int curX = node->gridX;
-    int curY = node->gridY;
-    int curW = node->getGridWidth();
-    int curH = node->getGridHeight();
-    bool overlapX = (gridX < curX + curW) && (gridX + gridW > curX);
-    bool overlapY = (gridY < curY + curH) && (gridY + gridH > curY);
-    if (overlapX && overlapY) {
+    if (gridRectsOverlap(gridX, gridY, gridW, gridH, node->gridX, node->gridY,
+                         node->getGridWidth(), node->getGridHeight())) {
       return true;
     }
   }
@@ -125,11 +112,8 @@ bool GraphEngine::isUnfoldFootprintClear(const GraphNode *node) const {
     if (other.get() == node || !other->isUnfoldedRuntime) {
       continue;
     }
-    int ox = other->gridX, oy = other->gridY;
-    int ow = other->getGridWidth(), oh = other->getGridHeight();
-    bool overlapX = (x < ox + ow) && (x + w > ox);
-    bool overlapY = (y < oy + oh) && (y + h > oy);
-    if (overlapX && overlapY) {
+    if (gridRectsOverlap(x, y, w, h, other->gridX, other->gridY,
+                         other->getGridWidth(), other->getGridHeight())) {
       return false;
     }
   }
@@ -223,14 +207,16 @@ int GraphEngine::getNextFreeMacro() const {
 GraphNode::PortType GraphEngine::getEffectiveOutputPortType(GraphNode *node,
                                                             int port) const {
   auto declared = node->getOutputPortType(port);
-  if (declared != GraphNode::PortType::Agnostic) return declared;
+  if (declared != GraphNode::PortType::Agnostic)
+    return declared;
   // Agnostic: latch to the type of the first non-agnostic connection target
   const auto &conns = node->getConnections();
   auto it = conns.find(port);
   if (it != conns.end()) {
     for (const auto &conn : it->second) {
       auto tType = conn.targetNode->getInputPortType(conn.targetInputPort);
-      if (tType != GraphNode::PortType::Agnostic) return tType;
+      if (tType != GraphNode::PortType::Agnostic)
+        return tType;
     }
   }
   return GraphNode::PortType::Agnostic;
@@ -239,14 +225,16 @@ GraphNode::PortType GraphEngine::getEffectiveOutputPortType(GraphNode *node,
 GraphNode::PortType GraphEngine::getEffectiveInputPortType(GraphNode *node,
                                                            int port) const {
   auto declared = node->getInputPortType(port);
-  if (declared != GraphNode::PortType::Agnostic) return declared;
+  if (declared != GraphNode::PortType::Agnostic)
+    return declared;
   // Agnostic: latch to the type of the first non-agnostic connected source
   for (const auto &n : nodes) {
     for (const auto &[outPort, connVec] : n->getConnections()) {
       for (const auto &conn : connVec) {
         if (conn.targetNode == node && conn.targetInputPort == port) {
           auto sType = n->getOutputPortType(outPort);
-          if (sType != GraphNode::PortType::Agnostic) return sType;
+          if (sType != GraphNode::PortType::Agnostic)
+            return sType;
         }
       }
     }
@@ -288,7 +276,8 @@ bool GraphEngine::addExplicitConnection(GraphNode *source, int outPort,
     return false;
   }
 
-  // Port type compatibility (Notes ↔ CC mismatch rejected; Agnostic accepts all)
+  // Port type compatibility (Notes ↔ CC mismatch rejected; Agnostic accepts
+  // all)
   if (!checkPortTypeCompatibility(source, outPort, target, inPort)) {
     return false;
   }
@@ -518,6 +507,12 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
     }
   }
 
+  // Build UUID → node map for O(1) connection lookup.
+  std::unordered_map<juce::String, GraphNode *> uuidMap;
+  for (const auto &node : nodes) {
+    uuidMap[node->nodeId.toString()] = node.get();
+  }
+
   // Load Connections
   auto *connectionsXml = xmlRoot->getChildByName("Connections");
   if (connectionsXml != nullptr) {
@@ -527,20 +522,10 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
       juce::String targetUuidStr = connXml->getStringAttribute("targetUuid");
       int targetPort = connXml->getIntAttribute("targetPort");
 
-      GraphNode *sourceNode = nullptr;
-      GraphNode *targetNode = nullptr;
-
-      for (const auto &node : nodes) {
-        if (node->nodeId.toString() == sourceUuidStr) {
-          sourceNode = node.get();
-        }
-        if (node->nodeId.toString() == targetUuidStr) {
-          targetNode = node.get();
-        }
-      }
-
-      if (sourceNode && targetNode) {
-        sourceNode->addConnection(sourcePort, targetNode, targetPort);
+      auto srcIt = uuidMap.find(sourceUuidStr);
+      auto dstIt = uuidMap.find(targetUuidStr);
+      if (srcIt != uuidMap.end() && dstIt != uuidMap.end()) {
+        srcIt->second->addConnection(sourcePort, dstIt->second, targetPort);
       }
     }
   }
@@ -548,14 +533,7 @@ void GraphEngine::loadState(juce::XmlElement *xmlRoot,
   // Wire callbacks, set macros, and mark dirty
   for (const auto &node : nodes) {
     node->macros = macros;
-    if (onGraphDirtied) {
-      auto callback = onGraphDirtied;
-      GraphNode *rawPtr = node.get();
-      node->onNodeDirtied = [rawPtr, callback]() {
-        rawPtr->isDirty = true;
-        callback();
-      };
-    }
+    wireNodeCallbacks(node);
     node->isDirty = true;
   }
   recalculate();
