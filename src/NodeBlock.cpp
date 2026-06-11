@@ -1201,16 +1201,13 @@ void NodeBlock::cancelDrag() {
 juce::Rectangle<int> NodeBlock::getInputPortRect(int portIndex) const {
   bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
   auto body = unfolded ? getLocalBounds() : compactBodyRect();
-  int y = body.getY() + HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
-  return {body.getX(), y - PORT_RADIUS, PORT_RADIUS, PORT_RADIUS * 2};
+  return PortGeo::inputPortRect(body, portIndex);
 }
 
 juce::Rectangle<int> NodeBlock::getOutputPortRect(int portIndex) const {
   bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
   auto body = unfolded ? getLocalBounds() : compactBodyRect();
-  int y = body.getY() + HEADER_HEIGHT + 10 + (portIndex * PORT_SPACING);
-  return {body.getRight() - PORT_RADIUS, y - PORT_RADIUS, PORT_RADIUS,
-          PORT_RADIUS * 2};
+  return PortGeo::outputPortRect(body, portIndex);
 }
 
 juce::Point<int> NodeBlock::getInputPortCentre(int portIndex) const {
@@ -1224,29 +1221,17 @@ juce::Point<int> NodeBlock::getOutputPortCentre(int portIndex) const {
 }
 
 int NodeBlock::hitTestInputPort(juce::Point<int> localPoint) const {
-  int numIn = targetNode->getNumInputPorts();
-  auto localFloat = localPoint.toFloat();
-  for (int i = 0; i < numIn; ++i) {
-    auto rect = getInputPortRect(i);
-    auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) {
-      return i;
-    }
-  }
-  return -1;
+  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
+  auto body = unfolded ? getLocalBounds() : compactBodyRect();
+  return PortGeo::hitTestInput(localPoint, body,
+                               targetNode->getNumInputPorts());
 }
 
 int NodeBlock::hitTestOutputPort(juce::Point<int> localPoint) const {
-  int numOut = targetNode->getNumOutputPorts();
-  auto localFloat = localPoint.toFloat();
-  for (int i = 0; i < numOut; ++i) {
-    auto rect = getOutputPortRect(i);
-    auto centre = rect.getCentre().toFloat();
-    if (localFloat.getDistanceFrom(centre) <= (float)PORT_HIT_RADIUS) {
-      return i;
-    }
-  }
-  return -1;
+  bool unfolded = isExpanded && targetNode->getLayout().hasUnfoldedLayout();
+  auto body = unfolded ? getLocalBounds() : compactBodyRect();
+  return PortGeo::hitTestOutput(localPoint, body,
+                                targetNode->getNumOutputPorts());
 }
 
 NodeDragPreview::NodeDragPreview(juce::String nodeType, int gridW, int gridH,
@@ -1280,18 +1265,14 @@ void NodeDragPreview::paint(juce::Graphics &g) {
              juce::Justification::centredLeft);
 
   // Ports
+  auto body = getLocalBounds();
   g.setColour(ArpsLookAndFeel::getBackgroundCharcoal().withAlpha(0.8f));
   for (int i = 0; i < numIn; ++i) {
-    int py = NodeBlock::HEADER_HEIGHT + 10 + (i * NodeBlock::PORT_SPACING);
-    g.fillEllipse(0.0f, (float)(py - NodeBlock::PORT_RADIUS),
-                  (float)NodeBlock::PORT_RADIUS,
-                  (float)(NodeBlock::PORT_RADIUS * 2));
+    auto r = PortGeo::inputPortRect(body, i).toFloat();
+    g.fillEllipse(r);
   }
   for (int i = 0; i < numOut; ++i) {
-    int py = NodeBlock::HEADER_HEIGHT + 10 + (i * NodeBlock::PORT_SPACING);
-    g.fillEllipse((float)(getWidth() - NodeBlock::PORT_RADIUS),
-                  (float)(py - NodeBlock::PORT_RADIUS),
-                  (float)NodeBlock::PORT_RADIUS,
-                  (float)(NodeBlock::PORT_RADIUS * 2));
+    auto r = PortGeo::outputPortRect(body, i).toFloat();
+    g.fillEllipse(r);
   }
 }

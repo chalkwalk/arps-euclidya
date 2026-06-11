@@ -6,6 +6,7 @@
 
 #include "GraphNode.h"
 #include "MacroOverlayPainter.h"
+#include "PortGeometry.h"
 #include "SharedMacroUI.h"
 
 class GraphCanvas;  // forward declaration
@@ -36,13 +37,14 @@ class NodeBlock : public juce::Component, private juce::Timer {
   [[nodiscard]] juce::Point<int> getInputPortCentre(int portIndex) const;
   [[nodiscard]] juce::Point<int> getOutputPortCentre(int portIndex) const;
 
-  // Port geometry
-  static constexpr int PORT_RADIUS = 8;
-  static constexpr int PORT_HIT_RADIUS = 14;  // generous hit area
-  static constexpr int PORT_SPACING = 24;
-  static constexpr int HEADER_HEIGHT = 28;
-  static constexpr int PORT_MARGIN = 14;
-  static constexpr int TAB_HEIGHT = 20;
+  // Port geometry — values live in PortGeometry.h; aliases kept for call-site
+  // compatibility.
+  static constexpr int PORT_RADIUS = PortGeo::PORT_RADIUS;
+  static constexpr int PORT_HIT_RADIUS = PortGeo::PORT_HIT_RADIUS;
+  static constexpr int PORT_SPACING = PortGeo::PORT_SPACING;
+  static constexpr int HEADER_HEIGHT = PortGeo::HEADER_HEIGHT;
+  static constexpr int PORT_MARGIN = PortGeo::PORT_MARGIN;
+  static constexpr int TAB_HEIGHT = PortGeo::TAB_HEIGHT;
 
   // Called by GraphCanvas after construction to share the editor's selection
   // state
