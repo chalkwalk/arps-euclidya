@@ -10,8 +10,9 @@ static juce::String formatBarBeatTick(double ppq) {
   const double beatPos = std::fmod(ppq, 4.0);
   const int beat = (int)beatPos + 1;
   int tick = (int)std::round((beatPos - std::floor(beatPos)) * 960.0);
-  if (tick >= 960)
+  if (tick >= 960) {
     tick = 0;  // rounding guard at the boundary
+  }
   return juce::String(bar) + "." + juce::String(beat) + "." +
          juce::String(tick).paddedLeft('0', 3);
 }

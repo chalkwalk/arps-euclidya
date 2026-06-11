@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters,readability-function-cognitive-complexity)
 void ClockManager::update(juce::AudioPlayHead *playHead, int samplesPerBlock,
                           double sampleRate) {
   tickFlag = false;

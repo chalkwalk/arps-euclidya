@@ -17,7 +17,7 @@ void TimelineRuler::tick() {
     const double viewEndPpq =
         viewStartPpq + (ppqForX((float)getWidth()) - viewStartPpq);
     if (ppq >= viewEndPpq) {
-      viewStartPpq = ppq - (ppqForX((float)getWidth()) - ppqForX(0.0f)) * 0.1;
+      viewStartPpq = ppq - ((ppqForX((float)getWidth()) - ppqForX(0.0f)) * 0.1);
       viewStartPpq = std::max(0.0, viewStartPpq);
     }
   }
@@ -25,13 +25,15 @@ void TimelineRuler::tick() {
 }
 
 double TimelineRuler::snapPpq(double ppq, bool snapDisabled) const {
-  if (snapDisabled)
+  if (snapDisabled) {
     return ppq;
+  }
   // Use sixteenth-note snapping when zoomed in enough, beat otherwise.
   const double snapUnit = (pixelsPerBar >= 128.0) ? 0.25 : 1.0;
   return std::round(ppq / snapUnit) * snapUnit;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void TimelineRuler::paint(juce::Graphics &g) {
   const int w = getWidth();
   const int h = getHeight();
@@ -57,11 +59,13 @@ void TimelineRuler::paint(juce::Graphics &g) {
     g.setColour(juce::Colour(0xff333333));
     for (int bar = firstBar; bar <= lastBar; ++bar) {
       for (int beat = 1; beat < 4; ++beat) {
-        double ppq = (double)bar * kPpqPerBar + (double)beat;
+        double ppq = ((double)bar * kPpqPerBar) + (double)beat;
         float x = xForPpq(ppq);
-        if (x < 0.0f || x > (float)w)
+        if (x < 0.0f || x > (float)w) {
           continue;
-        g.drawVerticalLine((int)x, (float)(h / 2), (float)h);
+        }
+        // NOLINTNEXTLINE(bugprone-swapped-arguments)
+        g.drawVerticalLine((int)x, (float)h * 0.5f, (float)h);
       }
     }
   }
@@ -71,8 +75,9 @@ void TimelineRuler::paint(juce::Graphics &g) {
   for (int bar = firstBar; bar <= lastBar; ++bar) {
     double ppq = (double)bar * kPpqPerBar;
     float x = xForPpq(ppq);
-    if (x < 0.0f || x > (float)w)
+    if (x < 0.0f || x > (float)w) {
       continue;
+    }
     g.setColour(juce::Colour(0xff555555));
     g.drawVerticalLine((int)x, 0.0f, (float)h);
     if ((bar % labelEvery) == 0 && bar >= 0) {
@@ -171,11 +176,13 @@ void TimelineRuler::mouseDrag(const juce::MouseEvent &e) {
       end = curPpq;
     } else {
       // Create: anchor is fixed, cursor is the other edge
-      if (end < start)
+      if (end < start) {
         std::swap(start, end);
+      }
     }
-    if (end > start)
+    if (end > start) {
       clock.setLoopRange(start, end);
+    }
     repaint();
   }
 }
@@ -199,7 +206,8 @@ void TimelineRuler::mouseWheelMove(const juce::MouseEvent &e,
   if (e.mods.isShiftDown()) {
     // Shift+wheel: horizontal scroll
     const double scrollDelta =
-        -wheel.deltaY * (ppqForX((float)getWidth()) - viewStartPpq) * 0.15;
+        -(double)wheel.deltaY *
+        ((ppqForX((float)getWidth()) - viewStartPpq) * 0.15);
     viewStartPpq = std::max(0.0, viewStartPpq + scrollDelta);
   } else {
     // Zoom anchored at the cursor's PPQ position (same math as
@@ -208,7 +216,7 @@ void TimelineRuler::mouseWheelMove(const juce::MouseEvent &e,
     const double zoomDelta = wheel.deltaY > 0.0f ? 1.15 : (1.0 / 1.15);
     pixelsPerBar = juce::jlimit(8.0, 400.0, pixelsPerBar * zoomDelta);
     // Recompute viewStartPpq so ppqUnderCursor stays under the cursor.
-    viewStartPpq = ppqUnderCursor - ((double)e.x / pixelsPerBar) * kPpqPerBar;
+    viewStartPpq = ppqUnderCursor - (((double)e.x / pixelsPerBar) * kPpqPerBar);
     viewStartPpq = std::max(0.0, viewStartPpq);
   }
   repaint();
