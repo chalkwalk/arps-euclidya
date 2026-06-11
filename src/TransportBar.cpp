@@ -1,6 +1,20 @@
 #include "TransportBar.h"
 
+#include <cmath>
+
 #include "ArpsLookAndFeel.h"
+
+static juce::String formatBarBeatTick(double ppq) {
+  ppq = std::max(0.0, ppq);
+  const int bar = (int)(ppq / 4.0) + 1;
+  const double beatPos = std::fmod(ppq, 4.0);
+  const int beat = (int)beatPos + 1;
+  int tick = (int)std::round((beatPos - std::floor(beatPos)) * 960.0);
+  if (tick >= 960)
+    tick = 0;  // rounding guard at the boundary
+  return juce::String(bar) + "." + juce::String(beat) + "." +
+         juce::String(tick).paddedLeft('0', 3);
+}
 
 TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
   // Play/Stop toggle
@@ -43,6 +57,13 @@ TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
   bpmLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   bpmLabel.setColour(juce::Label::textColourId, juce::Colour(0xffdddddd));
 
+  // Bar.beat.tick position readout
+  addAndMakeVisible(positionLabel);
+  positionLabel.setText(formatBarBeatTick(0.0), juce::dontSendNotification);
+  positionLabel.setJustificationType(juce::Justification::centredLeft);
+  positionLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
+  positionLabel.setColour(juce::Label::textColourId, juce::Colour(0xffdddddd));
+
   addAndMakeVisible(standaloneLabel);
   standaloneLabel.setText("STANDALONE TRANSPORT", juce::dontSendNotification);
   standaloneLabel.setJustificationType(juce::Justification::centredRight);
@@ -51,7 +72,7 @@ TransportBar::TransportBar(ClockManager &clockManager) : clock(clockManager) {
   standaloneLabel.setColour(juce::Label::textColourId,
                             juce::Colour(0xff777777));
 
-  startTimerHz(10);
+  startTimerHz(30);
 }
 
 TransportBar::~TransportBar() { stopTimer(); }
@@ -69,6 +90,13 @@ void TransportBar::timerCallback() {
   if (playStopButton.getToggleState() != isClockRunning) {
     playStopButton.setToggleState(isClockRunning, juce::dontSendNotification);
     playStopButton.setButtonText(isClockRunning ? "||" : ">");
+  }
+
+  // Update bar.beat.tick readout; cache to avoid repaint churn
+  juce::String pos = formatBarBeatTick(clock.getTransportPpq());
+  if (pos != lastPositionText) {
+    lastPositionText = pos;
+    positionLabel.setText(pos, juce::dontSendNotification);
   }
 }
 
@@ -90,6 +118,10 @@ void TransportBar::resized() {
   auto bpmArea = bounds.removeFromLeft(120);
   bpmSlider.setBounds(bpmArea.removeFromLeft(36).reduced(2));
   bpmLabel.setBounds(bpmArea);
+
+  bounds.removeFromLeft(10);  // Spacing
+
+  positionLabel.setBounds(bounds.removeFromLeft(90));
 
   standaloneLabel.setBounds(bounds);
 }
