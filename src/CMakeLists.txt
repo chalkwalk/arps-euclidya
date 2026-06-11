@@ -78,6 +78,7 @@ target_sources(ArpsEuclidya
         AppSettings.cpp
         ArpsLookAndFeel.cpp
         GraphCanvas.cpp
+        MacroOverlayPainter.cpp
         ModuleLibraryPanel.cpp
         NodeBlock.cpp
         PatchLibrary.cpp

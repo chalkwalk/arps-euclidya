@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "GraphNode.h"
+#include "MacroOverlayPainter.h"
 #include "SharedMacroUI.h"
 
 class GraphCanvas;  // forward declaration
@@ -140,27 +141,8 @@ class NodeBlock : public juce::Component, private juce::Timer {
   }
 
  private:
-  // Tracks sliders that have a macroParamRef, for overlay rendering
-  struct SliderMacroInfo {
-    juce::Slider *slider;
-    MacroParam *macroParamRef;
-  };
   std::vector<SliderMacroInfo> sliderMacroInfos;
-
-  // Tracks buttons that have a macroParamRef, for overlay rendering
-  struct ButtonMacroInfo {
-    CustomMacroButton *button;
-    MacroParam *macroParamRef;
-    int *valueRef;  // pointer to the node's local int value (may be nullptr)
-  };
   std::vector<ButtonMacroInfo> buttonMacroInfos;
-
-  // Tracks combo boxes that have a macroParamRef, for overlay rendering
-  struct ComboMacroInfo {
-    CustomMacroComboBox *combo;
-    MacroParam *macroParamRef;
-    int *valueRef;  // pointer to the node's local int value (may be nullptr)
-  };
   std::vector<ComboMacroInfo> comboMacroInfos;
 
   void paintOverChildren(juce::Graphics &g) override;
