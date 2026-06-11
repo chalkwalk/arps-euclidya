@@ -4,6 +4,7 @@
 
 #include <unordered_set>
 
+#include "CanvasCamera.h"
 #include "GraphEngine.h"
 #include "NodeBlock.h"
 
@@ -45,7 +46,7 @@ class GraphCanvas : public juce::Component,
 
   // Zoom manipulation
   void setZoomFactor(float newZoom);
-  float getZoomFactor() const { return zoomFactor; }
+  float getZoomFactor() const { return camera.zoomFactor; }
 
   // Rebuild all NodeBlocks from the engine's node list
   void rebuild();
@@ -79,9 +80,9 @@ class GraphCanvas : public juce::Component,
   void checkForLargeSequences();
 
   // Selection API
-  void selectNode(GraphNode *node);                // clear set, select one node
-  void addToSelection(GraphNode *node);            // toggle node in selection
-  void clearSelection();                            // deselect everything
+  void selectNode(GraphNode *node);      // clear set, select one node
+  void addToSelection(GraphNode *node);  // toggle node in selection
+  void clearSelection();                 // deselect everything
   [[nodiscard]] GraphNode *getSelectedNode() const {
     return selectedNodes.size() == 1 ? *selectedNodes.begin() : nullptr;
   }
@@ -138,7 +139,8 @@ class GraphCanvas : public juce::Component,
   // Highlight controls bound to the given macro index (-1 to clear)
   void setHighlightedMacro(int macroIndex);
 
-  // Forwarded from editor → canvas → NodeBlock → CustomMacroSlider/Button/ComboBox
+  // Forwarded from editor → canvas → NodeBlock →
+  // CustomMacroSlider/Button/ComboBox
   std::function<void(std::vector<int>)> onHoverMacros;
   std::function<void(MacroParam *)> onRequestMidiLearn;
   std::function<void()> onCancelMidiLearn;
@@ -159,8 +161,7 @@ class GraphCanvas : public juce::Component,
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
   void drawCable(juce::Graphics &g, const juce::Path &path, bool highlighted,
-                 bool warning, bool isForeground,
-                 GraphNode::PortType portType);
+                 bool warning, bool isForeground, GraphNode::PortType portType);
   void updateCanvasSize();
 
   // Cable tooltip state
@@ -168,12 +169,10 @@ class GraphCanvas : public juce::Component,
   juce::Point<int> cableTooltipPos;
   bool showCableTooltip = false;
 
-  // Camera Projection
+  // Camera state
+  CanvasCamera camera;
   bool isPanning = false;
   juce::Point<int> lastPanScreenPos;
-  float panX = 0.0f;
-  float panY = 0.0f;
-  float zoomFactor = 1.0f;
 
   juce::ScrollBar hScroll{false};
   juce::ScrollBar vScroll{true};

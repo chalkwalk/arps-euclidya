@@ -77,6 +77,7 @@ target_sources(ArpsEuclidya
         AlgorithmicModulatorNode/AlgorithmicModulatorNodeEditor.cpp
         AppSettings.cpp
         ArpsLookAndFeel.cpp
+        CanvasCamera.cpp
         GraphCanvas.cpp
         MacroOverlayPainter.cpp
         ModuleLibraryPanel.cpp

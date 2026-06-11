@@ -129,16 +129,11 @@ void GraphCanvas::rebuild() {
 }
 
 juce::AffineTransform GraphCanvas::getCameraTransform() const {
-  return juce::AffineTransform::scale(zoomFactor).translated(panX, panY);
+  return camera.getTransform();
 }
 
 juce::Point<int> GraphCanvas::getViewportGridCenter() const {
-  auto center = getLocalBounds().getCentre().toFloat();
-  float cx = center.x;
-  float cy = center.y;
-  getCameraTransform().inverted().transformPoint(cx, cy);
-  return {(int)std::round(cx / Layout::GridPitchFloat),
-          (int)std::round(cy / Layout::GridPitchFloat)};
+  return camera.getViewportGridCenter(getLocalBounds().toFloat());
 }
 
 void GraphCanvas::updateTransforms() {
@@ -202,16 +197,16 @@ void GraphCanvas::paint(juce::Graphics &g) {
   // Draw infinitely panning grid dots
   g.setColour(juce::Colour(0xff2a2a2a));
 
-  float scaledGrid = Layout::GridPitchFloat * zoomFactor;
-  float scaledInner5 = Layout::TramlineOffset * zoomFactor;
+  float scaledGrid = Layout::GridPitchFloat * camera.zoomFactor;
+  float scaledInner5 = Layout::TramlineOffset * camera.zoomFactor;
   float scaledInner95 =
-      (Layout::GridPitchFloat - Layout::TramlineOffset) * zoomFactor;
+      (Layout::GridPitchFloat - Layout::TramlineOffset) * camera.zoomFactor;
 
-  float offsetX = std::fmod(panX, scaledGrid);
+  float offsetX = std::fmod(camera.panX, scaledGrid);
   if (offsetX > 0) {
     offsetX -= scaledGrid;
   }
-  float offsetY = std::fmod(panY, scaledGrid);
+  float offsetY = std::fmod(camera.panY, scaledGrid);
   if (offsetY > 0) {
     offsetY -= scaledGrid;
   }
@@ -620,8 +615,8 @@ void GraphCanvas::mouseDrag(const juce::MouseEvent &e) {
 
   if (isPanning) {
     auto delta = e.getScreenPosition() - lastPanScreenPos;
-    panX += (float)delta.x;
-    panY += (float)delta.y;
+    camera.panX += (float)delta.x;
+    camera.panY += (float)delta.y;
     lastPanScreenPos = e.getScreenPosition();
     updateTransforms();
     repaint();
@@ -688,26 +683,13 @@ void GraphCanvas::mouseWheelMove(const juce::MouseEvent &e,
     return;
   }
 
-  // Semantic zoom natively mapping focal origin
   float wheelAmount =
       std::abs(wheel.deltaY) > 0.0001f ? wheel.deltaY : wheel.deltaX;
   if (std::abs(wheelAmount) < 0.0001f) {
     return;
   }
 
-  float zoomDelta = wheelAmount > 0.0f ? 1.1f : 0.9f;
-  auto mousePos = e.position;
-
-  float newZoom = juce::jlimit(0.2f, 3.0f, zoomFactor * zoomDelta);
-
-  if (std::abs(newZoom - zoomFactor) > 0.0001f) {
-    float worldX = (mousePos.x - panX) / zoomFactor;
-    float worldY = (mousePos.y - panY) / zoomFactor;
-
-    zoomFactor = newZoom;
-    panX = mousePos.x - worldX * zoomFactor;
-    panY = mousePos.y - worldY * zoomFactor;
-
+  if (camera.applyWheelZoom(wheelAmount, e.position)) {
     updateTransforms();
     repaint();
   }
@@ -1078,9 +1060,9 @@ bool GraphCanvas::keyPressed(const juce::KeyPress &key,
 void GraphCanvas::scrollBarMoved(juce::ScrollBar *scrollBar,
                                  double newRangeStart) {
   if (scrollBar == &hScroll) {
-    panX = (float)(-newRangeStart * zoomFactor);
+    camera.setPanFromScrollX(newRangeStart);
   } else if (scrollBar == &vScroll) {
-    panY = (float)(-newRangeStart * zoomFactor);
+    camera.setPanFromScrollY(newRangeStart);
   }
   updateTransforms();
   repaint();
@@ -1128,10 +1110,10 @@ void GraphCanvas::updateScrollBars() {
     maxY = 100.0f;
   }
 
-  float currentViewX = -panX / zoomFactor;
-  float currentViewY = -panY / zoomFactor;
-  float viewW = (float)getWidth() / zoomFactor;
-  float viewH = (float)getHeight() / zoomFactor;
+  float currentViewX = -camera.panX / camera.zoomFactor;
+  float currentViewY = -camera.panY / camera.zoomFactor;
+  float viewW = (float)getWidth() / camera.zoomFactor;
+  float viewH = (float)getHeight() / camera.zoomFactor;
 
   // Union of node bounding box AND current viewport position
   float limitMinX = std::min(minX, currentViewX);
@@ -1171,8 +1153,8 @@ void GraphCanvas::zoomToFit() {
 
   float minX = nodeBlocks[0]->getNode()->nodeX;
   float minY = nodeBlocks[0]->getNode()->nodeY;
-  float maxX = minX + nodeBlocks[0]->getWidth();
-  float maxY = minY + nodeBlocks[0]->getHeight();
+  float maxX = minX + (float)nodeBlocks[0]->getWidth();
+  float maxY = minY + (float)nodeBlocks[0]->getHeight();
 
   for (auto *block : nodeBlocks) {
     float x = block->getNode()->nodeX;
@@ -1185,30 +1167,11 @@ void GraphCanvas::zoomToFit() {
     maxY = std::max(maxY, y + h);
   }
 
-  float pad = 60.0f;
-  minX -= pad;
-  minY -= pad;
-  maxX += pad;
-  maxY += pad;
-
-  float worldW = maxX - minX;
-  float worldH = maxY - minY;
-
-  if (worldW <= 0.0f || worldH <= 0.0f) {
-    return;
-  }
-
-  float zoomX = (float)getWidth() / worldW;
-  float zoomY = (float)getHeight() / worldH;
-
-  zoomFactor = juce::jlimit(0.1f, 3.0f, std::min(zoomX, zoomY));
-
-  float scaledW = worldW * zoomFactor;
-  float scaledH = worldH * zoomFactor;
-
-  panX = (getWidth() - scaledW) * 0.5f - minX * zoomFactor;
-  panY = (getHeight() - scaledH) * 0.5f - minY * zoomFactor;
-
+  const float pad = 60.0f;
+  auto content =
+      juce::Rectangle<float>(minX - pad, minY - pad, maxX - minX + 2.0f * pad,
+                             maxY - minY + 2.0f * pad);
+  camera.zoomToFit(getLocalBounds().toFloat(), content);
   updateTransforms();
   repaint();
 }
