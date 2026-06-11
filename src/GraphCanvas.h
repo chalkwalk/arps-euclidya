@@ -4,6 +4,7 @@
 
 #include <unordered_set>
 
+#include "CableRenderer.h"
 #include "CanvasCamera.h"
 #include "GraphEngine.h"
 #include "NodeBlock.h"
@@ -130,9 +131,6 @@ class GraphCanvas : public juce::Component,
   std::function<void(GraphNode *, int, int)> onNodeCloneRequest;
   std::function<void()> onTransportToggle;
 
-  // Refresh the cached cable paths
-  void refreshCableCache();
-
   // Share the editor's macro selection state with the canvas and all NodeBlocks
   void setSelectedMacroPtr(int *ptr);
 
@@ -160,8 +158,6 @@ class GraphCanvas : public juce::Component,
   juce::Point<int> cableDragEnd;
 
   NodeBlock *findBlockForNode(GraphNode *node) const;
-  void drawCable(juce::Graphics &g, const juce::Path &path, bool highlighted,
-                 bool warning, bool isForeground, GraphNode::PortType portType);
   void updateCanvasSize();
 
   // Cable tooltip state
@@ -203,38 +199,6 @@ class GraphCanvas : public juce::Component,
   bool ghostIsValid = false;
   bool hasGhostResolved = false;
 
-  struct CachedCable {
-    GraphNode *sourceNode;
-    int sourcePort;
-    GraphNode *targetNode;
-    int targetPort;
-    juce::Path path;
-    bool isLarge = false;
-    bool isSelected = false;
-    int stepCount = 0;
-    int activeStepCount = 0;
-    GraphNode::PortType portType = GraphNode::PortType::Notes;
-  };
-
-  struct CableID {
-    GraphNode *sourceNode = nullptr;
-    int sourcePort = 0;
-    GraphNode *targetNode = nullptr;
-    int targetPort = 0;
-
-    bool isValid() const {
-      return sourceNode != nullptr && targetNode != nullptr;
-    }
-    void clear() {
-      sourceNode = nullptr;
-      targetNode = nullptr;
-    }
-    bool matches(const CachedCable &c) const {
-      return sourceNode == c.sourceNode && sourcePort == c.sourcePort &&
-             targetNode == c.targetNode && targetPort == c.targetPort;
-    }
-  };
-
   // Macro selection state (pointer into editor's selectedMacro field)
   int *selectedMacroPtr = nullptr;
 
@@ -269,7 +233,7 @@ class GraphCanvas : public juce::Component,
 
   void setGroupGhostTarget(int bboxGridX, int bboxGridY);
 
-  std::vector<CachedCable> cachedCables;
+  CableRenderer cableRenderer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphCanvas)
 };

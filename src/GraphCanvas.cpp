@@ -1,5 +1,7 @@
 #include "GraphCanvas.h"
 
+#include <optional>
+
 #include "ArpsLookAndFeel.h"
 #include "LayoutConstants.h"
 #include "MacroColours.h"
@@ -8,7 +10,18 @@
 GraphCanvas::GraphCanvas(GraphEngine &engine,
                          juce::AudioProcessorValueTreeState &apvtsRef,
                          juce::CriticalSection &lock)
-    : graphEngine(engine), apvts(apvtsRef), graphLock(lock) {
+    : graphEngine(engine),
+      apvts(apvtsRef),
+      graphLock(lock),
+      cableRenderer(engine, lock,
+                    [this](GraphNode *node, int port,
+                           bool isOutput) -> std::optional<juce::Point<int>> {
+                      auto *block = findBlockForNode(node);
+                      if (!block)
+                        return std::nullopt;
+                      return isOutput ? block->getOutputPortCentre(port)
+                                      : block->getInputPortCentre(port);
+                    }) {
   setWantsKeyboardFocus(true);
 
   addAndMakeVisible(hScroll);
@@ -70,7 +83,7 @@ void GraphCanvas::rebuild() {
 
     block->onPositionChanged = [this]() {
       updateTransforms();
-      refreshCableCache();
+      cableRenderer.refresh(selectedNodes);
       repaint();
     };
 
@@ -81,7 +94,7 @@ void GraphCanvas::rebuild() {
       hScroll.toFront(false);
       vScroll.toFront(false);
       zoomFitButton.toFront(false);
-      refreshCableCache();
+      cableRenderer.refresh(selectedNodes);
       repaint();
     };
 
@@ -124,7 +137,7 @@ void GraphCanvas::rebuild() {
   zoomFitButton.toFront(false);
 
   updateTransforms();
-  refreshCableCache();
+  cableRenderer.refresh(selectedNodes);
   repaint();
 }
 
@@ -309,31 +322,36 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
 
   g.addTransform(getCameraTransform());
 
+  const bool hasSelection = !selectedNodes.empty();
+
   // 1. Draw background cables
-  for (const auto &cable : cachedCables) {
+  for (const auto &cable : cableRenderer.getCables()) {
     if (!cable.isSelected && !proximityCableID.matches(cable)) {
-      drawCable(g, cable.path, false, cable.isLarge, false, cable.portType);
+      cableRenderer.drawCable(g, cable.path, false, cable.isLarge, false,
+                              cable.portType, hasSelection);
     }
   }
 
   // 2. Draw foreground/selected cables
-  for (const auto &cable : cachedCables) {
+  for (const auto &cable : cableRenderer.getCables()) {
     if (cable.isSelected && !proximityCableID.matches(cable)) {
-      drawCable(g, cable.path, false, cable.isLarge, true, cable.portType);
+      cableRenderer.drawCable(g, cable.path, false, cable.isLarge, true,
+                              cable.portType, hasSelection);
     }
   }
 
   // 3. Draw proximity highlight cable (on top)
   if (proximityCableID.isValid()) {
-    for (const auto &cable : cachedCables) {
+    for (const auto &cable : cableRenderer.getCables()) {
       if (proximityCableID.matches(cable)) {
-        drawCable(g, cable.path, true, cable.isLarge, true, cable.portType);
+        cableRenderer.drawCable(g, cable.path, true, cable.isLarge, true,
+                                cable.portType, hasSelection);
         break;
       }
     }
   }
 
-  // 3. Third Pass: Draw the in-progress cable drag
+  // 4. Draw the in-progress cable drag
   if (isDraggingCable && cableDragSourceBlock != nullptr) {
     juce::Point<int> start;
     if (cableDragFromOutput) {
@@ -352,7 +370,8 @@ void GraphCanvas::paintOverChildren(juce::Graphics &g) {
     dragPath.cubicTo(start.x + dx, (float)start.y, end.x - dx, (float)end.y,
                      (float)end.x, (float)end.y);
 
-    drawCable(g, dragPath, true, false, true, GraphNode::PortType::Notes);
+    cableRenderer.drawCable(g, dragPath, true, false, true,
+                            GraphNode::PortType::Notes, hasSelection);
   }
 
   g.restoreState();  // Pop the camera transform to draw tooltips in screen
@@ -421,130 +440,6 @@ void GraphCanvas::setHighlightedMacro(int macroIndex) {
     block->setHighlightedMacro(macroIndex);
 }
 
-void GraphCanvas::refreshCableCache() {
-  cachedCables.clear();
-  const juce::ScopedLock sl(graphLock);
-  const auto &nodes = graphEngine.getNodes();
-
-  for (const auto &node : nodes) {
-    auto *sourceBlock = findBlockForNode(node.get());
-    if (sourceBlock == nullptr) {
-      continue;
-    }
-
-    for (const auto &[outPort, connVec] : node->getConnections()) {
-      for (const auto &conn : connVec) {
-        auto *targetBlock = findBlockForNode(conn.targetNode);
-        if (targetBlock == nullptr) {
-          continue;
-        }
-
-        CachedCable cable;
-        cable.sourceNode = node.get();
-        cable.sourcePort = outPort;
-        cable.targetNode = conn.targetNode;
-        cable.targetPort = conn.targetInputPort;
-
-        auto start = sourceBlock->getOutputPortCentre(outPort);
-        auto end = targetBlock->getInputPortCentre(conn.targetInputPort);
-
-        auto startF = start.toFloat();
-        auto endF = end.toFloat();
-
-        // Final safety check for NaN/Inf before path operations
-        if (std::isnan(startF.x) || std::isinf(startF.x))
-          startF.x = 0.0f;
-        if (std::isnan(startF.y) || std::isinf(startF.y))
-          startF.y = 0.0f;
-        if (std::isnan(endF.x) || std::isinf(endF.x))
-          endF.x = 0.0f;
-        if (std::isnan(endF.y) || std::isinf(endF.y))
-          endF.y = 0.0f;
-
-        cable.path.startNewSubPath(startF);
-        float dx = std::max(std::abs(endF.x - startF.x) * 0.5f, 40.0f);
-        if (std::isnan(dx) || std::isinf(dx))
-          dx = 40.0f;
-
-        cable.path.cubicTo(startF.x + dx, startF.y, endF.x - dx, endF.y, endF.x,
-                           endF.y);
-
-        cable.portType =
-            graphEngine.getEffectiveOutputPortType(node.get(), outPort);
-        const auto &outSeq = node->getOutputSequence(outPort);
-        cable.stepCount = (int)outSeq.size();
-        cable.activeStepCount = 0;
-        for (const auto &step : outSeq) {
-          if (!step.empty()) {
-            cable.activeStepCount++;
-          }
-        }
-        cable.isLarge = (cable.stepCount > 10000);
-        cable.isSelected = !selectedNodes.empty() &&
-                           (selectedNodes.count(node.get()) > 0 ||
-                            selectedNodes.count(conn.targetNode) > 0);
-
-        cachedCables.push_back(std::move(cable));
-      }
-    }
-  }
-}
-
-void GraphCanvas::drawCable(juce::Graphics &g, const juce::Path &path,
-                            bool highlighted, bool warning, bool isForeground,
-                            GraphNode::PortType portType) {
-  // 1. Drop Shadow (Subtle dark offset)
-  auto shadowPath = path;
-  shadowPath.applyTransform(juce::AffineTransform::translation(1.0f, 1.5f));
-  g.setColour(juce::Colours::black.withAlpha(0.4f));
-  g.strokePath(shadowPath, juce::PathStrokeType(2.5f));
-
-  // 2. Base Cable Color and Glow — colour by source port type
-  juce::Colour baseColor;
-  if (highlighted) {
-    baseColor = juce::Colour(0xffeeee44);  // Yellow highlight
-  } else if (warning) {
-    baseColor = juce::Colour(0xffff6633);  // Orange (large sequence)
-  } else if (portType == GraphNode::PortType::CC) {
-    baseColor = juce::Colour(0xffaa44ff);  // Violet for CC
-  } else if (portType == GraphNode::PortType::Notes) {
-    baseColor = juce::Colour(0xffd4a017);  // Amber/gold for Notes
-  } else {
-    baseColor = juce::Colour(0xffaaaaaa);  // Cool grey for Agnostic
-  }
-
-  // Dimming for background (non-selected) cables
-  if (!isForeground && !highlighted && !selectedNodes.empty()) {
-    baseColor = baseColor.withMultipliedAlpha(0.4f);
-  }
-
-  // Multi-stroke Bloom
-  if (isForeground || highlighted || (selectedNodes.empty() && !warning)) {
-    // Large outer glow
-    g.setColour(baseColor.withAlpha(0.15f));
-    g.strokePath(path, juce::PathStrokeType(8.0f));
-
-    // Medium glow
-    g.setColour(ArpsLookAndFeel::getNeonColor().withAlpha(0.2f));
-    g.strokePath(path, juce::PathStrokeType(5.0f));
-  }
-
-  // 3. Main Cable Stroke
-  g.setColour(baseColor);
-  float strokeThickness = (isForeground || highlighted) ? 3.0f : 2.0f;
-  if (highlighted) {
-    strokeThickness = 3.5f;
-  }
-
-  g.strokePath(path, juce::PathStrokeType(strokeThickness));
-
-  // 4. Center Shine (if highlighted or foreground)
-  if (isForeground || highlighted) {
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
-    g.strokePath(path, juce::PathStrokeType(1.0f));
-  }
-}
-
 void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
   if (e.eventComponent != this && !e.mods.isMiddleButtonDown()) {
     return;
@@ -556,7 +451,7 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
     getCameraTransform().inverted().transformPoint(mx, my);
     auto localPos = juce::Point<float>(mx, my);
     const juce::ScopedLock sl(graphLock);
-    for (const auto &cable : cachedCables) {
+    for (const auto &cable : cableRenderer.getCables()) {
       juce::Point<float> nearest;
       cable.path.getNearestPoint(localPos, nearest);
       if (nearest.getDistanceFrom(localPos) < 12.0f) {
@@ -569,7 +464,7 @@ void GraphCanvas::mouseDown(const juce::MouseEvent &e) {
           graphEngine.removeConnection(cable.sourceNode, cable.sourcePort,
                                        cable.targetNode, cable.targetPort);
         }
-        refreshCableCache();
+        cableRenderer.refresh(selectedNodes);
         repaint();
         return;
       }
@@ -671,7 +566,7 @@ void GraphCanvas::mouseUp(const juce::MouseEvent &e) {
           selectedNodes.insert(node);
         }
       }
-      refreshCableCache();
+      cableRenderer.refresh(selectedNodes);
       repaint();
     }
   }
@@ -787,7 +682,7 @@ void GraphCanvas::attemptProximityConnection(GraphNode *droppedNode,
       // finished? No, it's called during mouseUp. We should probably wrap the
       // entire mouseUp sequence in a mutation if any change happens.
     }
-    refreshCableCache();
+    cableRenderer.refresh(selectedNodes);
     repaint();
     if (onGraphChanged) {
       onGraphChanged();
@@ -809,10 +704,10 @@ bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
 
   // High threshold for "near" a cable (15 world-space pixels)
   const float threshold = 15.0f;
-  CachedCable *bestCable = nullptr;
+  const CachedCable *bestCable = nullptr;
   float bestDist = threshold;
 
-  for (auto &cable : cachedCables) {
+  for (auto &cable : cableRenderer.getCables()) {
     juce::Point<float> nearest;
     cable.path.getNearestPoint(worldMousePos, nearest);
     float d = worldMousePos.getDistanceFrom(nearest);
@@ -838,7 +733,7 @@ bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
         graphEngine.addExplicitConnection(sourceNode, sourcePort, newNode, 0);
         graphEngine.addExplicitConnection(newNode, 0, targetNode, targetPort);
       });
-      refreshCableCache();
+      cableRenderer.refresh(selectedNodes);
       repaint();
       if (onGraphChanged) {
         onGraphChanged();
@@ -854,7 +749,7 @@ bool GraphCanvas::attemptSignalPathInsertion(GraphNode *newNode,
           graphEngine.addExplicitConnection(newNode, 0, targetNode, targetPort);
 
       if (conn1 || conn2) {
-        refreshCableCache();
+        cableRenderer.refresh(selectedNodes);
         repaint();
         if (onGraphChanged) {
           onGraphChanged();
@@ -949,7 +844,7 @@ void GraphCanvas::endCableDrag(juce::Point<int> canvasPos) {
 
   cableDragSourceBlock = nullptr;
   cableDragSourcePort = -1;
-  refreshCableCache();
+  cableRenderer.refresh(selectedNodes);
   repaint();
 }
 
@@ -1183,7 +1078,7 @@ void GraphCanvas::mouseMove(const juce::MouseEvent &e) {
   auto localPosWorld = juce::Point<float>(mx, my);
   bool found = false;
 
-  for (const auto &cable : cachedCables) {
+  for (const auto &cable : cableRenderer.getCables()) {
     juce::Point<float> nearest;
     cable.path.getNearestPoint(localPosWorld, nearest);
     if (nearest.getDistanceFrom(localPosWorld) < 12.0f) {
@@ -1215,23 +1110,7 @@ void GraphCanvas::mouseExit(const juce::MouseEvent & /*event*/) {
 }
 
 void GraphCanvas::checkForLargeSequences() {
-  bool foundLarge = false;
-  const juce::ScopedLock sl(graphLock);
-  const auto &nodes = graphEngine.getNodes();
-
-  for (const auto &node : nodes) {
-    for (const auto &[outPort, connVec] : node->getConnections()) {
-      const auto &outSeq = node->getOutputSequence(outPort);
-      if (outSeq.size() > 10000) {
-        foundLarge = true;
-        break;
-      }
-    }
-    if (foundLarge) {
-      break;
-    }
-  }
-
+  const bool foundLarge = cableRenderer.checkForLargeSequences();
   if (foundLarge != hasLargeSequenceWarning) {
     hasLargeSequenceWarning = foundLarge;
     repaint();
@@ -1297,7 +1176,7 @@ void GraphCanvas::updateProximityHighlight(juce::Point<int> mousePos,
   // 1. Check Cable Insertion first (precedence)
   const float cableThreshold = 15.0f;
   float bestDist = cableThreshold;
-  for (auto &cable : cachedCables) {
+  for (auto &cable : cableRenderer.getCables()) {
     juce::Point<float> nearest;
     cable.path.getNearestPoint(worldMousePos, nearest);
     float d = worldMousePos.getDistanceFrom(nearest);
@@ -1406,7 +1285,7 @@ void GraphCanvas::selectNode(GraphNode *node) {
   }
   grabKeyboardFocus();
   if (changed) {
-    refreshCableCache();
+    cableRenderer.refresh(selectedNodes);
     repaint();
   }
 }
@@ -1417,14 +1296,14 @@ void GraphCanvas::addToSelection(GraphNode *node) {
   } else {
     selectedNodes.insert(node);
   }
-  refreshCableCache();
+  cableRenderer.refresh(selectedNodes);
   repaint();
 }
 
 void GraphCanvas::clearSelection() {
   if (!selectedNodes.empty()) {
     selectedNodes.clear();
-    refreshCableCache();
+    cableRenderer.refresh(selectedNodes);
     repaint();
   }
 }
@@ -1530,7 +1409,7 @@ void GraphCanvas::updateGroupDrag(const juce::MouseEvent &e) {
   setGroupGhostTarget(groupDragBBoxMinX + groupDragCurrentDeltaX,
                       groupDragBBoxMinY + groupDragCurrentDeltaY);
   updateTransforms();
-  refreshCableCache();
+  cableRenderer.refresh(selectedNodes);
   repaint();
 }
 
@@ -1586,7 +1465,7 @@ void GraphCanvas::commitGroupDrag(bool isClone) {
       }
     }
     updateTransforms();
-    refreshCableCache();
+    cableRenderer.refresh(selectedNodes);
     repaint();
     if (onGraphChanged) {
       onGraphChanged();
@@ -1608,7 +1487,7 @@ void GraphCanvas::cancelGroupDrag() {
   }
   clearGhostTarget();
   updateTransforms();
-  refreshCableCache();
+  cableRenderer.refresh(selectedNodes);
   repaint();
   groupDragNodes.clear();
   groupDragAnchor = nullptr;
