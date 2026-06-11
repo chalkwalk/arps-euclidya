@@ -44,3 +44,24 @@ TEST_CASE("getAvailableNodeTypes count matches registry", "[registry]") {
     total += names.size();
   CHECK(NodeFactory::getAvailableNodeTypes().size() == total);
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Drift protection: preview metadata must match real node instances
+// ──────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("Preview metadata matches real node layout and port counts",
+          "[registry][drift]") {
+  NoteExpressionManager nem;
+  ClockManager clk;
+  for (const auto &name : NodeFactory::getAvailableNodeTypes()) {
+    auto node = NodeFactory::createNode(name, nem, clk);
+    REQUIRE(node != nullptr);
+    auto meta = NodeFactory::getPreviewMetadata(name);
+
+    INFO("Node \"" << name << "\"");
+    CHECK(node->getGridWidth() == meta.gridW);
+    CHECK(node->getGridHeight() == meta.gridH);
+    CHECK(node->getNumInputPorts() == meta.numIn);
+    CHECK(node->getNumOutputPorts() == meta.numOut);
+  }
+}

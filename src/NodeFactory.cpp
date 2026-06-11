@@ -61,7 +61,7 @@ const std::vector<NodeTypeInfo> &registry() {
      [](NoteExpressionManager &m, ClockManager &c) -> std::shared_ptr<GraphNode> {
        return std::make_shared<MidiOutNode>(m, c);
      },
-     "I/O", {}, {4, 3, 1, 0}},
+     "I/O", {}, {4, 3, 2, 0}},
 
     // Modulation
     {"CC Modulator",
@@ -75,7 +75,7 @@ const std::vector<NodeTypeInfo> &registry() {
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<AllNotesNode>();
      },
-     "Generators", {"harmony", "polyphony"}, {1, 1, 1, 1}},
+     "Generators", {"harmony", "polyphony"}, {1, 1, 0, 1}},
     {"ChordN",
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<ChordNNode>();
@@ -97,12 +97,12 @@ const std::vector<NodeTypeInfo> &registry() {
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<ConvergeNode>();
      },
-     "Pattern", {}, {1, 1, 2, 1}},
+     "Pattern", {}, {1, 1, 1, 1}},
     {"Diverge",
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<DivergeNode>();
      },
-     "Pattern", {}, {1, 1, 1, 2}},
+     "Pattern", {}, {1, 1, 1, 1}},
     {"Fold",
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<FoldNode>();
@@ -191,7 +191,7 @@ const std::vector<NodeTypeInfo> &registry() {
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<QuantizerNode>();
      },
-     "Pitch & Range", {"melody", "tuning"}, {2, 2, 1, 1}},
+     "Pitch & Range", {"melody", "tuning"}, {3, 2, 1, 1}},
     {"Transpose",
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<TransposeNode>();
@@ -203,12 +203,12 @@ const std::vector<NodeTypeInfo> &registry() {
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<RouteNode>();
      },
-     "Routing", {}, {1, 1, 1, 1}},
+     "Routing", {}, {1, 1, 1, 2}},
     {"Select",
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<SelectNode>();
      },
-     "Routing", {}, {1, 1, 1, 1}},
+     "Routing", {}, {1, 1, 2, 1}},
     {"Switch",
      [](NoteExpressionManager &, ClockManager &) -> std::shared_ptr<GraphNode> {
        return std::make_shared<SwitchNode>();
