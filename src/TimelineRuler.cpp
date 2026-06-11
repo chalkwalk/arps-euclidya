@@ -8,18 +8,34 @@ TimelineRuler::TimelineRuler(ClockManager &clockManager) : clock(clockManager) {
   setOpaque(true);
 }
 
-void TimelineRuler::tick() {
-  // Auto-scroll: if the playhead exits the right edge while playing and the
-  // user isn't mid-drag, page the view forward so the playhead lands ~10%
-  // from the left.
-  if (!draggingPlayhead && clock.isStandaloneRunning()) {
-    const double ppq = clock.getTransportPpq();
-    const double viewEndPpq =
-        viewStartPpq + (ppqForX((float)getWidth()) - viewStartPpq);
-    if (ppq >= viewEndPpq) {
-      viewStartPpq = ppq - ((ppqForX((float)getWidth()) - ppqForX(0.0f)) * 0.1);
-      viewStartPpq = std::max(0.0, viewStartPpq);
+void TimelineRuler::centreOnPlayhead() {
+  const double desired = clock.getTransportPpq() - (viewWidthPpq() * 0.5);
+  viewStartPpq = std::max(0.0, desired);
+}
+
+void TimelineRuler::followPlayhead() {
+  const int w = getWidth();
+  if (w <= 0) {
+    return;
+  }
+  const double frac = (double)xForPpq(clock.getTransportPpq()) / (double)w;
+  if (clock.isStandaloneRunning()) {
+    // While playing, keep the playhead inside the central band. The start cap
+    // in centreOnPlayhead means it rides the far left until there is room.
+    if (frac < kFollowBandLow || frac > kFollowBandHigh) {
+      centreOnPlayhead();
     }
+  } else if (frac < 0.0 || frac > 1.0) {
+    // Stopped: only resolve when the playhead has gone fully off-screen
+    // (e.g. a transport reset back to bar 1) so manual panning isn't fought.
+    centreOnPlayhead();
+  }
+}
+
+void TimelineRuler::tick() {
+  // Don't fight the user while they're interacting with the strip.
+  if (!draggingPlayhead && !panning && loopDragMode == LoopDragMode::None) {
+    followPlayhead();
   }
   repaint();
 }
@@ -124,6 +140,14 @@ void TimelineRuler::paint(juce::Graphics &g) {
 }
 
 void TimelineRuler::mouseDown(const juce::MouseEvent &e) {
+  // Middle-button drag pans the view (an alternative to Shift+wheel scroll).
+  if (e.mods.isMiddleButtonDown()) {
+    panning = true;
+    panAnchorX = (float)e.x;
+    panAnchorViewStartPpq = viewStartPpq;
+    return;
+  }
+
   const float topH = (float)getHeight() / 3.0f;
   if (e.y < (int)topH) {
     // Upper third: loop region create/resize
@@ -155,6 +179,14 @@ void TimelineRuler::mouseDown(const juce::MouseEvent &e) {
 }
 
 void TimelineRuler::mouseDrag(const juce::MouseEvent &e) {
+  if (panning) {
+    // Drag content with the cursor: moving right reveals earlier bars.
+    const double deltaPpq =
+        (((double)e.x - (double)panAnchorX) / pixelsPerBar) * kPpqPerBar;
+    viewStartPpq = std::max(0.0, panAnchorViewStartPpq - deltaPpq);
+    repaint();
+    return;
+  }
   if (draggingPlayhead) {
     const bool noSnap = e.mods.isShiftDown();
     clock.seekTransport(snapPpq(ppqForX((float)e.x), noSnap));
@@ -188,8 +220,14 @@ void TimelineRuler::mouseDrag(const juce::MouseEvent &e) {
 }
 
 void TimelineRuler::mouseUp(const juce::MouseEvent & /*e*/) {
+  // Resolve the view after a playhead jog by re-centring on where it landed.
+  if (draggingPlayhead) {
+    centreOnPlayhead();
+  }
   draggingPlayhead = false;
+  panning = false;
   loopDragMode = LoopDragMode::None;
+  repaint();
 }
 
 void TimelineRuler::mouseDoubleClick(const juce::MouseEvent &e) {
@@ -218,6 +256,11 @@ void TimelineRuler::mouseWheelMove(const juce::MouseEvent &e,
     // Recompute viewStartPpq so ppqUnderCursor stays under the cursor.
     viewStartPpq = ppqUnderCursor - (((double)e.x / pixelsPerBar) * kPpqPerBar);
     viewStartPpq = std::max(0.0, viewStartPpq);
+    // Implicit correction wrt the playhead: while playing, re-centre so the
+    // zoom keeps it in view rather than anchoring on the cursor.
+    if (clock.isStandaloneRunning()) {
+      centreOnPlayhead();
+    }
   }
   repaint();
 }
