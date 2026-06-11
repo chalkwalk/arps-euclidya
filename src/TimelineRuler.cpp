@@ -18,6 +18,28 @@ void TimelineRuler::followPlayhead() {
   if (w <= 0) {
     return;
   }
+
+  // While a loop is active and fits within the view, keep the loop framed and
+  // let the playhead cycle across it. Treadmill-scrolling within the loop would
+  // make the bars (and loop band) slide under a near-stationary playhead and
+  // snap back on every wrap; framing keeps the loop stable, as it stays put.
+  if (clock.isStandaloneRunning() && clock.isLoopEnabled() &&
+      clock.hasLoopRange()) {
+    const double loopStart = clock.getLoopStartPpq();
+    const double loopEnd = clock.getLoopEndPpq();
+    const double loopLen = loopEnd - loopStart;
+    if (loopLen > 0.0 && loopLen <= viewWidthPpq()) {
+      // Only re-frame when the loop isn't fully on-screen, so the view stays
+      // stable across wraps (and doesn't fight a deliberate pan/zoom).
+      if (xForPpq(loopStart) < 0.0f || xForPpq(loopEnd) > (float)w) {
+        const double margin = (viewWidthPpq() - loopLen) * 0.5;
+        viewStartPpq = std::max(0.0, loopStart - margin);
+      }
+      return;
+    }
+    // Loop larger than the view: fall through to central-band follow.
+  }
+
   const double frac = (double)xForPpq(clock.getTransportPpq()) / (double)w;
   if (clock.isStandaloneRunning()) {
     // While playing, keep the playhead inside the central band. The start cap
