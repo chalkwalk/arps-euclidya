@@ -24,7 +24,8 @@ target_sources(ArpsTests PRIVATE
     TestGraphEngineTopology.cpp
     TestPortTypes.cpp
     TestScalaParser.cpp
-    TestGraphStateRoundTrip.cpp)
+    TestGraphStateRoundTrip.cpp
+    TestNodeRegistry.cpp)
 
 target_include_directories(ArpsTests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 

@@ -22,6 +22,7 @@ set(ARPS_CORE_SOURCES
     FoldNode/FoldNode.cpp
     GraphEngine.cpp
     GraphNode.cpp
+    NodeFactory.cpp
     NoteExpressionManager.cpp
     MidiInNode/MidiInNode.cpp
     MidiOutNode/MidiOutNode.cpp
