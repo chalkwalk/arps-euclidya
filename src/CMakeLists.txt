@@ -61,6 +61,15 @@ juce_add_plugin(ArpsEuclidya
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_EFFECT TRUE
     NAME_PREFIX "Arps"
+    # Pinned, because these two four-character codes are the plugin's identity
+    # to an AU host. Left unset, JUCE defaults the manufacturer to 'Manu' --
+    # shared with every other JUCE plugin whose author never set one -- and
+    # regenerates the plugin code with string(RANDOM) on every configure
+    # (JUCE/extras/Build/CMake/JUCEUtils.cmake:1763), so each fresh build tree
+    # produced a different Audio Unit. 'Chlk' is the shared ChalkWalk
+    # manufacturer code; Antiphon uses the same one with plugin code 'Antp'.
+    PLUGIN_MANUFACTURER_CODE Chlk
+    PLUGIN_CODE ArpE
     VERSION "0.1.0"
     JUCER_VERSION "7.0.5"
     PRODUCT_NAME "Arps Euclidya"
