@@ -18,8 +18,7 @@ target_sources(ArpsTests PRIVATE
     ${ARPS_CORE_SOURCES}
     TestMain.cpp
     TestMpeCondition.cpp
-    TestEuclideanMath.cpp
-    TestEuclideanDivergence.cpp
+    TestEuclideanMigration.cpp
     TestMacroResolution.cpp
     TestNodeProcess.cpp
     TestQuantizerNode.cpp
@@ -42,6 +41,7 @@ target_compile_definitions(ArpsTests PRIVATE
     ARPS_TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/patches")
 
 target_link_libraries(ArpsTests PRIVATE
+    chalkwalk::music
     NodeLayoutData
     FactoryScaleData
     juce::juce_audio_utils

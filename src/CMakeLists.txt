@@ -18,7 +18,6 @@ set(ARPS_CORE_SOURCES
     ConvergeNode/ConvergeNode.cpp
     DiagnosticNode/DiagnosticNode.cpp
     DivergeNode/DivergeNode.cpp
-    EuclideanMath.cpp
     FoldNode/FoldNode.cpp
     GraphEngine.cpp
     GraphNode.cpp
@@ -201,6 +200,7 @@ target_compile_definitions(ArpsEuclidya
 
 target_link_libraries(ArpsEuclidya
     PRIVATE
+        chalkwalk::music
         NodeLayoutData
         FactoryPatchData
         FactoryTuningData

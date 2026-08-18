@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "../EuclideanMath.h"
+#include <chalkwalk/music/Euclidean.h>
 #include "../LayoutParser.h"
 #include "BinaryData.h"
 
@@ -117,7 +117,7 @@ void AlgorithmicModulatorNode::process() {
     int actualOffset = resolveMacroInt(macroOffset, offset, 0, 63);
 
     auto pattern =
-        EuclideanMath::generatePattern(actualSteps, actualBeats, actualOffset);
+        chalkwalk::music::pattern(actualSteps, actualBeats, actualOffset);
     outSeq.reserve(pattern.size());
     for (bool gate : pattern) {
       if (gate) {

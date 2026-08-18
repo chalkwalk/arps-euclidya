@@ -13,6 +13,16 @@ add_subdirectory(JUCE)
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 
 # Add the sources subdirectory (populates ARPS_CORE_SOURCES in parent scope)
+# ---------------------------------------------------------------------------
+# chalkwalk-music -- shared, JUCE-free music theory (../ECOSYSTEM.md).
+# Submodule: https://github.com/chalkwalk/chalkwalk-music (MIT).
+#
+# This project's Euclidean generator came from here originally and has now gone
+# back, with its phase corrected -- see the note in tests/TestEuclideanDivergence.cpp.
+# ---------------------------------------------------------------------------
+set(CHALKWALK_MUSIC_TESTS ON CACHE BOOL "" FORCE)
+add_subdirectory(libs/music)
+
 add_subdirectory(src)
 
 if(ARPS_BUILD_TESTS)

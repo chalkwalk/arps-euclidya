@@ -4,3 +4,6 @@
 [submodule "modules/clap-juce-extensions"]
 	path = modules/clap-juce-extensions
 	url = https://github.com/free-audio/clap-juce-extensions.git
+[submodule "libs/music"]
+	path = libs/music
+	url = https://github.com/chalkwalk/chalkwalk-music.git

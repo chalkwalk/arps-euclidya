@@ -1,6 +1,6 @@
 #include "MidiOutNode.h"
 
-#include "../EuclideanMath.h"
+#include <chalkwalk/music/Euclidean.h>
 
 MidiOutNode::MidiOutNode(NoteExpressionManager &midiCtx, ClockManager &clockCtx)
     : noteExpressionManager(midiCtx), clockManager(clockCtx) {
@@ -581,14 +581,14 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
         int aRO = resolveMacroOffset(macroROffset, rOffset, aRS);
         aRO = std::clamp(aRO, -(aRS + 1) / 2, (aRS + 1) / 2);
         std::vector<bool> rPat =
-            EuclideanMath::generatePattern(aRS, aRB, aRO);
+            chalkwalk::music::pattern(aRS, aRB, aRO);
         int aPS = resolveMacroInt(macroPSteps, pSteps, 1, 32);
         int aPB = resolveMacroInt(macroPBeats, pBeats, 1, aPS);
         aPB = std::clamp(aPB, 1, aPS);
         int aPO = resolveMacroOffset(macroPOffset, pOffset, aPS);
         aPO = std::clamp(aPO, -(aPS + 1) / 2, (aPS + 1) / 2);
         std::vector<bool> pat =
-            EuclideanMath::generatePattern(aPS, aPB, aPO);
+            chalkwalk::music::pattern(aPS, aPB, aPO);
         if (!rPat.empty() && !pat.empty()) {
           // Helper: apply rest behaviour to all CC lanes
           auto applyRest = [this, samplesPerTick]() {
@@ -707,7 +707,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     int actualROffset = resolveMacroOffset(macroROffset, rOffset, actualRSteps);
     actualROffset = std::clamp(actualROffset, -halfR, halfR);
 
-    std::vector<bool> rhythmPattern = EuclideanMath::generatePattern(
+    std::vector<bool> rhythmPattern = chalkwalk::music::pattern(
         actualRSteps, actualRBeats, actualROffset);
 
     if (rhythmPattern.empty()) {
@@ -722,7 +722,7 @@ void MidiOutNode::generateOutput(NoteEventCollector &collector, int numSamples,
     int actualPOffset = resolveMacroOffset(macroPOffset, pOffset, actualPSteps);
     actualPOffset = std::clamp(actualPOffset, -halfP, halfP);
 
-    std::vector<bool> pattern = EuclideanMath::generatePattern(
+    std::vector<bool> pattern = chalkwalk::music::pattern(
         actualPSteps, actualPBeats, actualPOffset);
 
     if (pattern.empty()) {
@@ -1355,7 +1355,7 @@ std::vector<bool> MidiOutNode::getPattern() const {
   int actualPBeats = resolveMacroInt(macroPBeats, pBeats, 1, actualPSteps);
   int actualPOffset = resolveMacroOffset(macroPOffset, pOffset, actualPSteps);
 
-  return EuclideanMath::generatePattern(
+  return chalkwalk::music::pattern(
       std::max(1, actualPSteps), std::clamp(actualPBeats, 1, actualPSteps),
       actualPOffset);
 }
@@ -1365,7 +1365,7 @@ std::vector<bool> MidiOutNode::getRhythm() const {
   int actualRBeats = resolveMacroInt(macroRBeats, rBeats, 1, actualRSteps);
   int actualROffset = resolveMacroOffset(macroROffset, rOffset, actualRSteps);
 
-  return EuclideanMath::generatePattern(
+  return chalkwalk::music::pattern(
       std::max(1, actualRSteps), std::clamp(actualRBeats, 1, actualRSteps),
       actualROffset);
 }
