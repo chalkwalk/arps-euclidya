@@ -26,15 +26,31 @@
 //   - The other formulation ALWAYS fires on step 0. This one frequently does
 //     not: E(3,8), E(5,12), E(5,16), E(7,16) and E(9,32) all start on a rest.
 //
-// The ecosystem plan adopts the other phase, because a rhythm generator whose
-// default pattern misses the downbeat is surprising and Antiphon's kick depends
-// on landing there. When that happens, THIS behaviour is still reachable --
-// every phase is, via the existing `offset` parameter -- but patches saved
-// before the change will shift unless a compensating offset is applied.
+// The ecosystem plan adopts the other phase. Three reasons, in order of weight:
 //
-// These tests pin the current behaviour so that shift is visible and
-// deliberate. They are expected to FAIL when the change lands; that failure is
-// the migration checklist, not a regression.
+//   1. This project's own ring visualiser. Turning BEATS with the centred phase
+//      ROTATES the ring as well as adding hits, and irregularly -- the implied
+//      rotation for 32 steps as pulses go 1..8 is 16, 8, 26, 4, 28, 2, 6, 2,
+//      with no closed form. Anchored, BEATS only adds and redistributes hits
+//      around a fixed twelve o'clock and OFFSET is the only control that
+//      rotates. Two controls, two jobs.
+//   2. A generator whose default pattern misses the downbeat is surprising,
+//      and Antiphon's kick depends on landing there.
+//   3. The centring here was never a design decision. `error = steps / 2` is
+//      the textbook Bresenham initialiser for round-to-nearest, inherited with
+//      the line-drawing algorithm rather than chosen for musical reasons.
+//
+// The BIPOLAR OFFSET CONTROL IS UNAFFECTED. `pOffset` and `rOffset` stay
+// signed and centred on zero with symmetric travel; only the pattern that zero
+// produces changes. Every pattern reachable before is reachable after -- the
+// runtime clamp of [-half, +half] already spans every rotation.
+//
+// No compensating offset will be applied: patterns shift once, deliberately.
+// This project has no users yet, which is what makes that free.
+//
+// These tests pin the current behaviour so that shift is visible. They are
+// expected to FAIL when the change lands; that failure is the migration
+// checklist, not a regression.
 
 namespace {
 
