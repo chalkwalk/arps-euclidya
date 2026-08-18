@@ -19,6 +19,7 @@ target_sources(ArpsTests PRIVATE
     TestMain.cpp
     TestMpeCondition.cpp
     TestEuclideanMath.cpp
+    TestEuclideanDivergence.cpp
     TestMacroResolution.cpp
     TestNodeProcess.cpp
     TestQuantizerNode.cpp
