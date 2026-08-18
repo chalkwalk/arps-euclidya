@@ -21,6 +21,9 @@ target_sources(ArpsTests PRIVATE
     TestEuclideanMath.cpp
     TestMacroResolution.cpp
     TestNodeProcess.cpp
+    TestQuantizerNode.cpp
+    TestNodeProcessMore.cpp
+    TestHarmonicAnalysis.cpp
     TestGraphEngineTopology.cpp
     TestPortTypes.cpp
     TestScalaParser.cpp
