@@ -1,5 +1,12 @@
 # Arps Euclidya - Design Document
 
+
+**Shared code across the four Chalkwalk plugins is planned in
+[`../ECOSYSTEM.md`](../ECOSYSTEM.md)** -- which libraries are extracted (this
+project contributes its Scala tuning parser and receives one canonical Euclidean
+implementation), which third-party dependencies are taken, and the licence and
+JUCE-free rules. Do not restate that argument here; link to it.
+
 ## 1. Overview
 
 **Arps Euclidya** is a modular, di-graph based MIDI effect designed for expressive performance. It decouples melodic sequence generation from rhythmic triggering, utilizing Euclidean algorithms to create complex, evolving patterns while maintaining full MPE (MIDI Polyphonic Expression) support.
