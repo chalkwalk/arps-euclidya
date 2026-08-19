@@ -26,7 +26,6 @@ target_sources(ArpsTests PRIVATE
     TestHarmonicAnalysis.cpp
     TestGraphEngineTopology.cpp
     TestPortTypes.cpp
-    TestScalaParser.cpp
     TestGraphStateRoundTrip.cpp
     TestNodeRegistry.cpp
     TestClockManager.cpp

@@ -42,7 +42,6 @@ set(ARPS_CORE_SOURCES
     SwitchNode/SwitchNode.cpp
     TextNoteNode/TextNoteNode.cpp
     TransposeNode/TransposeNode.cpp
-    Tuning/ScalaParser.cpp
     Scales/ScaleLibrary.cpp
     Scales/HarmonicAnalysis.cpp
     Scales/ScaleEditorComponent.cpp

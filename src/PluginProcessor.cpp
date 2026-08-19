@@ -7,7 +7,7 @@
 #include "MidiOutNode/MidiOutNode.h"
 #include "PluginEditor.h"
 #include "QuantizerNode/QuantizerNode.h"
-#include "Tuning/ScalaParser.h"
+#include <chalkwalk/music/Tuning.h>
 
 namespace FactoryPatches {
 extern const char *getNamedResource(const char *name, int &size);
@@ -539,7 +539,13 @@ void ArpsEuclidyaProcessor::pushTuningToNodes() {
 void ArpsEuclidyaProcessor::setActiveTuning(const juce::File &sclFile,
                                             const juce::File &kbmFile,
                                             bool rebuildUI) {
-  activeTuning = ScalaParser::parse(sclFile, kbmFile);
+  // Reading the bytes is our job: chalkwalk-music parses TEXT, so that it
+  // needs no file API and can be tested without a filesystem.
+  activeTuning = chalkwalk::music::parseTuning(
+      sclFile.loadFileAsString().toStdString(),
+      kbmFile.existsAsFile() ? kbmFile.loadFileAsString().toStdString()
+                             : std::string{},
+      sclFile.getFileNameWithoutExtension().toStdString());
 
   // Store relative paths for serialization
   juce::File tuningDir =
