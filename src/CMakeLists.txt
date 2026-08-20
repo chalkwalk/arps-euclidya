@@ -65,7 +65,7 @@ juce_add_plugin(ArpsEuclidya
     # regenerates the plugin code with string(RANDOM) on every configure
     # (JUCE/extras/Build/CMake/JUCEUtils.cmake:1763), so each fresh build tree
     # produced a different Audio Unit. 'Chlk' is the shared ChalkWalk
-    # manufacturer code; Antiphon uses the same one with plugin code 'Antp'.
+    # manufacturer code. Allocated plugin codes are tracked in the ecosystem plan.
     PLUGIN_MANUFACTURER_CODE Chlk
     PLUGIN_CODE ArpE
     VERSION "0.1.0"

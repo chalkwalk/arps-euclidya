@@ -9,7 +9,7 @@
 //
 // This project used to carry its own generator (`src/EuclideanMath.cpp`): a
 // Bresenham line-drawing distribution with the error term seeded at steps/2.
-// Lockstep and Antiphon shared a different one. All three now call
+// Two sibling projects shared a different one. All three now call
 // chalkwalk-music (libs/music), and the patterns THIS project produces have
 // changed as a result.
 //

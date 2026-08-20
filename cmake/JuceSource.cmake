@@ -39,7 +39,7 @@ if(CHALKWALK_JUCE_DIR)
 else()
     set(CHALKWALK_JUCE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/JUCE")
     # CHALKWALK_JUCE_OPTIONAL: set by a project that can do something useful
-    # with no JUCE at all -- Anvil builds and tests its physical core that way,
+    # with no JUCE at all -- a project may build and test a JUCE-free core that way,
     # and turning that into a hard error would destroy the boundary it exists
     # to prove. Such a project checks CHALKWALK_JUCE_ROOT itself.
     if(NOT EXISTS "${CHALKWALK_JUCE_ROOT}/CMakeLists.txt" AND NOT CHALKWALK_JUCE_OPTIONAL)
