@@ -6,7 +6,7 @@
 #include "QuantizerNode/QuantizerNode.h"
 
 // QuantizerNode carries the scale logic that is slated to move into
-// chalkwalk-music (../../ECOSYSTEM.md). It had no tests at all. These pin the
+// chalkwalk-music. It had no tests at all. These pin the
 // behaviour BEFORE the move, so the extraction can be proved rather than
 // hoped for.
 //

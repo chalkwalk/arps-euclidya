@@ -7,7 +7,7 @@
 #include "Tuning/TuningTable.h"
 
 // HarmonicAnalysis::scoreStep is a pure function and had no tests. It moves
-// into chalkwalk-music with the rest of the pitch model (../../ECOSYSTEM.md).
+// into chalkwalk-music with the rest of the pitch model.
 //
 // The contract: 1.0 means the interval sits exactly on a low harmonic,
 // 0.0 means it is 100 cents or more away from every one of them.

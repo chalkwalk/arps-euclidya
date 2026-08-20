@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# Where JUCE comes from (../ECOSYSTEM.md).
+# Where JUCE comes from.
 #
 # JUCE is 94 MB of working tree and four plugins in this ecosystem pin the same
 # commit, so four checkouts is 376 MB of the same files. CHALKWALK_JUCE_DIR --
@@ -19,7 +19,7 @@
 # THE SHARED CHECKOUT CARRIES THE UNION OF EVERY PROJECT'S JUCE PATCHES. They
 # touch disjoint files today, so the union is well defined -- but it does mean
 # building against patches another plugin needed. That coupling is the price of
-# one checkout and it is accepted knowingly; see ECOSYSTEM.md.
+# one checkout and it is accepted knowingly.
 # ---------------------------------------------------------------------------
 if(NOT CHALKWALK_JUCE_DIR AND DEFINED ENV{CHALKWALK_JUCE_DIR})
     set(CHALKWALK_JUCE_DIR "$ENV{CHALKWALK_JUCE_DIR}")
@@ -50,7 +50,7 @@ else()
             "    git submodule update --init --recursive\n"
             "  or point at a shared checkout:\n"
             "    cmake -B build -DCHALKWALK_JUCE_DIR=/path/to/JUCE\n"
-            "  See ECOSYSTEM.md. Without this the failure is a bare "
+            "  Without this the failure is a bare "
             "add_subdirectory error that says nothing about either option.")
     endif()
 endif()

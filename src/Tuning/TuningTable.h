@@ -1,7 +1,7 @@
 #pragma once
 
 // TuningTable — provided by chalkwalk-music (`libs/music`, MIT, JUCE-free).
-// See `../../ECOSYSTEM.md`. A using-declaration, so every existing call site
+// A using-declaration, so every existing call site
 // keeps working and nothing here can drift.
 //
 // The shared type drops the `sclFile`/`kbmFile` members this one used to

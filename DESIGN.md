@@ -1,11 +1,12 @@
 # Arps Euclidya - Design Document
 
 
-**Shared code across the four Chalkwalk plugins is planned in
-[`../ECOSYSTEM.md`](../ECOSYSTEM.md)** -- which libraries are extracted (this
+**Shared code across the Chalkwalk plugins is planned separately**, in a
+document kept outside this repository -- which libraries are extracted (this
 project contributes its Scala tuning parser and receives one canonical Euclidean
 implementation), which third-party dependencies are taken, and the licence and
-JUCE-free rules. Do not restate that argument here; link to it.
+JUCE-free rules. That argument is not restated here, and nothing below
+depends on having read it.
 
 ## 1. Overview
 
