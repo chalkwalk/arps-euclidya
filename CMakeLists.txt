@@ -6,8 +6,8 @@ project(ArpsEuclidya VERSION 0.5.0)
 
 option(ARPS_BUILD_TESTS "Build unit tests" OFF)
 
-# Configure JUCE
-add_subdirectory(JUCE)
+include(cmake/JuceSource.cmake)
+add_subdirectory("${CHALKWALK_JUCE_ROOT}" "${CMAKE_BINARY_DIR}/juce-build")
 
 # Configure CLAP JUCE extension
 add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
