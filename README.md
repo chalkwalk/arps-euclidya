@@ -5,6 +5,19 @@
 > [!WARNING]
 > **Beta Software**: Arps Euclidya is currently in active development. Features may change, and you may encounter bugs. Please report issues and backup your projects!
 
+> **Patterns moved on 2026-08-19.** The Euclidean generator now anchors its
+> first onset on step 0 — `E(3,8)` is `x..x..x.` — where it previously centred
+> the pattern, an artefact of the Bresenham line-drawing algorithm it grew from
+> rather than a decision about where a rhythm should start. **A saved patch
+> will play a rotation of what it used to**, and no compensating offset is
+> applied: the shift happens once, deliberately. `OFFSET` spans every rotation,
+> so nothing has become unreachable. The gain is that `BEATS` now only adds and
+> redistributes hits around a fixed twelve o'clock instead of also rotating the
+> ring by an amount with no closed form — two controls, two jobs. The generator
+> is now [chalkwalk-music](https://github.com/chalkwalk/chalkwalk-music)'s,
+> shared with the other Chalkwalk plugins, which is what settled a
+> disagreement three separate implementations had been carrying.
+
 [![Watch the demo](screenshots/arps_euclidya_bitwig_screenshot.png)](https://youtu.be/zL0USwwGseI)
 
 ## Why Arps Euclidya?
