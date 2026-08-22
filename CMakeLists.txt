@@ -6,6 +6,19 @@ project(ArpsEuclidya VERSION 0.5.0)
 
 option(ARPS_BUILD_TESTS "Build unit tests" OFF)
 
+# C++20 -- applies to every target in the tree, including the format-specific
+# plugin wrappers that juce_add_plugin creates. A per-target PUBLIC cxx_std_20
+# does NOT reach those wrappers, because JUCE compiles their sources
+# independently with its own cxx_std_17 floor (see JUCEUtils.cmake).
+#
+# It is a single standard across the build rather than a preference: JUCE has
+# inlines gated on __cpp_char8_t, so a tree that compiles some translation
+# units at 17 and some at 20 is an ODR hazard, not merely an inconsistent one.
+# Same reasoning and same lines as Anvil, Antiphon and the sequencer.
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 include(cmake/JuceSource.cmake)
 add_subdirectory("${CHALKWALK_JUCE_ROOT}" "${CMAKE_BINARY_DIR}/juce-build")
 
