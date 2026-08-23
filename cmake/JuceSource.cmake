@@ -1,8 +1,15 @@
 # ---------------------------------------------------------------------------
 # Where JUCE comes from.
 #
-# JUCE is 94 MB of working tree and four plugins in this ecosystem pin the same
-# commit, so four checkouts is 376 MB of the same files. CHALKWALK_JUCE_DIR --
+# JUCE is 94 MB of working tree AND about 290 MB of git objects, so one checkout
+# is ~385 MB rather than the 94 MB `du` on the submodule directory reports --
+# a submodule's objects live in .git/modules, outside the tree being measured.
+# Four plugins in this ecosystem pin the same commit, so four checkouts is about
+# 1.5 GB of the same files, not the 376 MB this comment used to claim.
+#
+# The shared checkout lives at ~/Programming/.juce/JUCE and carries the UNION of
+# the ecosystem's JUCE patches, which each project applies to it idempotently at
+# configure time. CHALKWALK_JUCE_DIR --
 # a cache variable or an environment variable -- points at one shared checkout
 # instead.
 #
