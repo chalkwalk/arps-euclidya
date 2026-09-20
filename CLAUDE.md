@@ -24,6 +24,15 @@ cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
 # Windows: plain `cmake ..` (MSVC)
 
 cmake --build . -j $(nproc)
+
+# The promotion floor -- under a second, and worth running before a commit that
+# touches anything in cmake/PromotionSet.cmake. chalkwalk-music is C++17 and
+# this tree is C++20, so a file on its way out can take a C++20 feature -- or
+# merely drop an include and reach it transitively -- and still build and pass
+# here. It fails only when somebody tries to move it, which is too late and
+# lands on the wrong person.
+cmake -B build -DARPS_BUILD_TESTS=ON
+ctest --test-dir build -R promotion-readiness
 ```
 
 Debug artifacts: `build/src/ArpsEuclidya_artefacts/Debug/`

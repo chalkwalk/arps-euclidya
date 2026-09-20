@@ -54,3 +54,24 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_test(NAME ArpsUnitTests COMMAND ArpsTests)
+
+# ---------------------------------------------------------------------------
+# The promotion floor.
+#
+# `DESIGN.md` says this project contributes its tuning work to the shared
+# libraries and receives the Euclidean generator back. chalkwalk-music is
+# C++17 and this tree is C++20, so a file on its way out can take a C++20
+# feature -- or merely drop an include and reach it transitively -- and still
+# build and pass here. It fails when somebody tries to move it, which is far
+# too late and lands on the wrong person.
+#
+# WHICH files are leaving is the interesting part, and it is declared in
+# cmake/PromotionSet.cmake rather than inferred from what happens to compile
+# without JUCE -- half this tree's node headers do that by accident.
+# ---------------------------------------------------------------------------
+add_test(NAME promotion-readiness
+         COMMAND ${CMAKE_COMMAND}
+                 -DSRC_DIR=${CMAKE_SOURCE_DIR}/src
+                 -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                 -DEXTRA_INCLUDES=${CMAKE_SOURCE_DIR}/libs/music/include
+                 -P ${CMAKE_SOURCE_DIR}/cmake/CheckPromotionReadiness.cmake)
