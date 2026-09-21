@@ -33,8 +33,13 @@ add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 # This project's Euclidean generator came from here originally and has now gone
 # back, with its phase corrected -- see the note in tests/TestEuclideanDivergence.cpp.
 # ---------------------------------------------------------------------------
-set(CHALKWALK_MUSIC_TESTS ON CACHE BOOL "" FORCE)
-add_subdirectory(libs/music)
+# Added through the shared helper, like every other project in the ecosystem.
+# That is what makes CHALKWALK_MUSIC_DIR work -- a working checkout can be
+# tested HERE without a commit and without a push, which matters most when the
+# library is the thing under test. Configure prints OVERRIDE when one is in
+# use, because the submodule SHA then no longer describes the build.
+include(cmake/ChalkwalkLibrary.cmake)
+chalkwalk_add_library(music libs/music)
 
 # ---------------------------------------------------------------------------
 # chalkwalk-seed -- deterministic derivation.
@@ -50,7 +55,7 @@ add_subdirectory(libs/music)
 # The result: the same patch walks differently on macOS than on Linux, and it
 # fails silently, because each platform is perfectly consistent with itself.
 # ---------------------------------------------------------------------------
-add_subdirectory(libs/seed)
+chalkwalk_add_library(seed libs/seed)
 
 add_subdirectory(src)
 
