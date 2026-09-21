@@ -200,6 +200,7 @@ target_compile_definitions(ArpsEuclidya
 target_link_libraries(ArpsEuclidya
     PRIVATE
         chalkwalk::music
+        chalkwalk::seed
         NodeLayoutData
         FactoryPatchData
         FactoryTuningData

@@ -7,3 +7,6 @@
 [submodule "libs/music"]
 	path = libs/music
 	url = https://github.com/chalkwalk/chalkwalk-music.git
+[submodule "libs/seed"]
+	path = libs/seed
+	url = https://github.com/chalkwalk/chalkwalk-seed.git

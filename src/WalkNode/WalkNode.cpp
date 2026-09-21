@@ -1,7 +1,9 @@
 #include "WalkNode.h"
 
 #include <algorithm>
-#include <random>
+#include <cstdint>
+
+#include <chalkwalk/seed/Derive.h>
 
 #include "../LayoutParser.h"
 #include "BinaryData.h"
@@ -86,19 +88,37 @@ void WalkNode::process() {
                        return getMeanValue(a) < getMeanValue(b);
                      });
 
-    // Generate a seed based on the sorted steps and length parameter so it's
-    // stable
-    size_t seed = steps.size() + (size_t)actualLength;
+    // A seed from the sorted steps and the length, so the same input walks the
+    // same way.
+    //
+    // ---- THIS USED TO BE STABLE ONLY ON ONE COMPILER ----
+    //
+    // It was `std::mt19937` seeded from a `size_t`, drawn through
+    // `std::uniform_real_distribution<float>`. Both halves were wrong in the
+    // same quiet way:
+    //
+    //   * `size_t` is eight bytes on a 64-bit build and four on a 32-bit one,
+    //     so the seed itself differed before the engine started.
+    //   * The mt19937 ENGINE is fully specified -- seeded 12345 it yields
+    //     3992670690 everywhere. `uniform_real_distribution` IS NOT. The
+    //     standard gives it no algorithm, so libstdc++ and libc++ hand back
+    //     different numbers from the same engine state.
+    //
+    // So a patch saved on Linux walked differently when opened on macOS, and
+    // nothing could catch it: each platform was perfectly consistent with
+    // itself, and the comment above said "so it's stable", which it was --
+    // per toolchain.
+    //
+    // `chalkwalk::seed` is integer mixing with a division by a power of two
+    // and no `<random>` anywhere, which is the only way this is actually true.
+    std::uint64_t seed = steps.size() + (std::uint64_t)actualLength;
     for (const auto &step : steps) {
       for (const auto &ev : step) {
         if (const auto *n = asNote(ev)) {
-          seed ^= (size_t)n->noteNumber + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+          seed = chalkwalk::seed::derive(seed, (std::uint64_t)n->noteNumber);
         }
       }
     }
-
-    std::mt19937 gen((unsigned int)seed);
-    std::uniform_real_distribution<float> dis(0.0f, 1.0f);
 
     actualSkew = std::max(-1.0f, std::min(1.0f, actualSkew));
     float pv = std::max(0.0f, (1.0f / 3.0f) * (1.0f - actualSkew));
@@ -122,7 +142,10 @@ void WalkNode::process() {
       for (int i = 0; i < actualLength; ++i) {
         generatedSeq.push_back(steps[(size_t)currentIdx]);
 
-        float r = dis(gen);
+        // A fresh draw per step, derived from the step index rather than from
+        // an advancing engine: the thousandth value costs the same as the
+        // first and asking for it disturbs nothing else.
+        const float r = (float)chalkwalk::seed::unitaryFor(seed, (std::uint64_t)i);
         if (r < pv) {
           currentIdx = (currentIdx - 1 + (int)steps.size()) % (int)steps.size();
         } else if (r >= pv + pc) {

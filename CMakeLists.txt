@@ -36,6 +36,22 @@ add_subdirectory(modules/clap-juce-extensions EXCLUDE_FROM_ALL)
 set(CHALKWALK_MUSIC_TESTS ON CACHE BOOL "" FORCE)
 add_subdirectory(libs/music)
 
+# ---------------------------------------------------------------------------
+# chalkwalk-seed -- deterministic derivation.
+# Submodule: https://github.com/chalkwalk/chalkwalk-seed (MIT, JUCE-free).
+#
+# Here to fix a real bug rather than to tidy anything. `WalkNode` seeds a
+# generator from the sorted steps "so it's stable", and then draws through
+# `std::uniform_real_distribution` -- which the standard deliberately leaves
+# unspecified, so libstdc++ and libc++ return different numbers from the same
+# engine state. The seed was a `size_t`, which is four bytes on some platforms
+# and eight on others, so it differed before the engine even started.
+#
+# The result: the same patch walks differently on macOS than on Linux, and it
+# fails silently, because each platform is perfectly consistent with itself.
+# ---------------------------------------------------------------------------
+add_subdirectory(libs/seed)
+
 add_subdirectory(src)
 
 if(ARPS_BUILD_TESTS)

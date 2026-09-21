@@ -22,6 +22,7 @@ target_sources(ArpsTests PRIVATE
     TestMacroResolution.cpp
     TestNodeProcess.cpp
     TestQuantizerNode.cpp
+    TestWalkNode.cpp
     TestNodeProcessMore.cpp
     TestHarmonicAnalysis.cpp
     TestGraphEngineTopology.cpp
@@ -41,6 +42,7 @@ target_compile_definitions(ArpsTests PRIVATE
 
 target_link_libraries(ArpsTests PRIVATE
     chalkwalk::music
+    chalkwalk::seed
     NodeLayoutData
     FactoryScaleData
     juce::juce_audio_utils
