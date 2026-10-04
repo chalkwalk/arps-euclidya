@@ -75,5 +75,6 @@ add_test(NAME promotion-readiness
          COMMAND ${CMAKE_COMMAND}
                  -DSRC_DIR=${CMAKE_SOURCE_DIR}/src
                  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                 -DCXX_FRONTEND_VARIANT=${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}
                  -DEXTRA_INCLUDES=${CMAKE_SOURCE_DIR}/libs/music/include
                  -P ${CMAKE_SOURCE_DIR}/cmake/CheckPromotionReadiness.cmake)

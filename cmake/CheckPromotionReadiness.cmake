@@ -34,9 +34,28 @@ set(work "${CMAKE_CURRENT_BINARY_DIR}/promotion-readiness")
 file(MAKE_DIRECTORY "${work}")
 
 separate_arguments(include_list UNIX_COMMAND "${EXTRA_INCLUDES}")
+
+# ---- AND IT HAS TO SPEAK THE COMPILER'S LANGUAGE ----
+#
+# `-std=c++17 -fsyntax-only` is GCC and Clang. MSVC rejects both, so on Windows
+# every guarded header "failed" and the report named no reason -- MSVC writes
+# its diagnostics to STDOUT, as `error C2065`, and this script read stderr for
+# `error:`. That broke the Windows build on a check that had found nothing.
+#
+# Chosen by FRONTEND rather than by compiler ID, because clang-cl is Clang that
+# speaks MSVC's flags. `/permissive-` because a floor check run in MSVC's lenient
+# default mode would accept code no other compiler does.
+if(CXX_FRONTEND_VARIANT STREQUAL "MSVC")
+    set(std_flags /nologo /std:c++17 /permissive- /EHsc /Zs)
+    set(include_switch "/I")
+else()
+    set(std_flags -std=c++17 -fsyntax-only)
+    set(include_switch "-I")
+endif()
+
 set(include_flags "")
 foreach(dir IN LISTS include_list)
-    list(APPEND include_flags -I "${dir}")
+    list(APPEND include_flags "${include_switch}${dir}")
 endforeach()
 
 set(failures "")
@@ -51,8 +70,8 @@ foreach(name IN LISTS ARPS_PROMOTION_SET)
     file(WRITE "${work}/tu.cpp" "#include \"${header}\"\nint main() { return 0; }\n")
 
     execute_process(
-        COMMAND ${CMAKE_CXX_COMPILER} -std=c++17 -fsyntax-only
-                -I "${SRC_DIR}" ${include_flags} "${work}/tu.cpp"
+        COMMAND ${CMAKE_CXX_COMPILER} ${std_flags}
+                "${include_switch}${SRC_DIR}" ${include_flags} "${work}/tu.cpp"
         RESULT_VARIABLE rc
         OUTPUT_VARIABLE out
         ERROR_VARIABLE err)
@@ -61,7 +80,12 @@ foreach(name IN LISTS ARPS_PROMOTION_SET)
 
     if(NOT rc EQUAL 0)
         # The first error only; the cascade after it names the wrong file.
-        string(REGEX MATCH "[^\n]*error:[^\n]*" first "${err}")
+        # Both streams and both spellings: GCC and Clang say `error:` on
+        # stderr, MSVC says `error C2065:` on stdout.
+        string(REGEX MATCH "[^\n]*error( C[0-9]+)?:[^\n]*" first "${err}\n${out}")
+        if(NOT first)
+            set(first "(exit ${rc}, no diagnostic recognised)")
+        endif()
         list(APPEND failures "  ${name}\n      ${first}")
     endif()
 endforeach()
