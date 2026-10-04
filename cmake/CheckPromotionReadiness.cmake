@@ -35,23 +35,31 @@ file(MAKE_DIRECTORY "${work}")
 
 separate_arguments(include_list UNIX_COMMAND "${EXTRA_INCLUDES}")
 
-# ---- AND IT HAS TO SPEAK THE COMPILER'S LANGUAGE ----
+# ---- GCC AND CLANG ONLY, AND MSVC IS SKIPPED RATHER THAN FAKED ----
 #
-# `-std=c++17 -fsyntax-only` is GCC and Clang. MSVC rejects both, so on Windows
-# every guarded header "failed" and the report named no reason -- MSVC writes
-# its diagnostics to STDOUT, as `error C2065`, and this script read stderr for
-# `error:`. That broke the Windows build on a check that had found nothing.
+# `-std=c++17 -fsyntax-only` is GCC and Clang, and on Windows the first version
+# of this script passed it to MSVC, which rejected it -- so every guarded header
+# "failed", and the Windows build went red on a check that had found nothing.
 #
-# Chosen by FRONTEND rather than by compiler ID, because clang-cl is Clang that
-# speaks MSVC's flags. `/permissive-` because a floor check run in MSVC's lenient
-# default mode would accept code no other compiler does.
+# Speaking MSVC's flags is not enough either. `cl` run from a script has no
+# standard headers: it finds them through the environment Visual Studio's build
+# sets up, which a test launched by ctest does not inherit, and the second
+# version of this script failed on `<algorithm>`.
+#
+# And the guard does not need it. What it checks is a property of the SOURCE --
+# does this header still compile as C++17 -- and GCC and Clang answer that on
+# Linux and macOS in the same CI run. When a header does move, the library it
+# lands in compiles it at C++17 on MSVC in its own CI, which is the check that
+# matters there. So MSVC and clang-cl report SKIPPED, which ctest shows as
+# skipped and not as passed (`SKIP_REGULAR_EXPRESSION` in tests/CMakeLists.txt).
 if(CXX_FRONTEND_VARIANT STREQUAL "MSVC")
-    set(std_flags /nologo /std:c++17 /permissive- /EHsc /Zs)
-    set(include_switch "/I")
-else()
-    set(std_flags -std=c++17 -fsyntax-only)
-    set(include_switch "-I")
+    message(STATUS "promotion-readiness: SKIPPED on an MSVC-style compiler; "
+                   "the C++17 floor is checked by GCC and Clang")
+    return()
 endif()
+
+set(std_flags -std=c++17 -fsyntax-only)
+set(include_switch "-I")
 
 set(include_flags "")
 foreach(dir IN LISTS include_list)
@@ -80,8 +88,8 @@ foreach(name IN LISTS ARPS_PROMOTION_SET)
 
     if(NOT rc EQUAL 0)
         # The first error only; the cascade after it names the wrong file.
-        # Both streams and both spellings: GCC and Clang say `error:` on
-        # stderr, MSVC says `error C2065:` on stdout.
+        # Both streams, and MSVC's spelling too: harmless here, and it is what
+        # made the Windows failure say what it was rather than print nothing.
         string(REGEX MATCH "[^\n]*error( C[0-9]+)?:[^\n]*" first "${err}\n${out}")
         if(NOT first)
             set(first "(exit ${rc}, no diagnostic recognised)")

@@ -78,3 +78,6 @@ add_test(NAME promotion-readiness
                  -DCXX_FRONTEND_VARIANT=${CMAKE_CXX_COMPILER_FRONTEND_VARIANT}
                  -DEXTRA_INCLUDES=${CMAKE_SOURCE_DIR}/libs/music/include
                  -P ${CMAKE_SOURCE_DIR}/cmake/CheckPromotionReadiness.cmake)
+# Reported as skipped, not passed, where the script declines to run (MSVC).
+set_tests_properties(promotion-readiness PROPERTIES
+    SKIP_REGULAR_EXPRESSION "promotion-readiness: SKIPPED")
